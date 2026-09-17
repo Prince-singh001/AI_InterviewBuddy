@@ -1,4 +1,4 @@
-/**
+/*
  * API Service — Interviewer Buddy AI
  *
  * Authentication:
@@ -10,11 +10,24 @@
  * - Automatic retry after 401
  *
  * Storage:
- * Zustand persist → ib-auth
+ * - Zustand persist → ib-auth
  */
 
-const BASE = '/api'
+// ============================================================
+// API BASE URL
+// ============================================================
 
+// Local development:
+//   VITE_API_URL=http://127.0.0.1:8000/api
+//
+// Production:
+//   VITE_API_URL=https://ai-interviewbuddy.onrender.com/api
+//
+// If VITE_API_URL is not provided, fall back to /api.
+
+const BASE = (
+  import.meta.env.VITE_API_URL || "/api"
+).replace(/\/+$/, "");
 
 // ============================================================
 // AUTH STORAGE
@@ -22,44 +35,41 @@ const BASE = '/api'
 
 function getAuthState(): any | null {
   try {
-    const raw = localStorage.getItem('ib-auth')
+    const raw = localStorage.getItem("ib-auth");
 
     if (!raw) {
-      return null
+      return null;
     }
 
-    return JSON.parse(raw)
+    return JSON.parse(raw);
   } catch {
-    return null
+    return null;
   }
 }
-
 
 // ============================================================
 // ACCESS TOKEN
 // ============================================================
 
 function getToken(): string | null {
-  const auth = getAuthState()
+  const auth = getAuthState();
 
-  return auth?.state?.token ?? null
+  return auth?.state?.token ?? null;
 }
-
 
 // ============================================================
 // REFRESH TOKEN
 // ============================================================
 
 function getRefreshToken(): string | null {
-  const auth = getAuthState()
+  const auth = getAuthState();
 
   return (
     auth?.state?.refreshToken ??
     auth?.state?.refresh_token ??
     null
-  )
+  );
 }
-
 
 // ============================================================
 // SAVE NEW TOKENS
@@ -70,34 +80,35 @@ function saveTokens(
   refreshToken: string,
 ): void {
   try {
-    const raw = localStorage.getItem('ib-auth')
+    const raw = localStorage.getItem("ib-auth");
 
     if (!raw) {
-      return
+      return;
     }
 
-    const auth = JSON.parse(raw)
+    const auth = JSON.parse(raw);
 
     if (!auth.state) {
-      auth.state = {}
+      auth.state = {};
     }
 
-    auth.state.token = accessToken
-    auth.state.refreshToken = refreshToken
-    auth.state.refresh_token = refreshToken
+    auth.state.token = accessToken;
+    auth.state.refreshToken = refreshToken;
+
+    // Backward compatibility
+    auth.state.refresh_token = refreshToken;
 
     localStorage.setItem(
-      'ib-auth',
+      "ib-auth",
       JSON.stringify(auth),
-    )
+    );
   } catch (error) {
     console.error(
-      'Failed to save refreshed tokens:',
+      "Failed to save refreshed tokens:",
       error,
-    )
+    );
   }
 }
-
 
 // ============================================================
 // CLEAR AUTH
@@ -105,38 +116,36 @@ function saveTokens(
 
 function clearAuth(): void {
   try {
-    localStorage.removeItem('ib-auth')
+    localStorage.removeItem("ib-auth");
   } catch {
-    // Ignore
+    // Ignore storage errors
   }
 }
-
 
 // ============================================================
 // HEADERS
 // ============================================================
 
 function authHeaders(): Record<string, string> {
-  const token = getToken()
+  const token = getToken();
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
+    "Content-Type": "application/json",
+  };
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`
+    headers.Authorization = `Bearer ${token}`;
   }
 
-  return headers
+  return headers;
 }
-
 
 // ============================================================
 // REFRESH STATE
 // ============================================================
 
-let refreshPromise: Promise<string | null> | null = null
-
+// Prevent multiple simultaneous refresh requests.
+let refreshPromise: Promise<string | null> | null = null;
 
 // ============================================================
 // REFRESH ACCESS TOKEN
@@ -144,15 +153,15 @@ let refreshPromise: Promise<string | null> | null = null
 
 async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) {
-    return refreshPromise
+    return refreshPromise;
   }
 
   refreshPromise = (async () => {
     try {
-      const refreshToken = getRefreshToken()
+      const refreshToken = getRefreshToken();
 
       if (!refreshToken) {
-        return null
+        return null;
       }
 
       const response = await fetch(
@@ -160,49 +169,48 @@ async function refreshAccessToken(): Promise<string | null> {
           refreshToken,
         )}`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         },
-      )
+      );
 
       if (!response.ok) {
-        clearAuth()
-        return null
+        clearAuth();
+        return null;
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (
         !data?.access_token ||
         !data?.refresh_token
       ) {
-        clearAuth()
-        return null
+        clearAuth();
+        return null;
       }
 
       saveTokens(
         data.access_token,
         data.refresh_token,
-      )
+      );
 
-      return data.access_token
+      return data.access_token;
     } catch (error) {
       console.error(
-        'Token refresh failed:',
+        "Token refresh failed:",
         error,
-      )
+      );
 
-      return null
+      return null;
     } finally {
-      refreshPromise = null
+      refreshPromise = null;
     }
-  })()
+  })();
 
-  return refreshPromise
+  return refreshPromise;
 }
-
 
 // ============================================================
 // JWT EXPIRATION
@@ -212,69 +220,79 @@ function getTokenExpiration(
   token: string | null,
 ): number | null {
   if (!token) {
-    return null
+    return null;
   }
 
   try {
-    const parts = token.split('.')
+    const parts = token.split(".");
 
     if (parts.length !== 3) {
-      return null
+      return null;
     }
 
     const base64 = parts[1]
-      .replace(/-/g, '+')
-      .replace(/_/g, '/')
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+
+    // Add missing Base64 padding if necessary.
+    const paddedBase64 =
+      base64 +
+      "=".repeat(
+        (4 - (base64.length % 4)) % 4,
+      );
 
     const payload = JSON.parse(
-      atob(base64),
-    )
+      atob(paddedBase64),
+    );
 
     if (!payload.exp) {
-      return null
+      return null;
     }
 
-    return payload.exp * 1000
+    return payload.exp * 1000;
   } catch {
-    return null
+    return null;
   }
 }
-
 
 // ============================================================
 // ENSURE VALID ACCESS TOKEN
 // ============================================================
 
 async function ensureValidToken(): Promise<string | null> {
-  const token = getToken()
+  const token = getToken();
 
   if (!token) {
-    return null
+    return null;
   }
 
-  const expiration = getTokenExpiration(token)
+  const expiration =
+    getTokenExpiration(token);
 
+  // If expiration cannot be decoded,
+  // keep using the existing token.
   if (!expiration) {
-    return token
+    return token;
   }
 
-  const now = Date.now()
+  const now = Date.now();
 
-  // Refresh 2 minutes before expiration
-  const refreshBefore = 2 * 60 * 1000
+  // Refresh 2 minutes before expiration.
+  const refreshBefore =
+    2 * 60 * 1000;
 
   if (
-    expiration - now <= refreshBefore
+    expiration - now <=
+    refreshBefore
   ) {
     const newToken =
-      await refreshAccessToken()
+      await refreshAccessToken();
 
-    return newToken ?? token
+    return newToken ?? token;
   }
 
-  return token
+  return token;
 }
-
 
 // ============================================================
 // GENERIC REQUEST
@@ -286,22 +304,21 @@ async function request<T>(
   body?: unknown,
   retry = true,
 ): Promise<T> {
+  // Make sure the access token is valid
+  // before making the request.
+  await ensureValidToken();
 
-  await ensureValidToken()
-
-  const res = await fetch(
+  let res = await fetch(
     `${BASE}${path}`,
     {
       method,
       headers: authHeaders(),
-
       body:
         body !== undefined
           ? JSON.stringify(body)
           : undefined,
     },
-  )
-
+  );
 
   // ==========================================================
   // TOKEN EXPIRED
@@ -312,122 +329,113 @@ async function request<T>(
     res.status === 401 &&
     retry
   ) {
-
     const newToken =
-      await refreshAccessToken()
+      await refreshAccessToken();
 
     if (newToken) {
+      res = await fetch(
+        `${BASE}${path}`,
+        {
+          method,
+          headers: authHeaders(),
+          body:
+            body !== undefined
+              ? JSON.stringify(body)
+              : undefined,
+        },
+      );
+    } else {
+      clearAuth();
 
-      return request<T>(
-        method,
-        path,
-        body,
-        false,
-      )
+      throw new Error(
+        "Session expired. Please login again.",
+      );
     }
-
-    clearAuth()
-
-    throw new Error(
-      'Session expired. Please login again.',
-    )
   }
-
 
   // ==========================================================
   // OTHER ERRORS
   // ==========================================================
 
   if (!res.ok) {
-
-    let message = `HTTP ${res.status}`
+    let message = `HTTP ${res.status}`;
 
     try {
-
-      const data = await res.json()
+      const data = await res.json();
 
       if (
-        typeof data?.detail === 'string'
+        typeof data?.detail === "string"
       ) {
-
-        message = data.detail
-
+        message = data.detail;
       } else if (
         Array.isArray(data?.detail)
       ) {
-
         message = data.detail
           .map(
             (item: any) =>
               item?.msg ??
-              'Validation error',
+              "Validation error",
           )
-          .join(', ')
+          .join(", ");
       }
-
     } catch {
-      // Ignore JSON parsing errors
+      // Ignore JSON parsing errors.
     }
 
-    throw new Error(message)
+    throw new Error(message);
   }
 
-  return res.json() as Promise<T>
-}
+  // Handle empty responses safely.
+  if (res.status === 204) {
+    return undefined as T;
+  }
 
+  return res.json() as Promise<T>;
+}
 
 // ============================================================
 // AUTH TYPES
 // ============================================================
 
 export interface UserResponse {
-  id: string
-  email: string
-  name: string
-
-  college?: string
-  target_role?: string
-  experience?: string
-
-  skills: string[]
-
-  github?: string
-  linkedin?: string
-  portfolio?: string
-
-  profile_complete: boolean
+  id: string;
+  email: string;
+  name: string;
+  college?: string;
+  target_role?: string;
+  experience?: string;
+  skills: string[];
+  github?: string;
+  linkedin?: string;
+  portfolio?: string;
+  profile_complete: boolean;
 }
-
 
 // ============================================================
 // OTP RESPONSE
 // ============================================================
 
 export interface OTPResponse {
-  message: string
-  email: string
+  message: string;
+  email: string;
 }
-
 
 // ============================================================
 // TOKEN RESPONSE
 // ============================================================
 
 export interface TokenResponse {
-  access_token: string
-  refresh_token: string
-  token_type: string
-
-  user: UserResponse
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  user: UserResponse;
 }
-
 
 // ============================================================
 // AUTH API
 // ============================================================
 
 export const authApi = {
-
   // ----------------------------------------------------------
   // SIGNUP
   // Register → OTP sent to email
@@ -439,15 +447,14 @@ export const authApi = {
     password: string,
   ) =>
     request<OTPResponse>(
-      'POST',
-      '/auth/register',
+      "POST",
+      "/auth/register",
       {
         name,
         email,
         password,
       },
     ),
-
 
   // ----------------------------------------------------------
   // VERIFY SIGNUP OTP
@@ -459,14 +466,13 @@ export const authApi = {
     otp: string,
   ) =>
     request<TokenResponse>(
-      'POST',
-      '/auth/verify-signup-otp',
+      "POST",
+      "/auth/verify-signup-otp",
       {
         email,
         otp,
       },
     ),
-
 
   // ----------------------------------------------------------
   // RESEND SIGNUP OTP
@@ -476,39 +482,31 @@ export const authApi = {
     email: string,
   ) =>
     request<OTPResponse>(
-      'POST',
-      '/auth/resend-signup-otp',
+      "POST",
+      "/auth/resend-signup-otp",
       {
         email,
       },
     ),
 
-
   // ----------------------------------------------------------
   // OLD COMPONENT COMPATIBILITY
-  //
-  // Some older components may still call:
-  // authApi.resendOTP(email)
-  //
-  // This now points to signup OTP resend.
   // ----------------------------------------------------------
 
   resendOTP: (
     email: string,
   ) =>
     request<OTPResponse>(
-      'POST',
-      '/auth/resend-signup-otp',
+      "POST",
+      "/auth/resend-signup-otp",
       {
         email,
       },
     ),
 
-
   // ----------------------------------------------------------
   // LOGIN
-  // Email + Password → Direct JWT
-  // NO OTP
+  // Email + Password → JWT
   // ----------------------------------------------------------
 
   login: (
@@ -516,14 +514,13 @@ export const authApi = {
     password: string,
   ) =>
     request<TokenResponse>(
-      'POST',
-      '/auth/login',
+      "POST",
+      "/auth/login",
       {
         email,
         password,
       },
     ),
-
 
   // ----------------------------------------------------------
   // CURRENT USER
@@ -531,10 +528,9 @@ export const authApi = {
 
   me: () =>
     request<UserResponse>(
-      'GET',
-      '/auth/me',
+      "GET",
+      "/auth/me",
     ),
-
 
   // ----------------------------------------------------------
   // UPDATE PROFILE
@@ -544,214 +540,172 @@ export const authApi = {
     data: Partial<UserResponse>,
   ) =>
     request<UserResponse>(
-      'PUT',
-      '/auth/profile',
+      "PUT",
+      "/auth/profile",
       data,
     ),
-}
-
+};
 
 // ============================================================
 // DASHBOARD
 // ============================================================
 
 export interface DashboardStats {
-  overall_score: number
-  interviews_completed: number
-  average_score: number
-  best_score: number
-  current_streak: number
-  questions_answered: number
-  practice_hours: number
-
-  recent_interviews: RecentInterview[]
-
-  weekly_performance: WeeklyPerf[]
+  overall_score: number;
+  interviews_completed: number;
+  average_score: number;
+  best_score: number;
+  current_streak: number;
+  questions_answered: number;
+  practice_hours: number;
+  recent_interviews: RecentInterview[];
+  weekly_performance: WeeklyPerf[];
 }
-
 
 export interface RecentInterview {
-  id: string
-  role: string
-  type: string
-  difficulty: string
-  status: string
-  score: number | null
-  duration: string
-  date: string | null
+  id: string;
+  role: string;
+  type: string;
+  difficulty: string;
+  status: string;
+  score: number | null;
+  duration: string;
+  date: string | null;
 }
-
 
 export interface WeeklyPerf {
-  week: string
-  score: number
-  interviews: number
+  week: string;
+  score: number;
+  interviews: number;
 }
-
 
 export const dashboardApi = {
-
   get: () =>
     request<DashboardStats>(
-      'GET',
-      '/dashboard',
+      "GET",
+      "/dashboard",
     ),
-}
-
+};
 
 // ============================================================
 // INTERVIEWS
 // ============================================================
 
 export interface InterviewListItem {
-  id: string
-  role: string
-  type: string
-  status: string
-  score: number | null
-  created_at: string
+  id: string;
+  role: string;
+  type: string;
+  status: string;
+  score: number | null;
+  created_at: string;
 }
-
 
 export interface CreateInterviewResponse {
-  id: string
-  interview_type: string
-  role: string
-  difficulty: string
-  duration_minutes: number
-  total_questions: number
-  status: string
+  id: string;
+  interview_type: string;
+  role: string;
+  difficulty: string;
+  duration_minutes: number;
+  total_questions: number;
+  status: string;
 }
-
 
 export interface InterviewQuestionResponse {
-  question_id: string
-
-  question: string
-
-  question_type: string
-  difficulty: string
-
-  topic: string | null
-
-  question_number: number
-  total_questions: number
-
-  is_last: boolean
+  question_id: string;
+  question: string;
+  question_type: string;
+  difficulty: string;
+  topic: string | null;
+  question_number: number;
+  total_questions: number;
+  is_last: boolean;
 }
-
 
 export interface AnswerEvaluation {
-  score: number
-
-  feedback: string
-
-  strengths: string[]
-
-  improvements: string[]
-
-  suggested_answer: string
+  score: number;
+  feedback: string;
+  strengths: string[];
+  improvements: string[];
+  suggested_answer: string;
 }
-
 
 export interface SubmitAnswerResponse {
-  question_id: string
-
-  score: number
-
-  evaluation: AnswerEvaluation
-
-  question_number: number
-  total_questions: number
-
-  is_last: boolean
+  question_id: string;
+  score: number;
+  evaluation: AnswerEvaluation;
+  question_number: number;
+  total_questions: number;
+  is_last: boolean;
 }
-
 
 export interface CommunicationMetrics {
-  speaking_speed: number
-  filler_words: number
-  avg_pause: number
-  clarity: number
-  vocabulary: number
-  answer_structure: number
+  speaking_speed: number;
+  filler_words: number;
+  avg_pause: number;
+  clarity: number;
+  vocabulary: number;
+  answer_structure: number;
 }
-
 
 export interface StarScores {
-  overall: number
-  situation: number
-  task: number
-  action: number
-  result: number
+  overall: number;
+  situation: number;
+  task: number;
+  action: number;
+  result: number;
 }
-
 
 export interface FinalInterviewReport {
-  overall: number
-  technical: number
-  communication: number
-  confidence: number
-  clarity: number
-  problem_solving: number
-  behavioral: number
-
-  strengths: string[]
-
-  improvements: string[]
-
-  recommendations: string[]
-
-  communication_metrics: CommunicationMetrics
-
-  star_scores: StarScores
+  overall: number;
+  technical: number;
+  communication: number;
+  confidence: number;
+  clarity: number;
+  problem_solving: number;
+  behavioral: number;
+  strengths: string[];
+  improvements: string[];
+  recommendations: string[];
+  communication_metrics: CommunicationMetrics;
+  star_scores: StarScores;
 }
-
 
 export interface CompleteInterviewResponse {
-  id: string
-
-  status: string
-
-  total_questions: number
-
-  answered_questions: number
-
-  report: FinalInterviewReport | null
+  id: string;
+  status: string;
+  total_questions: number;
+  answered_questions: number;
+  report: FinalInterviewReport | null;
 }
 
-
 export const interviewsApi = {
-
   // ----------------------------------------------------------
   // LIST INTERVIEWS
   // ----------------------------------------------------------
 
   list: () =>
     request<InterviewListItem[]>(
-      'GET',
-      '/interviews',
+      "GET",
+      "/interviews",
     ),
-
 
   // ----------------------------------------------------------
   // CREATE INTERVIEW
   // ----------------------------------------------------------
 
   create: (data: {
-    role: string
-    interview_type: string
-    difficulty: string
-    duration_minutes: number
-    mode: string
-    personality: string
+    role: string;
+    interview_type: string;
+    difficulty: string;
+    duration_minutes: number;
+    mode: string;
+    personality: string;
   }) =>
     request<CreateInterviewResponse>(
-      'POST',
-      '/interviews',
+      "POST",
+      "/interviews",
       data,
     ),
-
 
   // ----------------------------------------------------------
   // START INTERVIEW
@@ -759,10 +713,9 @@ export const interviewsApi = {
 
   start: (id: string) =>
     request<InterviewQuestionResponse>(
-      'POST',
+      "POST",
       `/interviews/${id}/start`,
     ),
-
 
   // ----------------------------------------------------------
   // SUBMIT ANSWER
@@ -775,7 +728,7 @@ export const interviewsApi = {
     duration_seconds?: number,
   ) =>
     request<SubmitAnswerResponse>(
-      'POST',
+      "POST",
       `/interviews/${id}/answer`,
       {
         question_id,
@@ -784,17 +737,15 @@ export const interviewsApi = {
       },
     ),
 
-
   // ----------------------------------------------------------
   // NEXT QUESTION
   // ----------------------------------------------------------
 
   nextQuestion: (id: string) =>
     request<InterviewQuestionResponse>(
-      'POST',
+      "POST",
       `/interviews/${id}/next-question`,
     ),
-
 
   // ----------------------------------------------------------
   // COMPLETE INTERVIEW
@@ -802,10 +753,9 @@ export const interviewsApi = {
 
   complete: (id: string) =>
     request<CompleteInterviewResponse>(
-      'POST',
+      "POST",
       `/interviews/${id}/complete`,
     ),
-
 
   // ----------------------------------------------------------
   // INTERVIEW REPORT
@@ -813,172 +763,153 @@ export const interviewsApi = {
 
   report: (id: string) =>
     request<CompleteInterviewResponse>(
-      'GET',
+      "GET",
       `/interviews/${id}/report`,
     ),
-}
-
+};
 
 // ============================================================
 // RESUME
 // ============================================================
 
 export interface ResumeItem {
-  id: string
-  filename: string
-
-  overall_score: number | null
-  ats_score: number | null
-  skills_score: number | null
-  experience_score: number | null
-  projects_score: number | null
-  keywords_score: number | null
-  formatting_score: number | null
-
-  extracted_skills: string[]
-
-  strengths: string[]
-
-  improvements: string[]
-
-  analyzed_at: string | null
+  id: string;
+  filename: string;
+  overall_score: number | null;
+  ats_score: number | null;
+  skills_score: number | null;
+  experience_score: number | null;
+  projects_score: number | null;
+  keywords_score: number | null;
+  formatting_score: number | null;
+  extracted_skills: string[];
+  strengths: string[];
+  improvements: string[];
+  analyzed_at: string | null;
 }
-
 
 export interface ResumeAnalysisResponse {
-  id: string
-
-  overall_score: number
-  ats_score: number
-  skills_score: number
-  experience_score: number
-  projects_score: number
-  keywords_score: number
-  formatting_score: number
-
-  extracted_skills: string[]
-
-  strengths: string[]
-
-  improvements: string[]
+  id: string;
+  overall_score: number;
+  ats_score: number;
+  skills_score: number;
+  experience_score: number;
+  projects_score: number;
+  keywords_score: number;
+  formatting_score: number;
+  extracted_skills: string[];
+  strengths: string[];
+  improvements: string[];
 }
 
-
 export const resumeApi = {
-
   // ----------------------------------------------------------
   // LIST RESUMES
   // ----------------------------------------------------------
 
   list: () =>
     request<ResumeItem[]>(
-      'GET',
-      '/resume',
+      "GET",
+      "/resume",
     ),
-
 
   // ----------------------------------------------------------
   // UPLOAD RESUME
   // ----------------------------------------------------------
 
   upload: async (file: File) => {
+    await ensureValidToken();
 
-    await ensureValidToken()
+    let token = getToken();
 
-    let token = getToken()
-
-    const formData = new FormData()
+    const formData = new FormData();
 
     formData.append(
-      'file',
+      "file",
       file,
-    )
+    );
 
     let res = await fetch(
       `${BASE}/resume/upload`,
       {
-        method: 'POST',
-
+        method: "POST",
         headers: token
           ? {
             Authorization: `Bearer ${token}`,
           }
           : {},
-
         body: formData,
       },
-    )
-
+    );
 
     // --------------------------------------------------------
     // Retry upload after token refresh
     // --------------------------------------------------------
 
-    if (
-      res.status === 401
-    ) {
-
+    if (res.status === 401) {
       const newToken =
-        await refreshAccessToken()
+        await refreshAccessToken();
 
       if (newToken) {
-
-        token = newToken
+        token = newToken;
 
         res = await fetch(
           `${BASE}/resume/upload`,
           {
-            method: 'POST',
-
+            method: "POST",
             headers: {
               Authorization: `Bearer ${newToken}`,
             },
-
             body: formData,
           },
-        )
+        );
       } else {
-        clearAuth()
+        clearAuth();
 
         throw new Error(
-          'Session expired. Please login again.',
-        )
+          "Session expired. Please login again.",
+        );
       }
     }
-
 
     // --------------------------------------------------------
     // Upload error
     // --------------------------------------------------------
 
     if (!res.ok) {
-
-      let message = `HTTP ${res.status}`
+      let message = `HTTP ${res.status}`;
 
       try {
-
-        const data = await res.json()
+        const data = await res.json();
 
         if (
-          typeof data?.detail === 'string'
+          typeof data?.detail === "string"
+        ) {
+          message = data.detail;
+        } else if (
+          Array.isArray(data?.detail)
         ) {
           message = data.detail
+            .map(
+              (item: any) =>
+                item?.msg ??
+                "Validation error",
+            )
+            .join(", ");
         }
-
       } catch {
-        // Ignore
+        // Ignore JSON parsing errors.
       }
 
-      throw new Error(message)
+      throw new Error(message);
     }
 
     return res.json() as Promise<{
-      id: string
-      filename: string
-      status: string
-    }>
+      id: string;
+      filename: string;
+      status: string;
+    }>;
   },
-
 
   // ----------------------------------------------------------
   // ANALYZE RESUME
@@ -988,74 +919,58 @@ export const resumeApi = {
     resumeId: string,
   ) =>
     request<ResumeAnalysisResponse>(
-      'POST',
+      "POST",
       `/resume/analyze/${resumeId}`,
     ),
-}
-
+};
 
 // ============================================================
 // JOBS
 // ============================================================
 
 export interface JobSkillMatch {
-  name: string
-
+  name: string;
   status:
-  | 'matched'
-  | 'partial'
-  | 'missing'
-
-  level: number
+  | "matched"
+  | "partial"
+  | "missing";
+  level: number;
 }
-
 
 export interface JobAnalysisResponse {
-  match_score: number
-
-  title: string
-
-  company?: string
-
-  skills: JobSkillMatch[]
-
-  required_exp: string
-
-  seniority: string
-
-  interview_topics: string[]
-
-  preparation_strategy: string
-
-  missing_skills: string[]
+  match_score: number;
+  title: string;
+  company?: string;
+  skills: JobSkillMatch[];
+  required_exp: string;
+  seniority: string;
+  interview_topics: string[];
+  preparation_strategy: string;
+  missing_skills: string[];
 }
 
-
 export const jobsApi = {
-
   // ----------------------------------------------------------
   // ANALYZE JOB
   // ----------------------------------------------------------
 
   analyze: (data: {
-    job_description: string
-    title?: string
-    company?: string
+    job_description: string;
+    title?: string;
+    company?: string;
   }) =>
     request<JobAnalysisResponse>(
-      'POST',
-      '/jobs/analyze',
+      "POST",
+      "/jobs/analyze",
       data,
     ),
-}
-
+};
 
 // ============================================================
 // PRACTICE
 // ============================================================
 
 export const practiceApi = {
-
   // ----------------------------------------------------------
   // GET PRACTICE QUESTION
   // ----------------------------------------------------------
@@ -1065,19 +980,18 @@ export const practiceApi = {
     difficulty: string,
   ) =>
     request<{
-      id: string
-      question: string
-      category: string
-      difficulty: string
+      id: string;
+      question: string;
+      category: string;
+      difficulty: string;
     }>(
-      'POST',
-      '/practice/question',
+      "POST",
+      "/practice/question",
       {
         category,
         difficulty,
       },
     ),
-
 
   // ----------------------------------------------------------
   // EVALUATE PRACTICE ANSWER
@@ -1088,17 +1002,17 @@ export const practiceApi = {
     answer: string,
   ) =>
     request<{
-      score: number
-      feedback: string
-      strengths: string[]
-      improvements: string[]
-      suggested_answer: string
+      score: number;
+      feedback: string;
+      strengths: string[];
+      improvements: string[];
+      suggested_answer: string;
     }>(
-      'POST',
-      '/practice/evaluate',
+      "POST",
+      "/practice/evaluate",
       {
         question,
         answer,
       },
     ),
-}
+};
