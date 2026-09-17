@@ -1,5 +1,6 @@
 """
-INTERVIEWER BUDDY AI BACKEND
+AI InterviewBuddy
+FastAPI application entry point.
 """
 
 from contextlib import asynccontextmanager
@@ -11,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import init_db, close_db
+
 
 # ============================================================================
 # ROUTERS
@@ -57,9 +59,7 @@ async def lifespan(app: FastAPI):
         upload_path = Path(settings.UPLOAD_DIR)
         upload_path.mkdir(parents=True, exist_ok=True)
 
-        print(
-            f"Upload directory: {upload_path.resolve()}"
-        )
+        print(f"Upload directory: {upload_path.resolve()}")
 
     except Exception as e:
         print(f"Upload directory warning: {e}")
@@ -84,6 +84,7 @@ async def lifespan(app: FastAPI):
     try:
         await close_db()
         print("Database connection closed.")
+
     except Exception as e:
         print(f"Database shutdown warning: {e}")
 
@@ -101,8 +102,14 @@ app = FastAPI(
         "Agentic AI, RAG, adaptive interviewing and analytics."
     ),
     version="1.0.0",
+
+    # Swagger
     docs_url="/api/docs",
+
+    # ReDoc
     redoc_url="/api/redoc",
+
+    # Application lifecycle
     lifespan=lifespan,
 )
 
@@ -111,21 +118,37 @@ app = FastAPI(
 # CORS
 # ============================================================================
 
+# Local development origins
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+# Production frontend
+# FRONTEND_URL will be set in Render environment variables.
+if settings.FRONTEND_URL:
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
+
+    if frontend_url not in allowed_origins:
+        allowed_origins.append(frontend_url)
+
+
+print("Allowed CORS origins:")
+for origin in allowed_origins:
+    print(f"  - {origin}")
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        settings.FRONTEND_URL,
 
-        # Vite
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
+    allow_origins=allowed_origins,
 
-        # Alternative frontend ports
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
     allow_credentials=True,
+
     allow_methods=["*"],
+
     allow_headers=["*"],
 )
 
@@ -135,7 +158,11 @@ app.add_middleware(
 # ============================================================================
 
 upload_directory = Path(settings.UPLOAD_DIR)
-upload_directory.mkdir(parents=True, exist_ok=True)
+
+upload_directory.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
 app.mount(
     "/uploads",
@@ -148,18 +175,38 @@ app.mount(
 
 # ============================================================================
 # API ROUTERS
+# ============================================================================
 #
 # IMPORTANT:
-# Do NOT add prefixes here because your route files already define
-# their own /api/... paths.
+# Route files already contain their /api/... prefixes.
+#
+# Therefore DO NOT add another prefix here.
+#
+# Example:
+#
+# router endpoint:
+#     /api/auth/login
+#
+# include_router:
+#     app.include_router(auth_router)
+#
+# Final endpoint:
+#     /api/auth/login
+#
 # ============================================================================
 
 app.include_router(auth_router)
+
 app.include_router(interview_router)
+
 app.include_router(resume_router)
+
 app.include_router(jobs_router)
+
 app.include_router(dashboard_router)
+
 app.include_router(practice_router)
+
 app.include_router(rag_router)
 
 
@@ -181,6 +228,7 @@ async def root():
         "status": "running",
         "version": "1.0.0",
         "docs": "/api/docs",
+        "health": "/api/health",
     }
 
 
@@ -228,9 +276,7 @@ class ConnectionManager:
 
         await websocket.accept()
 
-        self.active_connections[
-            interview_id
-        ] = websocket
+        self.active_connections[interview_id] = websocket
 
     def disconnect(
         self,
@@ -297,16 +343,25 @@ async def interview_websocket(
 
     try:
 
-        # Import agents only when WebSocket connection starts
+        # --------------------------------------------------------------------
+        # Import agents lazily
+        # --------------------------------------------------------------------
+        #
+        # This prevents AI agent initialization during application startup.
+        #
+        # --------------------------------------------------------------------
+
         from app.agents.interview_manager import (
             InterviewManagerAgent,
             EvaluationAgent,
         )
 
         interview_manager = InterviewManagerAgent()
+
         evaluator = EvaluationAgent()
 
         question_count = 0
+
         asked_topics: list[str] = []
 
         # --------------------------------------------------------------------
@@ -412,6 +467,10 @@ async def interview_websocket(
 
                 except Exception as e:
 
+                    print(
+                        f"Answer evaluation error: {e}"
+                    )
+
                     eval_result = {
                         "score": 0,
                         "feedback": (
@@ -462,10 +521,7 @@ async def interview_websocket(
                 # INTERVIEW COMPLETE
                 # =============================================================
 
-                if (
-                    question_count
-                    >= max_questions
-                ):
+                if question_count >= max_questions:
 
                     await websocket.send_json(
                         {
@@ -509,16 +565,21 @@ async def interview_websocket(
                         )
                     )
 
-                    # Support async implementation
+                    # Support async implementations
                     if hasattr(
                         next_question,
                         "__await__",
                     ):
+
                         next_question = (
                             await next_question
                         )
 
                 except Exception as e:
+
+                    print(
+                        f"Next question generation error: {e}"
+                    )
 
                     await websocket.send_json(
                         {
@@ -559,6 +620,7 @@ async def interview_websocket(
                     topic
                     and topic not in asked_topics
                 ):
+
                     asked_topics.append(topic)
 
                 # -------------------------------------------------------------
@@ -608,6 +670,10 @@ async def interview_websocket(
             interview_id
         )
 
+        print(
+            f"WebSocket disconnected: {interview_id}"
+        )
+
     # =========================================================================
     # OTHER ERROR
     # =========================================================================
@@ -616,6 +682,10 @@ async def interview_websocket(
 
         manager.disconnect(
             interview_id
+        )
+
+        print(
+            f"WebSocket error [{interview_id}]: {e}"
         )
 
         try:
