@@ -8,76 +8,20 @@ A production-ready, full-stack AI SaaS platform for intelligent interview prepar
 
 ## ✨ Features
 
-| Feature | Description |
-|---------|-------------|
-| 🎙 **AI Mock Interviews** | Adaptive AI interviewer with voice/text/video modes |
-| 📄 **Resume Intelligence** | ATS score, skill gap analysis, AI improvement tips |
-| 💼 **Job Match Analyzer** | Paste any JD and get match score + prep strategy |
-| 🧠 **Agentic AI System** | 6 specialized agents (Interview Manager, Resume, Job, Question, Evaluation, Career Coach) |
-| 🔍 **RAG Knowledge Base** | Upload documents for grounded AI answers |
-| 📊 **Analytics Dashboard** | Performance charts, skill radar, progress heatmap |
-| 🗺 **Career Roadmap** | Personalized 30-day preparation plan |
-| 🎯 **Practice Center** | 16+ categories with AI evaluation |
-| 📋 **PDF Reports** | Downloadable interview reports |
-| 🌙 **Dark Theme** | Premium dark UI with Aurora Intelligence design system |
-| ⌨ **Command Palette** | Ctrl+K for instant navigation |
-| 📱 **Responsive** | Works at all screen sizes from 320px to 4K |
-
----
-
-## 🚀 Quick Start (Demo Mode — No API Keys Needed)
-
-### Option 1: Frontend Only (fastest)
-
-```bash
-cd frontend
-npm install
-npm run dev
-# Open http://localhost:3000
-# Click "Try Demo" on the landing page
-```
-
-### Option 2: Full Stack (Python + SQLite)
-
-**Backend:**
-```bash
-cd backend
-python -m venv venv
-venv\Scripts\activate  # Windows
-# or: source venv/bin/activate  # Mac/Linux
-pip install -r requirements.txt
-cp .env.example .env
-uvicorn app.main:app --reload --port 8000
-```
-
-**Frontend (new terminal):**
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open **http://localhost:3000**
-
-### Option 3: Docker Compose
-
-```bash
-docker-compose up --build
-# Open http://localhost
-```
-
----
-
-## 🔑 Environment Variables
-
-Copy .env.example to .env in the ackend/ directory:
-
-```env
-DEMO_MODE=true          # true = no API key needed
-OPENAI_API_KEY=sk-...   # Optional: for real AI responses
-DATABASE_URL=sqlite+aiosqlite:///./interviewer_buddy.db
-SECRET_KEY=your-secret-key
-```
+| Feature                   | Description                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------- |
+| 🎙**AI Mock Interviews**  | Adaptive AI interviewer with voice/text/video modes                                       |
+| 📄**Resume Intelligence** | ATS score, skill gap analysis, AI improvement tips                                        |
+| 💼**Job Match Analyzer**  | Paste any JD and get match score + prep strategy                                          |
+| 🧠**Agentic AI System**   | 6 specialized agents (Interview Manager, Resume, Job, Question, Evaluation, Career Coach) |
+| 🔍**RAG Knowledge Base**  | Upload documents for grounded AI answers                                                  |
+| 📊**Analytics Dashboard** | Performance charts, skill radar, progress heatmap                                         |
+| 🗺**Career Roadmap**      | Personalized 30-day preparation plan                                                      |
+| 🎯**Practice Center**     | 16+ categories with AI evaluation                                                         |
+| 📋**PDF Reports**         | Downloadable interview reports                                                            |
+| 🌙**Dark Theme**          | Premium dark UI with Aurora Intelligence design system                                    |
+| ⌨**Command Palette**      | Ctrl+K for instant navigation                                                             |
+| 📱**Responsive**          | Works at all screen sizes from 320px to 4K                                                |
 
 ---
 
@@ -145,32 +89,21 @@ interviewer-buddy-ai/
 └── README.md
 ```
 
----
-
-## 🧪 Running Tests
-
-```bash
-cd backend
-pytest tests/ -v
-```
-
----
-
 ## 🛠 Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 19, TypeScript, Vite 8, Framer Motion |
-| Styling | Tailwind CSS, Custom CSS Variables (Aurora Intelligence) |
-| State | Zustand, TanStack Query |
-| Charts | Recharts |
-| Backend | FastAPI, Python 3.12 |
-| Database | SQLite (dev) / PostgreSQL (production) |
-| ORM | SQLAlchemy 2.0 (async) |
-| Auth | JWT (python-jose) + bcrypt |
-| AI | OpenAI GPT-4o / Demo Mode |
-| RAG | FAISS / Simple keyword search (demo) |
-| Deployment | Docker Compose, Nginx |
+| Layer      | Technology                                               |
+| ---------- | -------------------------------------------------------- |
+| Frontend   | React 19, TypeScript, Vite 8, Framer Motion              |
+| Styling    | Tailwind CSS, Custom CSS Variables (Aurora Intelligence) |
+| State      | Zustand, TanStack Query                                  |
+| Charts     | Recharts                                                 |
+| Backend    | FastAPI, Python 3.12                                     |
+| Database   | SQLite (dev) / PostgreSQL (production)                   |
+| ORM        | SQLAlchemy 2.0 (async)                                   |
+| Auth       | JWT (python-jose) + bcrypt                               |
+| AI         | OpenAI GPT-4o / Demo Mode                                |
+| RAG        | FAISS / Simple keyword search (demo)                     |
+| Deployment | Docker Compose, Nginx                                    |
 
 ---
 
@@ -180,4 +113,4 @@ MIT License — Build on top of this for your hackathon, college project, or por
 
 ---
 
-**Interviewer Buddy AI** — *Practice Smarter. Get Hired.*
+**Interviewer Buddy AI** — _Practice Smarter. Get Hired._
