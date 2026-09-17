@@ -1,0 +1,195 @@
+# ==========================================
+# InterviewerBuddy AI - Git Ignore
+# ==========================================
+
+# ---------- Environment Variables ----------
+.env
+.env.*
+!.env.example
+
+backend/.env
+backend/.env.*
+!.env.example
+
+frontend/.env
+frontend/.env.*
+!.env.example
+
+
+# ---------- Node.js / npm ----------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+.npm
+.yarn/
+.pnp/
+.pnp.js
+
+
+# ---------- Frontend Build ----------
+dist/
+dist-ssr/
+build/
+out/
+coverage/
+
+
+# ---------- Vite ----------
+.vite/
+*.local
+
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python packaging
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+
+# ---------- Databases ----------
+*.db
+*.sqlite
+*.sqlite3
+
+# Local database files
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+
+
+# ---------- Logs ----------
+logs/
+*.log
+
+
+# ---------- IDE / Editors ----------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+.idea/
+*.iml
+
+.DS_Store
+Thumbs.db
+
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+
+# ---------- OS ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+
+# ---------- Temporary Files ----------
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+
+# ---------- Model / AI Files ----------
+*.pth
+*.pt
+*.h5
+*.keras
+*.onnx
+*.joblib
+*.pkl
+*.pickle
+
+# Uncomment if you want to keep model files in Git:
+# !backend/model/
+
+
+# ---------- Jupyter ----------
+.ipynb_checkpoints/
+
+
+# ---------- Frontend Cache ----------
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.svelte-kit/
+
+
+# ---------- TypeScript ----------
+*.tsbuildinfo
+
+
+# ---------- Generated Files ----------
+*.map
+
+
+# ---------- Secrets / Credentials ----------
+*.pem
+*.key
+*.crt
+*.cert
+
+credentials.json
+service-account.json
+secrets.json
+
+
+# ---------- Local Config ----------
+config.local.*
+settings.local.*
+
+
+# ---------- Docker ----------
+docker-compose.override.yml
+.docker/
+
+
+# ---------- Firebase / Cloud ----------
+.firebase/
+.firebaserc.local
+
+
+# ---------- Vercel ----------
+.vercel/
+
+
+# ---------- Misc ----------
+*.pid
+*.seed
+*.pid.lock

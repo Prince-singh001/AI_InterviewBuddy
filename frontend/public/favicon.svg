@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Master Bubble Gradient: Violet into Electric Purple -->
+    <linearGradient id="ibBubbleGrad" x1="12%" y1="8%" x2="88%" y2="92%">
+      <stop offset="0%" stop-color="#A855F7"/>
+      <stop offset="25%" stop-color="#8B5CF6"/>
+      <stop offset="65%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#5B21B6"/>
+    </linearGradient>
+
+    <!-- Floating Intelligence Core: Cyan to White Jewel -->
+    <linearGradient id="ibCoreJewel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="35%" stop-color="#CFFAFE"/>
+      <stop offset="70%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow for Tab Legibility -->
+    <filter id="ibShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#ibShadow)">
+    <!-- Outer Dialogue Bubble Silhouette (Conversation) -->
+    <path fill="url(#ibBubbleGrad)"
+          d="
+            M 256 52
+            C 368 52, 450 134, 450 242
+            C 450 298, 424 350, 382 386
+            C 379 389, 377 395, 380 411
+            L 390 442
+            C 393 453, 381 463, 370 456
+            L 307 420
+            C 295 414, 281 411, 269 413
+            C 265 414, 260 414, 256 414
+            C 144 414, 62 332, 62 242
+            C 62 134, 144 52, 256 52 Z
+          "/>
+
+    <!-- Inner Deep Obsidian Neural Chamber (AI Engine) -->
+    <path fill="#0A0E1A"
+          d="
+            M 256 116
+            Q 256 238, 134 238
+            Q 256 238, 256 360
+            Q 256 238, 378 238
+            Q 256 238, 256 116 Z
+          "/>
+
+    <!-- Luminous Central AI Intelligence Spark (4-Point Diamond Star) -->
+    <path d="M 256 160
+             Q 256 238, 178 238
+             Q 256 238, 256 316
+             Q 256 238, 334 238
+             Q 256 238, 256 160 Z"
+          fill="url(#ibCoreJewel)"/>
+
+    <!-- Diamond Center Highlight (Pure White Spark Core) -->
+    <polygon points="256,202 288,238 256,274 224,238" fill="#FFFFFF"/>
+
+    <!-- Dynamic Candidate Growth Spark (Top-Right Ascension Star) -->
+    <path d="M 398 102
+             Q 398 123, 377 123
+             Q 398 123, 398 144
+             Q 398 123, 419 123
+             Q 398 123, 398 102 Z"
+          fill="#22D3EE"/>
+    <circle cx="398" cy="123" r="4.5" fill="#FFFFFF"/>
+  </g>
+</svg>

@@ -1,0 +1,129 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",
+        case_sensitive=True,
+    )
+
+    # ============================================================
+    # Application
+    # ============================================================
+
+    APP_NAME: str = "Interviewer Buddy AI"
+
+    DEBUG: bool = True
+
+    DEMO_MODE: bool = False
+
+    SECRET_KEY: str = "change-this-in-env"
+
+    ALGORITHM: str = "HS256"
+
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # ============================================================
+    # Database — MongoDB Atlas
+    # ============================================================
+
+    DATABASE_URL: str = "mongodb://localhost:27017"
+
+    MONGODB_DB_NAME: str = "interviewer_buddy"
+
+    @property
+    def parsed_db_name(self) -> str:
+        return self.MONGODB_DB_NAME
+
+    # ============================================================
+    # AI Provider — OpenAI
+    # ============================================================
+
+    OPENAI_API_KEY: Optional[str] = None
+
+    OPENAI_MODEL: str = "gpt-4o-mini"
+
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
+
+    # ============================================================
+    # AI Provider — Google Gemini
+    # ============================================================
+
+    GEMINI_API_KEY: Optional[str] = None
+
+    GEMINI_MODEL: str = "gemini-3.1-flash-lite"
+
+    # ============================================================
+    # Azure OpenAI — Optional
+    # ============================================================
+
+    AZURE_OPENAI_ENDPOINT: Optional[str] = None
+
+    AZURE_OPENAI_API_KEY: Optional[str] = None
+
+    AZURE_OPENAI_DEPLOYMENT: Optional[str] = None
+
+    AZURE_OPENAI_API_VERSION: str = "2024-02-01"
+
+    # ============================================================
+    # Email — Gmail SMTP (Local/Optional)
+    # ============================================================
+
+    SMTP_HOST: str = "smtp.gmail.com"
+
+    SMTP_PORT: int = 587
+
+    SMTP_USERNAME: Optional[str] = None
+
+    SMTP_PASSWORD: Optional[str] = None
+
+    SMTP_FROM_EMAIL: Optional[str] = None
+
+    # ============================================================
+    # Email — Resend API
+    # ============================================================
+
+    RESEND_API_KEY: Optional[str] = None
+
+    RESEND_FROM_EMAIL: str = "onboarding@resend.dev"
+
+    # ============================================================
+    # OTP Security
+    # ============================================================
+
+    OTP_EXPIRE_MINUTES: int = 5
+
+    OTP_MAX_ATTEMPTS: int = 5
+
+    # ============================================================
+    # Storage
+    # ============================================================
+
+    UPLOAD_DIR: str = "./uploads"
+
+    MAX_FILE_SIZE_MB: int = 10
+
+    # ============================================================
+    # CORS
+    # ============================================================
+
+    FRONTEND_URL: str = "http://localhost:3000"
+
+    # ============================================================
+    # Vector Database
+    # ============================================================
+
+    VECTOR_DB_TYPE: str = "faiss"
+
+    VECTOR_DB_URL: Optional[str] = None
+
+
+# ================================================================
+# Settings Instance
+# ================================================================
+
+settings = Settings()

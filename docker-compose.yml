@@ -1,0 +1,33 @@
+﻿version: '3.9'
+
+services:
+  backend:
+    build: ./backend
+    container_name: ib-backend
+    ports:
+      - ""8000:8000""
+    environment:
+      - DEMO_MODE=true
+      - SECRET_KEY=change-me-in-production-use-long-random-string
+      - DATABASE_URL=sqlite+aiosqlite:///./interviewer_buddy.db
+      - FRONTEND_URL=http://localhost
+    volumes:
+      - backend_uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: [""CMD"", ""curl"", ""-f"", ""http://localhost:8000/api/health""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    container_name: ib-frontend
+    ports:
+      - ""80:80""
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_uploads:
