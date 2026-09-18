@@ -69,10 +69,66 @@ const getErrorMessage = (error: unknown) => {
   return "Something went wrong. Please try again.";
 };
 
+const resolveInterviewId = (
+  routeId: string | undefined,
+  location: ReturnType<typeof useLocation>,
+): string | null => {
+  const candidates = [
+    routeId,
+    location.state?.interviewId,
+    location.state?.id,
+    new URLSearchParams(location.search).get("interviewId"),
+    new URLSearchParams(location.search).get("id"),
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "string") {
+      const value = candidate.trim();
+
+      if (value && value !== "undefined" && value !== "null") {
+        return value;
+      }
+    }
+  }
+
+  try {
+    const stored = sessionStorage.getItem("active_interview_id");
+
+    if (
+      stored &&
+      stored.trim() &&
+      stored !== "undefined" &&
+      stored !== "null"
+    ) {
+      return stored.trim();
+    }
+  } catch {
+    // Ignore storage restrictions.
+  }
+
+  return null;
+};
+
 export default function InterviewRoom() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
+
+  /*
+   * The backend-created interview ID is authoritative.
+   * Router state/query/storage are only navigation fallbacks.
+   */
+  const interviewId = resolveInterviewId(id, location);
+
+  useEffect(() => {
+    if (!interviewId) return;
+
+    try {
+      sessionStorage.setItem("active_interview_id", interviewId);
+    } catch {
+      // Ignore storage restrictions.
+    }
+  }, [interviewId]);
 
   /*
    * ----------------------------------------------------------
@@ -292,8 +348,10 @@ export default function InterviewRoom() {
 
   const completeInterview = useCallback(
     (fromTimer = false) => {
-      if (!id) {
-        setError("Interview ID is missing.");
+      if (!interviewId) {
+        setError(
+          "Interview ID is missing. Please start the interview from the setup page.",
+        );
         return;
       }
 
@@ -307,18 +365,18 @@ export default function InterviewRoom() {
       stopTimer();
       stopCamera();
 
-      navigate(`/interview/complete/${id}`, {
+      navigate(`/interview/complete/${interviewId}`, {
         replace: true,
         state: {
           fromTimer,
         },
       });
 
-      void interviewsApi.complete(id).catch((error) => {
+      void interviewsApi.complete(interviewId).catch((error) => {
         console.error("Failed to complete interview:", error);
       });
     },
-    [id, navigate, stopTimer, stopCamera],
+    [interviewId, navigate, stopTimer, stopCamera],
   );
 
   /*
@@ -371,8 +429,10 @@ export default function InterviewRoom() {
     let cancelled = false;
 
     const start = async () => {
-      if (!id) {
-        setError("Interview ID is missing.");
+      if (!interviewId) {
+        setError(
+          "Interview ID is missing. Please start the interview from the setup page.",
+        );
         setIsLoading(false);
         return;
       }
@@ -381,7 +441,7 @@ export default function InterviewRoom() {
         setIsLoading(true);
         setError("");
 
-        const response = await interviewsApi.start(id);
+        const response = await interviewsApi.start(interviewId);
 
         if (cancelled) return;
 
@@ -458,7 +518,7 @@ export default function InterviewRoom() {
     return () => {
       cancelled = true;
     };
-  }, [id, routeDuration]);
+  }, [interviewId, routeDuration]);
 
   /*
    * ----------------------------------------------------------
@@ -646,7 +706,7 @@ export default function InterviewRoom() {
       );
 
       const response = await interviewsApi.answer(
-        id,
+        interviewId,
         currentQ.question_id,
         answer,
         questionDuration,
@@ -683,7 +743,7 @@ export default function InterviewRoom() {
         return;
       }
 
-      const nextResponse = await interviewsApi.nextQuestion(id);
+      const nextResponse = await interviewsApi.nextQuestion(interviewId);
 
       const nextQuestion = nextResponse as unknown as LiveQuestion;
 

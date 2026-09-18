@@ -14,18 +14,21 @@ Handles:
 """
 
 import json
+
 from datetime import datetime
 from typing import Any
 
-from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.agents.interview_manager import (
     EvaluationAgent,
     InterviewManagerAgent,
 )
+
 from app.models.interview import Interview
+
 from app.routes.auth import get_user_from_token
+
 from app.schemas.interview import (
     CreateInterviewRequest,
     SubmitAnswerRequest,
@@ -75,7 +78,11 @@ def get_user_id(current_user: Any) -> str:
     Safely return the current user's ID as a string.
     """
 
-    user_id = getattr(current_user, "id", None)
+    user_id = getattr(
+        current_user,
+        "id",
+        None,
+    )
 
     if user_id is None:
         raise HTTPException(
@@ -93,19 +100,46 @@ async def get_owned_interview(
     """
     Fetch an interview and verify that it belongs to
     the currently authenticated user.
+
+    IMPORTANT:
+    Interview IDs in this application are UUID/string IDs.
+    They are NOT MongoDB ObjectIds.
     """
 
     # --------------------------------------------------------
-    # Validate MongoDB ObjectId
+    # Validate interview ID
     # --------------------------------------------------------
 
-    if not ObjectId.is_valid(interview_id):
+    if not interview_id or not interview_id.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid interview ID.",
+            detail="Interview ID is required.",
         )
 
-    interview = await Interview.get(interview_id)
+    interview_id = interview_id.strip()
+
+    # --------------------------------------------------------
+    # Fetch interview
+    # --------------------------------------------------------
+
+    try:
+        interview = await Interview.get(
+            interview_id
+        )
+
+    except Exception as exc:
+        print(
+            f"Interview lookup error: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve interview.",
+        )
+
+    # --------------------------------------------------------
+    # Interview not found
+    # --------------------------------------------------------
 
     if not interview:
         raise HTTPException(
@@ -117,7 +151,9 @@ async def get_owned_interview(
     # Ownership check
     # --------------------------------------------------------
 
-    if interview.user_id != get_user_id(current_user):
+    if interview.user_id != get_user_id(
+        current_user
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have access to this interview.",
@@ -136,8 +172,15 @@ def normalize_question(
     by the frontend and database.
     """
 
-    if not isinstance(question_data, dict):
+    if not isinstance(
+        question_data,
+        dict,
+    ):
         question_data = {}
+
+    # --------------------------------------------------------
+    # Question text
+    # --------------------------------------------------------
 
     question_text = question_data.get(
         "question",
@@ -150,10 +193,16 @@ def normalize_question(
     if question_text is None:
         question_text = ""
 
-    question_text = str(question_text).strip()
+    question_text = str(
+        question_text
+    ).strip()
+
+    # --------------------------------------------------------
+    # Question ID
+    # --------------------------------------------------------
 
     question_id = question_data.get(
-        "question_id",
+        "question_id"
     )
 
     if not question_id:
@@ -161,10 +210,18 @@ def normalize_question(
             f"q_{int(datetime.utcnow().timestamp() * 1000)}"
         )
 
+    # --------------------------------------------------------
+    # Question type
+    # --------------------------------------------------------
+
     question_type = question_data.get(
         "question_type",
         interview.interview_type,
     )
+
+    # --------------------------------------------------------
+    # Difficulty
+    # --------------------------------------------------------
 
     difficulty = question_data.get(
         "adapted_difficulty",
@@ -174,12 +231,18 @@ def normalize_question(
         ),
     )
 
+    # --------------------------------------------------------
+    # Topic
+    # --------------------------------------------------------
+
     topic = question_data.get(
-        "topic",
+        "topic"
     )
 
     return {
-        "question_id": str(question_id),
+        "question_id": str(
+            question_id
+        ),
         "question": question_text,
         "question_type": question_type,
         "difficulty": difficulty,
@@ -198,7 +261,10 @@ def get_question_by_id(
 
     for question in questions:
 
-        if not isinstance(question, dict):
+        if not isinstance(
+            question,
+            dict,
+        ):
             continue
 
         if str(
@@ -221,10 +287,15 @@ def get_last_answer_score(
 
     last_answer = answers[-1]
 
-    if not isinstance(last_answer, dict):
+    if not isinstance(
+        last_answer,
+        dict,
+    ):
         return None
 
-    score = last_answer.get("score")
+    score = last_answer.get(
+        "score"
+    )
 
     if score is None:
         score = last_answer.get(
@@ -236,7 +307,11 @@ def get_last_answer_score(
 
     try:
         return float(score)
-    except (TypeError, ValueError):
+
+    except (
+        TypeError,
+        ValueError,
+    ):
         return None
 
 
@@ -251,13 +326,20 @@ def get_asked_topics(
 
     for question in questions:
 
-        if not isinstance(question, dict):
+        if not isinstance(
+            question,
+            dict,
+        ):
             continue
 
-        topic = question.get("topic")
+        topic = question.get(
+            "topic"
+        )
 
         if topic and topic not in topics:
-            topics.append(str(topic))
+            topics.append(
+                str(topic)
+            )
 
     return topics
 
@@ -272,7 +354,10 @@ def is_question_answered(
 
     for answer in answers:
 
-        if not isinstance(answer, dict):
+        if not isinstance(
+            answer,
+            dict,
+        ):
             continue
 
         if str(
@@ -349,14 +434,14 @@ async def create_interview(
         )
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_500_INTERNAL_SERVER_ERROR
-            ),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create interview.",
         )
 
     return {
-        "id": str(interview.id),
+        "id": str(
+            interview.id
+        ),
         "interview_type": interview.interview_type,
         "role": interview.role,
         "difficulty": interview.difficulty,
@@ -405,7 +490,9 @@ async def list_interviews(
 
         result.append(
             {
-                "id": str(interview.id),
+                "id": str(
+                    interview.id
+                ),
                 "interview_type": interview.interview_type,
                 "role": interview.role,
                 "difficulty": interview.difficulty,
@@ -439,6 +526,10 @@ async def start_interview(
     Start an interview and generate the first
     AI-generated interview question.
     """
+
+    # --------------------------------------------------------
+    # Get interview
+    # --------------------------------------------------------
 
     interview = await get_owned_interview(
         interview_id,
@@ -478,6 +569,19 @@ async def start_interview(
 
         first_question = questions[0]
 
+        # If old interview contains a question but status
+        # is still "created", make sure it becomes running.
+        if interview.status != "running":
+
+            interview.status = "running"
+
+            if not interview.started_at:
+                interview.started_at = (
+                    datetime.utcnow()
+                )
+
+            await interview.save()
+
         return {
             "question_id": first_question.get(
                 "question_id"
@@ -509,9 +613,24 @@ async def start_interview(
     # Create AI manager
     # --------------------------------------------------------
 
-    manager = InterviewManagerAgent(
-        max_questions=total_questions
-    )
+    try:
+
+        manager = InterviewManagerAgent(
+            max_questions=total_questions
+        )
+
+    except Exception as exc:
+
+        print(
+            f"Interview manager initialization error: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "AI interview service could not be initialized."
+            ),
+        )
 
     # --------------------------------------------------------
     # Generate first AI question
@@ -537,9 +656,7 @@ async def start_interview(
         )
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ),
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
                 "Failed to generate interview question."
             ),
@@ -563,9 +680,7 @@ async def start_interview(
     if not question_text:
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_502_BAD_GATEWAY
-            ),
+            status_code=status.HTTP_502_BAD_GATEWAY,
             detail=(
                 "AI returned an empty interview question."
             ),
@@ -582,11 +697,27 @@ async def start_interview(
     interview.status = "running"
 
     if not interview.started_at:
+
         interview.started_at = (
             datetime.utcnow()
         )
 
-    await interview.save()
+    try:
+
+        await interview.save()
+
+    except Exception as exc:
+
+        print(
+            f"Interview save error after starting: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Interview question was generated but could not be saved."
+            ),
+        )
 
     return {
         **question_data,
@@ -646,7 +777,6 @@ async def submit_answer(
         )
 
     questions = interview.questions or []
-
     answers = interview.answers or []
 
     # --------------------------------------------------------
@@ -704,7 +834,22 @@ async def submit_answer(
     # AI Evaluation
     # --------------------------------------------------------
 
-    evaluator = EvaluationAgent()
+    try:
+
+        evaluator = EvaluationAgent()
+
+    except Exception as exc:
+
+        print(
+            f"Evaluation agent initialization error: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "AI evaluation service could not be initialized."
+            ),
+        )
 
     try:
 
@@ -729,9 +874,7 @@ async def submit_answer(
         )
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ),
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
                 "AI evaluation failed."
             ),
@@ -743,9 +886,7 @@ async def submit_answer(
     ):
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_502_BAD_GATEWAY
-            ),
+            status_code=status.HTTP_502_BAD_GATEWAY,
             detail=(
                 "AI evaluation returned an invalid response."
             ),
@@ -760,6 +901,7 @@ async def submit_answer(
     )
 
     if score is None:
+
         score = evaluation.get(
             "overall_score"
         )
@@ -767,9 +909,7 @@ async def submit_answer(
     if score is None:
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_502_BAD_GATEWAY
-            ),
+            status_code=status.HTTP_502_BAD_GATEWAY,
             detail=(
                 "AI evaluation did not return a valid score."
             ),
@@ -785,15 +925,16 @@ async def submit_answer(
     ):
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_502_BAD_GATEWAY
-            ),
+            status_code=status.HTTP_502_BAD_GATEWAY,
             detail=(
                 "AI evaluation returned an invalid score."
             ),
         )
 
+    # --------------------------------------------------------
     # Keep score between 0 and 100
+    # --------------------------------------------------------
+
     score = max(
         0.0,
         min(
@@ -824,10 +965,22 @@ async def submit_answer(
     )
 
     interview.answers = answers
-
     interview.status = "running"
 
-    await interview.save()
+    try:
+
+        await interview.save()
+
+    except Exception as exc:
+
+        print(
+            f"Answer save error: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save answer.",
+        )
 
     # --------------------------------------------------------
     # Determine question progress
@@ -935,7 +1088,6 @@ async def next_question(
     )
 
     questions = interview.questions or []
-
     answers = interview.answers or []
 
     questions_asked = len(
@@ -967,15 +1119,16 @@ async def next_question(
             "question_id"
         )
 
-        if last_question_id and not is_question_answered(
-            answers,
-            last_question_id,
+        if (
+            last_question_id
+            and not is_question_answered(
+                answers,
+                last_question_id,
+            )
         ):
 
             raise HTTPException(
-                status_code=(
-                    status.HTTP_400_BAD_REQUEST
-                ),
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
                     "Please answer the current question "
                     "before requesting the next question."
@@ -1010,9 +1163,24 @@ async def next_question(
     # AI Manager
     # --------------------------------------------------------
 
-    manager = InterviewManagerAgent(
-        max_questions=total_questions
-    )
+    try:
+
+        manager = InterviewManagerAgent(
+            max_questions=total_questions
+        )
+
+    except Exception as exc:
+
+        print(
+            f"Interview manager initialization error: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "AI interview service could not be initialized."
+            ),
+        )
 
     # --------------------------------------------------------
     # Generate AI question
@@ -1038,9 +1206,7 @@ async def next_question(
         )
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ),
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
                 "Failed to generate next interview question."
             ),
@@ -1064,9 +1230,7 @@ async def next_question(
     if not question_text:
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_502_BAD_GATEWAY
-            ),
+            status_code=status.HTTP_502_BAD_GATEWAY,
             detail=(
                 "AI returned an empty interview question."
             ),
@@ -1081,10 +1245,24 @@ async def next_question(
     )
 
     interview.questions = questions
-
     interview.status = "running"
 
-    await interview.save()
+    try:
+
+        await interview.save()
+
+    except Exception as exc:
+
+        print(
+            f"Next question save error: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Next question was generated but could not be saved."
+            ),
+        )
 
     return {
         **question_data,
@@ -1167,9 +1345,7 @@ async def complete_interview(
         ):
 
             raise HTTPException(
-                status_code=(
-                    status.HTTP_400_BAD_REQUEST
-                ),
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
                     "Please answer the current question "
                     "before completing the interview."
@@ -1203,7 +1379,22 @@ async def complete_interview(
     # Generate final report
     # --------------------------------------------------------
 
-    evaluator = EvaluationAgent()
+    try:
+
+        evaluator = EvaluationAgent()
+
+    except Exception as exc:
+
+        print(
+            f"Final evaluation agent initialization error: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "AI report service could not be initialized."
+            ),
+        )
 
     try:
 
@@ -1221,9 +1412,7 @@ async def complete_interview(
         )
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_503_SERVICE_UNAVAILABLE
-            ),
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
                 "Failed to generate final interview report."
             ),
@@ -1235,9 +1424,7 @@ async def complete_interview(
     ):
 
         raise HTTPException(
-            status_code=(
-                status.HTTP_502_BAD_GATEWAY
-            ),
+            status_code=status.HTTP_502_BAD_GATEWAY,
             detail=(
                 "AI returned an invalid final report."
             ),
@@ -1308,7 +1495,26 @@ async def complete_interview(
         ),
     )
 
-    await interview.save()
+    # --------------------------------------------------------
+    # Save interview
+    # --------------------------------------------------------
+
+    try:
+
+        await interview.save()
+
+    except Exception as exc:
+
+        print(
+            f"Interview completion save error: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Final report was generated but could not be saved."
+            ),
+        )
 
     return {
         "id": str(
