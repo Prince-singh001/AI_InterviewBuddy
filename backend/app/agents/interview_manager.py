@@ -1,7 +1,5 @@
 ﻿"""
-Interview Manager Agent
-Controls the full interview lifecycle:
-state, questions, difficulty adaptation, and completion.
+Interview Management 
 """
 
 from typing import Optional
