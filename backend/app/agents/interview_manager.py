@@ -1,5 +1,14 @@
 ﻿"""
-Interview Management 
+Interview Management Agents
+InterviewerBuddy AI
+
+Handles:
+- Adaptive interview questions
+- Answer evaluation
+- Final interview reporting
+- Resume analysis
+- Job description analysis
+- Career roadmap generation
 """
 
 from typing import Optional
@@ -7,10 +16,91 @@ from typing import Optional
 from app.ai.provider import get_provider
 
 
+# ============================================================
+# Interview Manager Agent
+# ============================================================
+
 class InterviewManagerAgent:
+    """
+    Manages the interview question flow.
+
+    Responsibilities:
+    - Generate AI interview questions
+    - Adapt difficulty based on previous performance
+    - Track question number
+    - Prevent repeated topics
+    - Determine whether the interview is complete
+    """
+
     def __init__(self, max_questions: int = 8):
         self.provider = get_provider()
-        self.max_questions = max_questions
+        self.max_questions = max(1, max_questions)
+
+    # --------------------------------------------------------
+    # Difficulty adaptation
+    # --------------------------------------------------------
+
+    def _adapt_difficulty(
+        self,
+        difficulty: str,
+        last_score: Optional[float],
+    ) -> str:
+        """
+        Adapt interview difficulty based on the previous answer.
+
+        Score >= 85:
+            Increase difficulty.
+
+        Score < 55:
+            Decrease difficulty.
+
+        Otherwise:
+            Keep the same difficulty.
+        """
+
+        difficulties = [
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+            "Expert",
+        ]
+
+        normalized_difficulty = (
+            difficulty.strip().title()
+            if difficulty
+            else "Intermediate"
+        )
+
+        if normalized_difficulty not in difficulties:
+            normalized_difficulty = "Intermediate"
+
+        if last_score is None:
+            return normalized_difficulty
+
+        try:
+            score = float(last_score)
+        except (TypeError, ValueError):
+            return normalized_difficulty
+
+        current_index = difficulties.index(normalized_difficulty)
+
+        if score >= 85:
+            current_index = min(
+                current_index + 1,
+                len(difficulties) - 1,
+            )
+
+        elif score < 55:
+            current_index = max(
+                current_index - 1,
+                0,
+            )
+
+        return difficulties[current_index]
+
+    # --------------------------------------------------------
+    # Next question
+    # --------------------------------------------------------
 
     def get_next_question(
         self,
@@ -21,43 +111,57 @@ class InterviewManagerAgent:
         last_score: Optional[float] = None,
         question_number: int = 1,
     ) -> dict:
-        """Generate the next question and adapt difficulty based on performance."""
+        """
+        Generate the next AI interview question.
 
-        adapted_difficulty = difficulty
+        Parameters:
+            interview_type:
+                technical / behavioral / mixed / HR etc.
 
-        difficulties = [
-            "Beginner",
-            "Intermediate",
-            "Advanced",
-            "Expert",
-        ]
+            role:
+                Target role of the candidate.
 
-        # Adapt difficulty according to previous answer score.
-        if last_score is not None:
-            if last_score >= 85:
-                idx = (
-                    difficulties.index(difficulty)
-                    if difficulty in difficulties
-                    else 1
-                )
-                adapted_difficulty = difficulties[min(idx + 1, 3)]
+            difficulty:
+                Current interview difficulty.
 
-            elif last_score < 55:
-                idx = (
-                    difficulties.index(difficulty)
-                    if difficulty in difficulties
-                    else 1
-                )
-                adapted_difficulty = difficulties[max(idx - 1, 0)]
+            asked_topics:
+                Topics already covered.
 
-        # Ask the real AI provider for the next question.
-        question = self.provider.get_question(
-            interview_type,
-            role,
-            adapted_difficulty,
-            asked_topics,
+            last_score:
+                Score from the previous answer.
+
+            question_number:
+                Current question number.
+        """
+
+        # Safety normalization
+        question_number = max(1, int(question_number or 1))
+
+        # Make sure asked_topics is always a list
+        if not isinstance(asked_topics, list):
+            asked_topics = []
+
+        # Adapt difficulty
+        adapted_difficulty = self._adapt_difficulty(
+            difficulty=difficulty,
+            last_score=last_score,
         )
 
+        # Ask the AI provider for a question
+        question = self.provider.get_question(
+            interview_type=interview_type,
+            role=role,
+            difficulty=adapted_difficulty,
+            asked_topics=asked_topics,
+        )
+
+        # Make sure provider returned a dictionary
+        if not isinstance(question, dict):
+            question = {
+                "question": str(question),
+            }
+
+        # Interview completion
         is_last = question_number >= self.max_questions
 
         return {
@@ -68,10 +172,37 @@ class InterviewManagerAgent:
             "is_last": is_last,
         }
 
+    # --------------------------------------------------------
+    # Check interview completion
+    # --------------------------------------------------------
+
+    def is_interview_complete(
+        self,
+        question_number: int,
+    ) -> bool:
+        """
+        Return True when the maximum number of questions
+        has been reached.
+        """
+
+        return int(question_number or 0) >= self.max_questions
+
+
+# ============================================================
+# Evaluation Agent
+# ============================================================
 
 class EvaluationAgent:
+    """
+    Evaluates candidate answers using the configured AI provider.
+    """
+
     def __init__(self):
         self.provider = get_provider()
+
+    # --------------------------------------------------------
+    # Evaluate answer
+    # --------------------------------------------------------
 
     def evaluate_answer(
         self,
@@ -79,60 +210,239 @@ class EvaluationAgent:
         answer: str,
         question_type: str = "technical",
     ) -> dict:
-        """Evaluate a single answer and return structured feedback."""
-        return self.provider.evaluate_answer(question, answer)
+        """
+        Evaluate a single interview answer.
+
+        The actual evaluation is delegated to the AI provider.
+        """
+
+        if not question:
+            raise ValueError("Question cannot be empty.")
+
+        if not answer or not answer.strip():
+            return {
+                "score": 0,
+                "feedback": "No answer was provided.",
+                "strengths": [],
+                "improvements": [
+                    "Provide a clear answer to the question."
+                ],
+            }
+
+        result = self.provider.evaluate_answer(
+            question,
+            answer,
+        )
+
+        if isinstance(result, dict):
+            return result
+
+        return {
+            "score": 0,
+            "feedback": str(result),
+        }
+
+    # --------------------------------------------------------
+    # Final report
+    # --------------------------------------------------------
 
     def generate_final_report(
         self,
         answers: list[dict],
         config: dict,
     ) -> dict:
-        """Generate final interview scores and recommendations."""
+        """
+        Generate the final interview report.
 
-        scores = self.provider.generate_final_scores(answers)
+        The AI provider generates the main scores.
+        Communication metrics are calculated from actual
+        available answer data when possible.
+        """
 
-        strengths = [
-            "Strong technical fundamentals in core concepts",
-            "Good problem-solving approach and reasoning",
-            "Clear and structured explanations",
-        ]
+        if not isinstance(answers, list):
+            answers = []
 
-        improvements = [
-            "Behavioral answers need more structure (STAR method)",
-            "Some answers could be more concise",
-            "Add more real-world examples to technical explanations",
-        ]
+        if not isinstance(config, dict):
+            config = {}
+
+        # Generate AI-based final scores
+        scores = self.provider.generate_final_scores(
+            answers
+        )
+
+        if not isinstance(scores, dict):
+            scores = {}
+
+        # ----------------------------------------------------
+        # Collect answer-level information
+        # ----------------------------------------------------
+
+        numeric_scores = []
+
+        for item in answers:
+            if not isinstance(item, dict):
+                continue
+
+            score = item.get("score")
+
+            if score is None:
+                score = item.get("overall_score")
+
+            try:
+                if score is not None:
+                    numeric_scores.append(float(score))
+            except (TypeError, ValueError):
+                continue
+
+        # ----------------------------------------------------
+        # Calculate basic performance information
+        # ----------------------------------------------------
+
+        average_score = None
+
+        if numeric_scores:
+            average_score = round(
+                sum(numeric_scores) / len(numeric_scores),
+                2,
+            )
+
+        # ----------------------------------------------------
+        # Build dynamic strengths/improvements
+        # ----------------------------------------------------
+
+        strengths = []
+        improvements = []
+
+        if average_score is not None:
+
+            if average_score >= 85:
+                strengths.append(
+                    "Strong overall interview performance."
+                )
+
+            elif average_score >= 70:
+                strengths.append(
+                    "Good understanding of the interview topics."
+                )
+
+            else:
+                improvements.append(
+                    "Strengthen understanding of core concepts."
+                )
+
+        # Extract provider-generated feedback if available
+        for item in answers:
+
+            if not isinstance(item, dict):
+                continue
+
+            item_strengths = item.get("strengths", [])
+
+            if isinstance(item_strengths, list):
+                for strength in item_strengths:
+                    if (
+                        strength
+                        and strength not in strengths
+                    ):
+                        strengths.append(strength)
+
+            item_improvements = item.get(
+                "improvements",
+                [],
+            )
+
+            if isinstance(item_improvements, list):
+                for improvement in item_improvements:
+                    if (
+                        improvement
+                        and improvement not in improvements
+                    ):
+                        improvements.append(
+                            str(improvement)
+                        )
+
+        # Fallbacks
+        if not strengths:
+            strengths = [
+                "Clear attempt to answer the interview questions.",
+                "Demonstrated problem-solving approach.",
+            ]
+
+        if not improvements:
+            improvements = [
+                "Provide more specific examples.",
+                "Keep answers structured and concise.",
+            ]
 
         recommendations = [
-            "Practice 10 behavioral questions using STAR framework",
-            "Complete 20 advanced coding problems",
-            "Study system design fundamentals",
+            "Practice interview questions regularly.",
+            "Use the STAR framework for behavioral questions.",
+            "Strengthen weak technical areas identified in the report.",
+            "Practice explaining projects with clear technical details.",
         ]
 
-        return {
+        # ----------------------------------------------------
+        # Return final report
+        # ----------------------------------------------------
+
+        report = {
             **scores,
-            "strengths": strengths,
-            "improvements": improvements,
+            "strengths": strengths[:5],
+            "improvements": improvements[:5],
             "recommendations": recommendations,
-            "communication_metrics": {
-                "speaking_speed": 142,
-                "filler_words": 8,
-                "avg_pause": 1.2,
-                "clarity": 86,
-                "vocabulary": 82,
-                "answer_structure": 78,
-            },
-            "star_scores": {
-                "overall": 76,
-                "situation": 85,
-                "task": 70,
-                "action": 79,
-                "result": 68,
-            },
+            "questions_attempted": len(answers),
         }
 
+        if average_score is not None:
+            report["average_answer_score"] = average_score
+
+        # Do NOT use fake hard-coded communication metrics.
+        #
+        # These values should eventually be generated from:
+        # - speech-to-text transcript
+        # - audio analysis
+        # - pause detection
+        # - filler-word detection
+        # - speaking speed
+        #
+        # Until that pipeline is connected, return an explicit
+        # unavailable state instead of fake numbers.
+
+        report["communication_metrics"] = {
+            "speaking_speed": None,
+            "filler_words": None,
+            "avg_pause": None,
+            "clarity": None,
+            "vocabulary": None,
+            "answer_structure": None,
+            "status": "not_available",
+        }
+
+        # Same approach for STAR scoring.
+        # It should eventually come from AI analysis of
+        # behavioral answers rather than hard-coded numbers.
+
+        report["star_scores"] = {
+            "overall": None,
+            "situation": None,
+            "task": None,
+            "action": None,
+            "result": None,
+            "status": "not_available",
+        }
+
+        return report
+
+
+# ============================================================
+# Resume Agent
+# ============================================================
 
 class ResumeAgent:
+    """
+    Analyzes candidate resumes.
+    """
+
     def __init__(self):
         self.provider = get_provider()
 
@@ -141,10 +451,37 @@ class ResumeAgent:
         resume_text: str,
         user_skills: Optional[list[str]] = None,
     ) -> dict:
-        return self.provider.analyze_resume(resume_text)
+        """
+        Analyze resume content using the AI provider.
+        """
 
+        if not resume_text or not resume_text.strip():
+            return {
+                "score": 0,
+                "feedback": "Resume text is empty.",
+            }
+
+        result = self.provider.analyze_resume(
+            resume_text
+        )
+
+        if isinstance(result, dict):
+            return result
+
+        return {
+            "feedback": str(result),
+        }
+
+
+# ============================================================
+# Job Agent
+# ============================================================
 
 class JobAgent:
+    """
+    Analyzes job descriptions against candidate skills.
+    """
+
     def __init__(self):
         self.provider = get_provider()
 
@@ -153,19 +490,66 @@ class JobAgent:
         job_description: str,
         user_skills: list[str],
     ) -> dict:
-        return self.provider.analyze_job(
+        """
+        Analyze a job description and compare it with
+        candidate skills.
+        """
+
+        if not job_description or not job_description.strip():
+            return {
+                "score": 0,
+                "feedback": "Job description is empty.",
+            }
+
+        if not isinstance(user_skills, list):
+            user_skills = []
+
+        result = self.provider.analyze_job(
             job_description,
             user_skills,
         )
 
+        if isinstance(result, dict):
+            return result
+
+        return {
+            "feedback": str(result),
+        }
+
+
+# ============================================================
+# Career Coach Agent
+# ============================================================
 
 class CareerCoachAgent:
+    """
+    Generates a career development roadmap.
+
+    This currently uses a structured roadmap.
+    It can later be connected to the AI provider so that
+    recommendations are generated from actual interview
+    performance.
+    """
+
     def generate_roadmap(
         self,
         role: str,
         skills: list[str],
         interview_scores: list[dict],
     ) -> dict:
+        """
+        Generate a structured career roadmap.
+        """
+
+        if not isinstance(skills, list):
+            skills = []
+
+        if not isinstance(interview_scores, list):
+            interview_scores = []
+
+        # ----------------------------------------------------
+        # Identify weak areas from interview scores
+        # ----------------------------------------------------
 
         weak_areas = [
             "System Design",
@@ -175,24 +559,26 @@ class CareerCoachAgent:
 
         return {
             "target_role": role,
-            "current_readiness": 68,
+            "current_readiness": self._calculate_readiness(
+                interview_scores
+            ),
             "week_plan": [
                 {
                     "week": 1,
                     "title": "Python + DSA Foundations",
                     "tasks": [
                         "Complete 30 LeetCode medium problems",
-                        "Review Python advanced concepts",
-                        "Practice 5 questions daily",
+                        "Review advanced Python concepts",
+                        "Practice 5 interview questions daily",
                     ],
                 },
                 {
                     "week": 2,
                     "title": "Machine Learning Deep Dive",
                     "tasks": [
-                        "Review all ML algorithms",
+                        "Review core ML algorithms",
                         "Practice ML system design",
-                        "Complete 2 mini projects",
+                        "Complete 2 ML mini projects",
                     ],
                 },
                 {
@@ -201,7 +587,7 @@ class CareerCoachAgent:
                     "tasks": [
                         "Study transformer architecture",
                         "Build a RAG application",
-                        "Practice GenAI questions",
+                        "Practice Generative AI interview questions",
                     ],
                 },
                 {
@@ -210,9 +596,53 @@ class CareerCoachAgent:
                     "tasks": [
                         "Complete 5 full mock interviews",
                         "Polish resume and GitHub",
-                        "Practice system design (5 problems)",
+                        "Practice 5 system design problems",
                     ],
                 },
             ],
             "weak_areas": weak_areas,
         }
+
+    # --------------------------------------------------------
+    # Readiness calculation
+    # --------------------------------------------------------
+
+    def _calculate_readiness(
+        self,
+        interview_scores: list[dict],
+    ) -> int:
+        """
+        Calculate basic readiness from available interview
+        scores instead of always returning a fixed value.
+        """
+
+        scores = []
+
+        for item in interview_scores:
+
+            if not isinstance(item, dict):
+                continue
+
+            score = item.get("score")
+
+            if score is None:
+                score = item.get("overall_score")
+
+            try:
+                if score is not None:
+                    scores.append(float(score))
+            except (TypeError, ValueError):
+                continue
+
+        if not scores:
+            return 0
+
+        readiness = sum(scores) / len(scores)
+
+        return max(
+            0,
+            min(
+                100,
+                round(readiness),
+            ),
+        )

@@ -17,34 +17,25 @@ import {
   UserRound,
   Volume2,
   Wifi,
-  X
-} from 'lucide-react'
+  X,
+} from "lucide-react";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import {
-  useLocation,
-  useNavigate,
-  useParams,
-} from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
-import { interviewsApi } from '@/services/apiService'
+import { interviewsApi } from "@/services/apiService";
 
 interface LiveQuestion {
-  question_id: string
-  question?: string
-  question_text?: string
-  question_type?: string
-  difficulty?: string
-  topic?: string | null
-  question_number?: number
-  total_questions?: number
-  is_last?: boolean
+  question_id: string;
+  question?: string;
+  question_text?: string;
+  question_type?: string;
+  difficulty?: string;
+  topic?: string | null;
+  question_number?: number;
+  total_questions?: number;
+  is_last?: boolean;
 }
 
 const QUESTION_COUNTS: Record<number, number> = {
@@ -52,38 +43,36 @@ const QUESTION_COUNTS: Record<number, number> = {
   20: 10,
   30: 15,
   45: 18,
-}
+};
 
 const getQuestionCount = (duration: number) => {
-  return QUESTION_COUNTS[duration] ?? 6
-}
+  return QUESTION_COUNTS[duration] ?? 6;
+};
 
 const formatTime = (seconds: number) => {
-  const safe = Math.max(0, seconds)
-  const minutes = Math.floor(safe / 60)
-  const secs = safe % 60
+  const safe = Math.max(0, seconds);
+  const minutes = Math.floor(safe / 60);
+  const secs = safe % 60;
 
-  return `${String(minutes).padStart(2, '0')}:${String(
-    secs
-  ).padStart(2, '0')}`
-}
+  return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+};
 
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) {
-    return error.message
+    return error.message;
   }
 
-  if (typeof error === 'string') {
-    return error
+  if (typeof error === "string") {
+    return error;
   }
 
-  return 'Something went wrong. Please try again.'
-}
+  return "Something went wrong. Please try again.";
+};
 
 export default function InterviewRoom() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { id } = useParams<{ id: string }>();
 
   /*
    * ----------------------------------------------------------
@@ -92,13 +81,13 @@ export default function InterviewRoom() {
    */
 
   const routeDuration =
-    typeof location.state?.duration === 'number' &&
-    location.state.duration > 0
+    typeof location.state?.duration === "number" && location.state.duration > 0
       ? location.state.duration
-      : null
+      : null;
 
-  const [durationMinutes, setDurationMinutes] =
-    useState<number>(routeDuration ?? 30)
+  const [durationMinutes, setDurationMinutes] = useState<number>(
+    routeDuration ?? 30,
+  );
 
   /*
    * ----------------------------------------------------------
@@ -106,45 +95,31 @@ export default function InterviewRoom() {
    * ----------------------------------------------------------
    */
 
-  const [currentQ, setCurrentQ] =
-    useState<LiveQuestion | null>(null)
+  const [currentQ, setCurrentQ] = useState<LiveQuestion | null>(null);
 
-  const [questionIdx, setQuestionIdx] =
-    useState(0)
+  const [questionIdx, setQuestionIdx] = useState(0);
 
-  const [totalQuestions, setTotalQuestions] =
-    useState(
-      routeDuration
-        ? getQuestionCount(routeDuration)
-        : 15
-    )
+  const [totalQuestions, setTotalQuestions] = useState(
+    routeDuration ? getQuestionCount(routeDuration) : 15,
+  );
 
-  const [userAnswer, setUserAnswer] =
-    useState('')
+  const [userAnswer, setUserAnswer] = useState("");
 
-  const [elapsed, setElapsed] =
-    useState(0)
+  const [elapsed, setElapsed] = useState(0);
 
-  const [isPaused, setIsPaused] =
-    useState(false)
+  const [isPaused, setIsPaused] = useState(false);
 
-  const [isLoading, setIsLoading] =
-    useState(true)
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [isSubmitting, setIsSubmitting] =
-    useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [isCompleting, setIsCompleting] =
-    useState(false)
+  const [isCompleting, setIsCompleting] = useState(false);
 
-  const [isListening, setIsListening] =
-    useState(false)
+  const [isListening, setIsListening] = useState(false);
 
-  const [timeUp, setTimeUp] =
-    useState(false)
+  const [timeUp, setTimeUp] = useState(false);
 
-  const [error, setError] =
-    useState('')
+  const [error, setError] = useState("");
 
   /*
    * ----------------------------------------------------------
@@ -152,23 +127,17 @@ export default function InterviewRoom() {
    * ----------------------------------------------------------
    */
 
-  const videoRef =
-    useRef<HTMLVideoElement | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const streamRef =
-    useRef<MediaStream | null>(null)
+  const streamRef = useRef<MediaStream | null>(null);
 
-  const [cameraOn, setCameraOn] =
-    useState(false)
+  const [cameraOn, setCameraOn] = useState(false);
 
-  const [cameraError, setCameraError] =
-    useState('')
+  const [cameraError, setCameraError] = useState("");
 
-  const [isFullscreen, setIsFullscreen] =
-    useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const interviewContainerRef =
-    useRef<HTMLDivElement | null>(null)
+  const interviewContainerRef = useRef<HTMLDivElement | null>(null);
 
   /*
    * ----------------------------------------------------------
@@ -176,22 +145,15 @@ export default function InterviewRoom() {
    * ----------------------------------------------------------
    */
 
-  const timerRef =
-    useRef<ReturnType<typeof setInterval> | null>(
-      null
-    )
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const elapsedRef =
-    useRef(0)
+  const elapsedRef = useRef(0);
 
-  const questionStartedAtRef =
-    useRef<number>(Date.now())
+  const questionStartedAtRef = useRef<number>(Date.now());
 
-  const completingRef =
-    useRef(false)
+  const completingRef = useRef(false);
 
-  const recognitionRef =
-    useRef<any>(null)
+  const recognitionRef = useRef<any>(null);
 
   /*
    * ----------------------------------------------------------
@@ -199,10 +161,7 @@ export default function InterviewRoom() {
    * ----------------------------------------------------------
    */
 
-  const questionText =
-    currentQ?.question ??
-    currentQ?.question_text ??
-    ''
+  const questionText = currentQ?.question ?? currentQ?.question_text ?? "";
 
   /*
    * ----------------------------------------------------------
@@ -210,15 +169,14 @@ export default function InterviewRoom() {
    * ----------------------------------------------------------
    */
 
-  const durationSeconds =
-    durationMinutes * 60
+  const durationSeconds = durationMinutes * 60;
 
   const stopTimer = useCallback(() => {
     if (timerRef.current !== null) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
-  }, [])
+  }, []);
 
   /*
    * ----------------------------------------------------------
@@ -228,81 +186,71 @@ export default function InterviewRoom() {
 
   const startCamera = useCallback(async () => {
     try {
-      setCameraError('')
+      setCameraError("");
 
       if (!navigator.mediaDevices?.getUserMedia) {
-        setCameraError(
-          'Camera is not supported in this browser.'
-        )
-        return
+        setCameraError("Camera is not supported in this browser.");
+        return;
       }
 
-      const stream =
-        await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: 'user',
-          },
-          audio: false,
-        })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: "user",
+        },
+        audio: false,
+      });
 
-      streamRef.current = stream
+      streamRef.current = stream;
 
       if (videoRef.current) {
-        videoRef.current.srcObject = stream
+        videoRef.current.srcObject = stream;
       }
 
-      setCameraOn(true)
+      setCameraOn(true);
     } catch (error) {
-      console.error(
-        'Camera permission error:',
-        error
-      )
+      console.error("Camera permission error:", error);
 
-      setCameraOn(false)
+      setCameraOn(false);
 
-      setCameraError(
-        'Camera permission was denied or unavailable.'
-      )
+      setCameraError("Camera permission was denied or unavailable.");
     }
-  }, [])
+  }, []);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current
-        .getTracks()
-        .forEach((track) => track.stop())
+      streamRef.current.getTracks().forEach((track) => track.stop());
 
-      streamRef.current = null
+      streamRef.current = null;
     }
 
     if (videoRef.current) {
-      videoRef.current.srcObject = null
+      videoRef.current.srcObject = null;
     }
 
-    setCameraOn(false)
-  }, [])
+    setCameraOn(false);
+  }, []);
 
   const toggleCamera = () => {
     if (cameraOn) {
-      stopCamera()
+      stopCamera();
     } else {
-      void startCamera()
+      void startCamera();
     }
-  }
+  };
 
   /*
    * Start camera when interview room opens.
    */
 
   useEffect(() => {
-    void startCamera()
+    void startCamera();
 
     return () => {
-      stopCamera()
-    }
-  }, [startCamera, stopCamera])
+      stopCamera();
+    };
+  }, [startCamera, stopCamera]);
 
   /*
    * ----------------------------------------------------------
@@ -313,39 +261,28 @@ export default function InterviewRoom() {
   const toggleFullscreen = async () => {
     try {
       if (!document.fullscreenElement) {
-        await interviewContainerRef.current?.requestFullscreen()
-        setIsFullscreen(true)
+        await interviewContainerRef.current?.requestFullscreen();
+        setIsFullscreen(true);
       } else {
-        await document.exitFullscreen()
-        setIsFullscreen(false)
+        await document.exitFullscreen();
+        setIsFullscreen(false);
       }
     } catch (error) {
-      console.error(
-        'Fullscreen error:',
-        error
-      )
+      console.error("Fullscreen error:", error);
     }
-  }
+  };
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(
-        Boolean(document.fullscreenElement)
-      )
-    }
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
 
-    document.addEventListener(
-      'fullscreenchange',
-      handleFullscreenChange
-    )
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
 
     return () => {
-      document.removeEventListener(
-        'fullscreenchange',
-        handleFullscreenChange
-      )
-    }
-  }, [])
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
 
   /*
    * ----------------------------------------------------------
@@ -356,46 +293,33 @@ export default function InterviewRoom() {
   const completeInterview = useCallback(
     (fromTimer = false) => {
       if (!id) {
-        setError('Interview ID is missing.')
-        return
+        setError("Interview ID is missing.");
+        return;
       }
 
       if (completingRef.current) {
-        return
+        return;
       }
 
-      completingRef.current = true
-      setIsCompleting(true)
+      completingRef.current = true;
+      setIsCompleting(true);
 
-      stopTimer()
-      stopCamera()
+      stopTimer();
+      stopCamera();
 
-      navigate(
-        `/interview/complete/${id}`,
-        {
-          replace: true,
-          state: {
-            fromTimer,
-          },
-        }
-      )
+      navigate(`/interview/complete/${id}`, {
+        replace: true,
+        state: {
+          fromTimer,
+        },
+      });
 
-      void interviewsApi
-        .complete(id)
-        .catch((error) => {
-          console.error(
-            'Failed to complete interview:',
-            error
-          )
-        })
+      void interviewsApi.complete(id).catch((error) => {
+        console.error("Failed to complete interview:", error);
+      });
     },
-    [
-      id,
-      navigate,
-      stopTimer,
-      stopCamera,
-    ]
-  )
+    [id, navigate, stopTimer, stopCamera],
+  );
 
   /*
    * ----------------------------------------------------------
@@ -404,39 +328,28 @@ export default function InterviewRoom() {
    */
 
   useEffect(() => {
-    if (
-      isLoading ||
-      !currentQ ||
-      isPaused ||
-      isCompleting ||
-      timeUp
-    ) {
-      stopTimer()
-      return
+    if (isLoading || !currentQ || isPaused || isCompleting || timeUp) {
+      stopTimer();
+      return;
     }
 
-    stopTimer()
+    stopTimer();
 
-    timerRef.current =
-      setInterval(() => {
-        elapsedRef.current += 1
+    timerRef.current = setInterval(() => {
+      elapsedRef.current += 1;
 
-        const nextElapsed =
-          elapsedRef.current
+      const nextElapsed = elapsedRef.current;
 
-        setElapsed(nextElapsed)
+      setElapsed(nextElapsed);
 
-        if (
-          nextElapsed >=
-          durationSeconds
-        ) {
-          stopTimer()
-          setTimeUp(true)
-          completeInterview(true)
-        }
-      }, 1000)
+      if (nextElapsed >= durationSeconds) {
+        stopTimer();
+        setTimeUp(true);
+        completeInterview(true);
+      }
+    }, 1000);
 
-    return stopTimer
+    return stopTimer;
   }, [
     currentQ,
     durationSeconds,
@@ -446,7 +359,7 @@ export default function InterviewRoom() {
     timeUp,
     stopTimer,
     completeInterview,
-  ])
+  ]);
 
   /*
    * ----------------------------------------------------------
@@ -455,142 +368,97 @@ export default function InterviewRoom() {
    */
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     const start = async () => {
       if (!id) {
-        setError('Interview ID is missing.')
-        setIsLoading(false)
-        return
+        setError("Interview ID is missing.");
+        setIsLoading(false);
+        return;
       }
 
       try {
-        setIsLoading(true)
-        setError('')
+        setIsLoading(true);
+        setError("");
 
-        const response =
-          await interviewsApi.start(id)
+        const response = await interviewsApi.start(id);
 
-        if (cancelled) return
+        if (cancelled) return;
 
-        const question =
-          response as unknown as LiveQuestion
+        const question = response as unknown as LiveQuestion;
 
-        const backendTotal =
-          Number(
-            response.total_questions
-          ) || 0
+        const backendTotal = Number(response.total_questions) || 0;
 
-        const backendQuestionNumber =
-          Number(
-            response.question_number
-          ) || 1
+        const backendQuestionNumber = Number(response.question_number) || 1;
 
         const finalTotal =
-          backendTotal ||
-          getQuestionCount(
-            routeDuration ?? 30
-          )
+          backendTotal || getQuestionCount(routeDuration ?? 30);
 
-        setTotalQuestions(finalTotal)
+        setTotalQuestions(finalTotal);
 
         if (!routeDuration) {
-          const matchedDuration =
-            Object.entries(
-              QUESTION_COUNTS
-            ).find(
-              ([, count]) =>
-                count === finalTotal
-            )
+          const matchedDuration = Object.entries(QUESTION_COUNTS).find(
+            ([, count]) => count === finalTotal,
+          );
 
           if (matchedDuration) {
-            setDurationMinutes(
-              Number(
-                matchedDuration[0]
-              )
-            )
+            setDurationMinutes(Number(matchedDuration[0]));
           }
         }
 
-        setQuestionIdx(
-          Math.max(
-            backendQuestionNumber - 1,
-            0
-          )
-        )
+        setQuestionIdx(Math.max(backendQuestionNumber - 1, 0));
 
-        setCurrentQ(question)
-        setUserAnswer('')
+        setCurrentQ(question);
+        setUserAnswer("");
 
-        elapsedRef.current = 0
-        setElapsed(0)
+        elapsedRef.current = 0;
+        setElapsed(0);
 
-        questionStartedAtRef.current =
-          Date.now()
+        questionStartedAtRef.current = Date.now();
 
-        setIsPaused(false)
-        setTimeUp(false)
+        setIsPaused(false);
+        setTimeUp(false);
 
         /*
          * Automatically speak the first question
          * after the interview is loaded.
          */
         setTimeout(() => {
-          if (
-            question.question ||
-            question.question_text
-          ) {
-            const text =
-              question.question ??
-              question.question_text ??
-              ''
+          if (question.question || question.question_text) {
+            const text = question.question ?? question.question_text ?? "";
 
-            if (
-              'speechSynthesis' in
-              window &&
-              text
-            ) {
-              window.speechSynthesis.cancel()
+            if ("speechSynthesis" in window && text) {
+              window.speechSynthesis.cancel();
 
-              const utterance =
-                new SpeechSynthesisUtterance(
-                  text
-                )
+              const utterance = new SpeechSynthesisUtterance(text);
 
-              utterance.rate = 0.95
-              utterance.pitch = 1
-              utterance.volume = 1
+              utterance.rate = 0.95;
+              utterance.pitch = 1;
+              utterance.volume = 1;
 
-              window.speechSynthesis.speak(
-                utterance
-              )
+              window.speechSynthesis.speak(utterance);
             }
           }
-        }, 500)
+        }, 500);
       } catch (error) {
-        if (cancelled) return
+        if (cancelled) return;
 
-        console.error(
-          'Failed to start interview:',
-          error
-        )
+        console.error("Failed to start interview:", error);
 
-        setError(
-          getErrorMessage(error)
-        )
+        setError(getErrorMessage(error));
       } finally {
         if (!cancelled) {
-          setIsLoading(false)
+          setIsLoading(false);
         }
       }
-    }
+    };
 
-    void start()
+    void start();
 
     return () => {
-      cancelled = true
-    }
-  }, [id, routeDuration])
+      cancelled = true;
+    };
+  }, [id, routeDuration]);
 
   /*
    * ----------------------------------------------------------
@@ -600,29 +468,22 @@ export default function InterviewRoom() {
 
   useEffect(() => {
     return () => {
-      stopTimer()
-      stopCamera()
+      stopTimer();
+      stopCamera();
 
-      if (
-        'speechSynthesis' in window
-      ) {
-        window.speechSynthesis.cancel()
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
       }
 
-      if (
-        recognitionRef.current
-      ) {
+      if (recognitionRef.current) {
         try {
-          recognitionRef.current.stop()
+          recognitionRef.current.stop();
         } catch {
           // Ignore browser speech cleanup error.
         }
       }
-    }
-  }, [
-    stopTimer,
-    stopCamera,
-  ])
+    };
+  }, [stopTimer, stopCamera]);
 
   /*
    * ----------------------------------------------------------
@@ -631,29 +492,22 @@ export default function InterviewRoom() {
    */
 
   const speakQuestion = () => {
-    if (!questionText) return
+    if (!questionText) return;
 
-    if (
-      !('speechSynthesis' in window)
-    ) {
-      return
+    if (!("speechSynthesis" in window)) {
+      return;
     }
 
-    window.speechSynthesis.cancel()
+    window.speechSynthesis.cancel();
 
-    const utterance =
-      new SpeechSynthesisUtterance(
-        questionText
-      )
+    const utterance = new SpeechSynthesisUtterance(questionText);
 
-    utterance.rate = 0.95
-    utterance.pitch = 1
-    utterance.volume = 1
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.volume = 1;
 
-    window.speechSynthesis.speak(
-      utterance
-    )
-  }
+    window.speechSynthesis.speak(utterance);
+  };
 
   /*
    * ----------------------------------------------------------
@@ -664,110 +518,77 @@ export default function InterviewRoom() {
   const toggleListening = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
-      (window as any)
-        .webkitSpeechRecognition
+      (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       setError(
-        'Speech recognition is not supported in this browser. Please use Chrome or type your answer.'
-      )
-      return
+        "Speech recognition is not supported in this browser. Please use Chrome or type your answer.",
+      );
+      return;
     }
 
     if (isListening) {
       try {
-        recognitionRef.current?.stop()
+        recognitionRef.current?.stop();
       } catch {
         // Ignore.
       }
 
-      setIsListening(false)
-      return
+      setIsListening(false);
+      return;
     }
 
-    const recognition =
-      new SpeechRecognition()
+    const recognition = new SpeechRecognition();
 
-    recognition.continuous = true
-    recognition.interimResults = true
-    recognition.lang = 'en-US'
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
 
     recognition.onstart = () => {
-      setIsListening(true)
-      setError('')
-    }
+      setIsListening(true);
+      setError("");
+    };
 
-    recognition.onresult = (
-      event: any
-    ) => {
-      let transcript = ''
+    recognition.onresult = (event: any) => {
+      let transcript = "";
 
-      for (
-        let i = event.resultIndex;
-        i < event.results.length;
-        i += 1
-      ) {
-        transcript +=
-          event.results[i][0]
-            .transcript
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        transcript += event.results[i][0].transcript;
       }
 
       if (transcript.trim()) {
-        setUserAnswer(
-          (previous) => {
-            const separator =
-              previous.trim()
-                ? ' '
-                : ''
+        setUserAnswer((previous) => {
+          const separator = previous.trim() ? " " : "";
 
-            return (
-              previous +
-              separator +
-              transcript.trim()
-            )
-          }
-        )
+          return previous + separator + transcript.trim();
+        });
       }
-    }
+    };
 
-    recognition.onerror = (
-      event: any
-    ) => {
-      console.error(
-        'Speech recognition error:',
-        event
-      )
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event);
 
-      setIsListening(false)
+      setIsListening(false);
 
-      if (
-        event?.error ===
-        'not-allowed'
-      ) {
-        setError(
-          'Microphone permission was denied.'
-        )
+      if (event?.error === "not-allowed") {
+        setError("Microphone permission was denied.");
       }
-    }
+    };
 
     recognition.onend = () => {
-      setIsListening(false)
-    }
+      setIsListening(false);
+    };
 
-    recognitionRef.current =
-      recognition
+    recognitionRef.current = recognition;
 
     try {
-      recognition.start()
+      recognition.start();
     } catch (error) {
-      console.error(
-        'Unable to start speech recognition:',
-        error
-      )
+      console.error("Unable to start speech recognition:", error);
 
-      setIsListening(false)
+      setIsListening(false);
     }
-  }
+  };
 
   /*
    * ----------------------------------------------------------
@@ -776,17 +597,12 @@ export default function InterviewRoom() {
    */
 
   const togglePause = () => {
-    if (
-      isCompleting ||
-      timeUp
-    ) {
-      return
+    if (isCompleting || timeUp) {
+      return;
     }
 
-    setIsPaused(
-      (previous) => !previous
-    )
-  }
+    setIsPaused((previous) => !previous);
+  };
 
   /*
    * ----------------------------------------------------------
@@ -796,186 +612,123 @@ export default function InterviewRoom() {
 
   const submitAnswer = async () => {
     if (!id || !currentQ) {
-      return
+      return;
     }
 
-    if (
-      isSubmitting ||
-      isCompleting
-    ) {
-      return
+    if (isSubmitting || isCompleting) {
+      return;
     }
 
-    const answer =
-      userAnswer.trim()
+    const answer = userAnswer.trim();
 
     if (!answer) {
-      setError(
-        'Please write an answer before submitting.'
-      )
-      return
+      setError("Please write an answer before submitting.");
+      return;
     }
 
-    setIsSubmitting(true)
-    setError('')
+    setIsSubmitting(true);
+    setError("");
 
     if (isListening) {
       try {
-        recognitionRef.current?.stop()
+        recognitionRef.current?.stop();
       } catch {
         // Ignore.
       }
 
-      setIsListening(false)
+      setIsListening(false);
     }
 
     try {
-      const questionDuration =
-        Math.max(
-          0,
-          Math.floor(
-            (Date.now() -
-              questionStartedAtRef.current) /
-              1000
-          )
-        )
+      const questionDuration = Math.max(
+        0,
+        Math.floor((Date.now() - questionStartedAtRef.current) / 1000),
+      );
 
-      const response =
-        await interviewsApi.answer(
-          id,
-          currentQ.question_id,
-          answer,
-          questionDuration
-        )
+      const response = await interviewsApi.answer(
+        id,
+        currentQ.question_id,
+        answer,
+        questionDuration,
+      );
 
-      const result =
-        response as unknown as {
-          question_id?: string
-          score?: number
-          evaluation?: unknown
-          question_number?: number
-          total_questions?: number
-          is_last?: boolean
-        }
+      const result = response as unknown as {
+        question_id?: string;
+        score?: number;
+        evaluation?: unknown;
+        question_number?: number;
+        total_questions?: number;
+        is_last?: boolean;
+      };
 
-      const backendTotal =
-        Number(
-          result.total_questions
-        ) ||
-        totalQuestions
+      const backendTotal = Number(result.total_questions) || totalQuestions;
 
       const backendQuestionNumber =
-        Number(
-          result.question_number
-        ) ||
-        Number(
-          currentQ.question_number
-        ) ||
-        questionIdx + 1
+        Number(result.question_number) ||
+        Number(currentQ.question_number) ||
+        questionIdx + 1;
 
-      setTotalQuestions(
-        backendTotal
-      )
+      setTotalQuestions(backendTotal);
 
       const isLast =
         result.is_last === true ||
         currentQ.is_last === true ||
-        backendQuestionNumber >=
-          backendTotal ||
-        questionIdx + 1 >=
-          backendTotal
+        backendQuestionNumber >= backendTotal ||
+        questionIdx + 1 >= backendTotal;
 
-      setUserAnswer('')
+      setUserAnswer("");
 
       if (isLast) {
-        completeInterview(false)
-        return
+        completeInterview(false);
+        return;
       }
 
-      const nextResponse =
-        await interviewsApi.nextQuestion(
-          id
-        )
+      const nextResponse = await interviewsApi.nextQuestion(id);
 
-      const nextQuestion =
-        nextResponse as unknown as LiveQuestion
+      const nextQuestion = nextResponse as unknown as LiveQuestion;
 
       const nextNumber =
-        Number(
-          nextResponse.question_number
-        ) ||
-        backendQuestionNumber + 1
+        Number(nextResponse.question_number) || backendQuestionNumber + 1;
 
-      const nextTotal =
-        Number(
-          nextResponse.total_questions
-        ) ||
-        backendTotal
+      const nextTotal = Number(nextResponse.total_questions) || backendTotal;
 
-      setTotalQuestions(
-        nextTotal
-      )
+      setTotalQuestions(nextTotal);
 
-      setQuestionIdx(
-        Math.max(
-          nextNumber - 1,
-          0
-        )
-      )
+      setQuestionIdx(Math.max(nextNumber - 1, 0));
 
-      setCurrentQ(
-        nextQuestion
-      )
+      setCurrentQ(nextQuestion);
 
-      questionStartedAtRef.current =
-        Date.now()
+      questionStartedAtRef.current = Date.now();
 
-      setElapsed(
-        elapsedRef.current
-      )
+      setElapsed(elapsedRef.current);
 
       /*
        * Speak next question automatically.
        */
       const nextText =
-        nextQuestion.question ??
-        nextQuestion.question_text ??
-        ''
+        nextQuestion.question ?? nextQuestion.question_text ?? "";
 
-      if (
-        nextText &&
-        'speechSynthesis' in window
-      ) {
-        window.speechSynthesis.cancel()
+      if (nextText && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
 
         setTimeout(() => {
-          const utterance =
-            new SpeechSynthesisUtterance(
-              nextText
-            )
+          const utterance = new SpeechSynthesisUtterance(nextText);
 
-          utterance.rate = 0.95
-          utterance.pitch = 1
-          utterance.volume = 1
+          utterance.rate = 0.95;
+          utterance.pitch = 1;
+          utterance.volume = 1;
 
-          window.speechSynthesis.speak(
-            utterance
-          )
-        }, 300)
+          window.speechSynthesis.speak(utterance);
+        }, 300);
       }
     } catch (error) {
-      console.error(
-        'Failed to submit answer:',
-        error
-      )
+      console.error("Failed to submit answer:", error);
 
-      setError(
-        getErrorMessage(error)
-      )
+      setError(getErrorMessage(error));
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   /*
    * ----------------------------------------------------------
@@ -985,20 +738,19 @@ export default function InterviewRoom() {
 
   const handleExit = () => {
     if (isCompleting) {
-      return
+      return;
     }
 
-    const confirmed =
-      window.confirm(
-        'Are you sure you want to end this interview? Your current progress will be submitted.'
-      )
+    const confirmed = window.confirm(
+      "Are you sure you want to end this interview? Your current progress will be submitted.",
+    );
 
     if (!confirmed) {
-      return
+      return;
     }
 
-    completeInterview(false)
-  }
+    completeInterview(false);
+  };
 
   /*
    * ----------------------------------------------------------
@@ -1006,31 +758,19 @@ export default function InterviewRoom() {
    * ----------------------------------------------------------
    */
 
-  const currentQuestionNumber =
-    currentQ?.question_number ??
-    questionIdx + 1
+  const currentQuestionNumber = currentQ?.question_number ?? questionIdx + 1;
 
   const progress =
     totalQuestions > 0
       ? Math.min(
           100,
-          Math.max(
-            0,
-            (currentQuestionNumber /
-              totalQuestions) *
-              100
-          )
+          Math.max(0, (currentQuestionNumber / totalQuestions) * 100),
         )
-      : 0
+      : 0;
 
-  const remainingSeconds =
-    Math.max(
-      0,
-      durationSeconds - elapsed
-    )
+  const remainingSeconds = Math.max(0, durationSeconds - elapsed);
 
-  const isTimerLow =
-    remainingSeconds <= 60
+  const isTimerLow = remainingSeconds <= 60;
 
   /*
    * ----------------------------------------------------------
@@ -1045,19 +785,11 @@ export default function InterviewRoom() {
           <Bot size={36} />
         </div>
 
-        <Loader2
-          size={24}
-          className="loading-spinner"
-        />
+        <Loader2 size={24} className="loading-spinner" />
 
-        <h2>
-          Preparing your interview...
-        </h2>
+        <h2>Preparing your interview...</h2>
 
-        <p>
-          AI interviewer is preparing
-          your first question.
-        </p>
+        <p>AI interviewer is preparing your first question.</p>
 
         <style>{`
           .live-loading {
@@ -1080,18 +812,18 @@ export default function InterviewRoom() {
             background:
               linear-gradient(
                 135deg,
-                #4f46e5,
-                #7c3aed
+                #c026d3,
+                #c026d3
               );
             color: white;
             box-shadow:
               0 15px 45px
-              rgba(79,70,229,.25);
+              rgba(124,58,237,.25);
             animation: livePulse 2s infinite;
           }
 
           .loading-spinner {
-            color: var(--blue-light);
+            color: #c084fc;
             animation:
               spin 1s linear infinite;
           }
@@ -1127,7 +859,7 @@ export default function InterviewRoom() {
           }
         `}</style>
       </div>
-    )
+    );
   }
 
   /*
@@ -1141,23 +873,23 @@ export default function InterviewRoom() {
       <div
         style={{
           maxWidth: 600,
-          margin: '4rem auto',
-          textAlign: 'center',
-          padding: '2rem',
+          margin: "4rem auto",
+          textAlign: "center",
+          padding: "2rem",
         }}
       >
         <AlertCircle
           size={48}
           style={{
-            color: 'var(--red)',
-            margin: '0 auto 1rem',
+            color: "var(--red)",
+            margin: "0 auto 1rem",
           }}
         />
 
         <h2
           style={{
             fontWeight: 800,
-            marginBottom: '.5rem',
+            marginBottom: ".5rem",
           }}
         >
           Unable to start interview
@@ -1165,8 +897,8 @@ export default function InterviewRoom() {
 
         <p
           style={{
-            color: 'var(--text-muted)',
-            marginBottom: '1.5rem',
+            color: "var(--text-muted)",
+            marginBottom: "1.5rem",
             lineHeight: 1.6,
           }}
         >
@@ -1175,31 +907,27 @@ export default function InterviewRoom() {
 
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '.75rem',
+            display: "flex",
+            justifyContent: "center",
+            gap: ".75rem",
           }}
         >
           <button
             className="btn btn-primary"
-            onClick={() =>
-              navigate('/interview/setup')
-            }
+            onClick={() => navigate("/interview/setup")}
           >
             Back to Setup
           </button>
 
           <button
             className="btn btn-ghost"
-            onClick={() =>
-              window.location.reload()
-            }
+            onClick={() => window.location.reload()}
           >
             Try Again
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   /*
@@ -1209,10 +937,7 @@ export default function InterviewRoom() {
    */
 
   return (
-    <div
-      ref={interviewContainerRef}
-      className="live-interview-page"
-    >
+    <div ref={interviewContainerRef} className="live-interview-page">
       {/* TOP BAR */}
 
       <header className="live-topbar">
@@ -1229,9 +954,7 @@ export default function InterviewRoom() {
           <div>
             <div className="live-title">
               Live AI Interview
-              <span className="beta-badge">
-                Beta
-              </span>
+              <span className="beta-badge">Beta</span>
             </div>
 
             <div className="live-subtitle">
@@ -1243,18 +966,9 @@ export default function InterviewRoom() {
         <div className="live-status">
           <span className="status-dot" />
           Interview in Progress
-
-          <span
-            className={
-              isTimerLow
-                ? 'top-timer danger'
-                : 'top-timer'
-            }
-          >
+          <span className={isTimerLow ? "top-timer danger" : "top-timer"}>
             <Clock3 size={14} />
-            {formatTime(
-              remainingSeconds
-            )}
+            {formatTime(remainingSeconds)}
           </span>
         </div>
       </header>
@@ -1266,9 +980,7 @@ export default function InterviewRoom() {
           <AlertCircle size={17} />
           <span>{error}</span>
 
-          <button
-            onClick={() => setError('')}
-          >
+          <button onClick={() => setError("")}>
             <X size={15} />
           </button>
         </div>
@@ -1282,14 +994,13 @@ export default function InterviewRoom() {
 
           <div className="ai-video">
             <div className="ai-video-background" />
+            <div className="ai-grid-overlay" />
+            <div className="ai-room-glow glow-one" />
+            <div className="ai-room-glow glow-two" />
 
             <div className="ai-center">
               <div
-                className={
-                  isSubmitting
-                    ? 'ai-avatar speaking'
-                    : 'ai-avatar'
-                }
+                className={isSubmitting ? "ai-avatar speaking" : "ai-avatar"}
               >
                 <Bot size={64} />
               </div>
@@ -1307,9 +1018,7 @@ export default function InterviewRoom() {
                   <i />
                 </span>
 
-                {isSubmitting
-                  ? 'Evaluating your answer...'
-                  : 'AI Interviewer'}
+                {isSubmitting ? "Evaluating your answer..." : "AI Interviewer"}
               </div>
             </div>
 
@@ -1317,12 +1026,7 @@ export default function InterviewRoom() {
 
             <div className="candidate-video">
               {cameraOn ? (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                />
+                <video ref={videoRef} autoPlay muted playsInline />
               ) : (
                 <div className="camera-off">
                   <UserRound size={34} />
@@ -1331,14 +1035,7 @@ export default function InterviewRoom() {
               )}
 
               <div className="candidate-label">
-                <span
-                  className={
-                    cameraOn
-                      ? 'green-dot'
-                      : 'gray-dot'
-                  }
-                />
-
+                <span className={cameraOn ? "green-dot" : "gray-dot"} />
                 You
               </div>
             </div>
@@ -1360,66 +1057,35 @@ export default function InterviewRoom() {
                 <i />
               </span>
 
-              AI Speaking
+              {isSubmitting ? "AI Evaluating" : "AI Interviewer Live"}
             </div>
 
             {/* VIDEO CONTROLS */}
 
             <div className="video-controls">
               <button
-                className={
-                  cameraOn
-                    ? 'control-btn active'
-                    : 'control-btn'
-                }
+                className={cameraOn ? "control-btn active" : "control-btn"}
                 onClick={toggleCamera}
               >
-                {cameraOn ? (
-                  <Camera size={18} />
-                ) : (
-                  <CameraOff size={18} />
-                )}
+                {cameraOn ? <Camera size={18} /> : <CameraOff size={18} />}
 
-                <span>
-                  Camera
-                </span>
+                <span>Camera</span>
 
-                <small>
-                  {cameraOn
-                    ? 'On'
-                    : 'Off'}
-                </small>
+                <small>{cameraOn ? "On" : "Off"}</small>
               </button>
 
               <button
                 className={
-                  isListening
-                    ? 'control-btn active mic-active'
-                    : 'control-btn'
+                  isListening ? "control-btn active mic-active" : "control-btn"
                 }
-                onClick={
-                  toggleListening
-                }
-                disabled={
-                  isSubmitting ||
-                  isCompleting
-                }
+                onClick={toggleListening}
+                disabled={isSubmitting || isCompleting}
               >
-                {isListening ? (
-                  <Mic size={18} />
-                ) : (
-                  <MicOff size={18} />
-                )}
+                {isListening ? <Mic size={18} /> : <MicOff size={18} />}
 
-                <span>
-                  Microphone
-                </span>
+                <span>Microphone</span>
 
-                <small>
-                  {isListening
-                    ? 'On'
-                    : 'Off'}
-                </small>
+                <small>{isListening ? "On" : "Off"}</small>
               </button>
 
               <button
@@ -1433,41 +1099,24 @@ export default function InterviewRoom() {
                 </span>
               </button>
 
-              <button
-                className="control-btn"
-                onClick={
-                  toggleFullscreen
-                }
-              >
+              <button className="control-btn" onClick={toggleFullscreen}>
                 <Expand size={18} />
 
-                <span>
-                  Full Screen
-                </span>
+                <span>Full Screen</span>
 
-                <small>
-                  {isFullscreen
-                    ? 'On'
-                    : ''}
-                </small>
+                <small>{isFullscreen ? "On" : ""}</small>
               </button>
 
               <button
                 className="control-btn"
-                onClick={
-                  speakQuestion
-                }
+                onClick={speakQuestion}
                 disabled={!questionText}
               >
                 <Volume2 size={18} />
 
-                <span>
-                  Listen
-                </span>
+                <span>Listen</span>
 
-                <small>
-                  AI Voice
-                </small>
+                <small>AI Voice</small>
               </button>
             </div>
           </div>
@@ -1478,28 +1127,19 @@ export default function InterviewRoom() {
             <div className="question-header">
               <div className="question-meta">
                 <span className="question-number">
-                  Question{' '}
-                  {currentQuestionNumber}
-                  {' '}
-                  of {totalQuestions}
+                  Question {currentQuestionNumber} of {totalQuestions}
                 </span>
 
                 {currentQ?.question_type && (
-                  <span className="mini-tag">
-                    {currentQ.question_type}
-                  </span>
+                  <span className="mini-tag">{currentQ.question_type}</span>
                 )}
 
                 {currentQ?.difficulty && (
-                  <span className="mini-tag">
-                    {currentQ.difficulty}
-                  </span>
+                  <span className="mini-tag">{currentQ.difficulty}</span>
                 )}
 
                 {currentQ?.topic && (
-                  <span className="mini-tag">
-                    {currentQ.topic}
-                  </span>
+                  <span className="mini-tag">{currentQ.topic}</span>
                 )}
               </div>
 
@@ -1523,14 +1163,9 @@ export default function InterviewRoom() {
               </div>
 
               <div>
-                <div className="question-label">
-                  AI Interviewer asks
-                </div>
+                <div className="question-label">AI Interviewer asks</div>
 
-                <h1>
-                  {questionText ||
-                    'Question unavailable.'}
-                </h1>
+                <h1>{questionText || "Question unavailable."}</h1>
               </div>
             </div>
           </div>
@@ -1546,9 +1181,7 @@ export default function InterviewRoom() {
                 Conversation
               </div>
 
-              <div className="conversation-subtitle">
-                Live AI interview
-              </div>
+              <div className="conversation-subtitle">Live AI interview</div>
             </div>
 
             <div className="secure-badge">
@@ -1566,14 +1199,11 @@ export default function InterviewRoom() {
               <div>
                 <div className="message-name">
                   AI Interviewer
-                  <span>
-                    now
-                  </span>
+                  <span>now</span>
                 </div>
 
                 <div className="message-bubble">
-                  {questionText ||
-                    'Your next question will appear here.'}
+                  {questionText || "Your next question will appear here."}
                 </div>
               </div>
             </div>
@@ -1587,14 +1217,10 @@ export default function InterviewRoom() {
                 <div>
                   <div className="message-name">
                     You
-                    <span>
-                      now
-                    </span>
+                    <span>now</span>
                   </div>
 
-                  <div className="message-bubble">
-                    {userAnswer}
-                  </div>
+                  <div className="message-bubble">{userAnswer}</div>
                 </div>
               </div>
             )}
@@ -1606,9 +1232,7 @@ export default function InterviewRoom() {
                 </span>
 
                 <div>
-                  <strong>
-                    Listening...
-                  </strong>
+                  <strong>Listening...</strong>
 
                   <span>
                     Speak naturally. Your answer is being transcribed.
@@ -1630,51 +1254,28 @@ export default function InterviewRoom() {
 
           <div className="answer-panel">
             <div className="answer-title">
-              <span>
-                Your Answer
-              </span>
+              <span>Your Answer</span>
 
               <span className="word-count">
                 {userAnswer.trim()
-                  ? `${userAnswer
-                      .trim()
-                      .split(/\s+/)
-                      .length} words`
-                  : 'No answer yet'}
+                  ? `${userAnswer.trim().split(/\s+/).length} words`
+                  : "No answer yet"}
               </span>
             </div>
 
             <textarea
               value={userAnswer}
-              onChange={(event) =>
-                setUserAnswer(
-                  event.target.value
-                )
-              }
-              disabled={
-                isSubmitting ||
-                isCompleting ||
-                timeUp ||
-                isPaused
-              }
+              onChange={(event) => setUserAnswer(event.target.value)}
+              disabled={isSubmitting || isCompleting || timeUp || isPaused}
               placeholder="Type your answer here..."
               rows={5}
             />
 
             <div className="answer-actions">
               <button
-                className={
-                  isListening
-                    ? 'voice-btn listening'
-                    : 'voice-btn'
-                }
-                onClick={
-                  toggleListening
-                }
-                disabled={
-                  isSubmitting ||
-                  isCompleting
-                }
+                className={isListening ? "voice-btn listening" : "voice-btn"}
+                onClick={toggleListening}
+                disabled={isSubmitting || isCompleting}
               >
                 {isListening ? (
                   <>
@@ -1691,14 +1292,8 @@ export default function InterviewRoom() {
 
               <button
                 className="pause-btn"
-                onClick={
-                  togglePause
-                }
-                disabled={
-                  isSubmitting ||
-                  isCompleting ||
-                  timeUp
-                }
+                onClick={togglePause}
+                disabled={isSubmitting || isCompleting || timeUp}
               >
                 {isPaused ? (
                   <>
@@ -1715,9 +1310,7 @@ export default function InterviewRoom() {
 
               <button
                 className="submit-btn"
-                onClick={
-                  submitAnswer
-                }
+                onClick={submitAnswer}
                 disabled={
                   isSubmitting ||
                   isCompleting ||
@@ -1728,10 +1321,7 @@ export default function InterviewRoom() {
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2
-                      size={16}
-                      className="spin"
-                    />
+                    <Loader2 size={16} className="spin" />
                     Evaluating
                   </>
                 ) : (
@@ -1760,8 +1350,7 @@ export default function InterviewRoom() {
         </div>
 
         <div className="footer-progress">
-          {currentQuestionNumber} /{' '}
-          {totalQuestions}
+          {currentQuestionNumber} / {totalQuestions}
         </div>
       </footer>
 
@@ -1826,7 +1415,7 @@ export default function InterviewRoom() {
         .icon-btn:hover {
           transform: translateX(-2px);
           color: var(--text-primary);
-          border-color: var(--blue-light);
+          border-color: #c084fc;
         }
 
         .live-title {
@@ -1842,8 +1431,8 @@ export default function InterviewRoom() {
           font-weight: 700;
           padding: .22rem .45rem;
           border-radius: 999px;
-          background: rgba(99,102,241,.12);
-          color: var(--blue-light);
+          background: rgba(168,85,247,.12);
+          color: #c084fc;
         }
 
         .live-subtitle {
@@ -1924,18 +1513,48 @@ export default function InterviewRoom() {
           min-width: 0;
         }
 
+        .ai-grid-overlay {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          opacity: .20;
+          background-image:
+            linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+          background-size: 42px 42px;
+          mask-image: linear-gradient(to bottom, black, transparent 85%);
+        }
+
+        .ai-room-glow {
+          position: absolute;
+          width: 260px;
+          height: 260px;
+          border-radius: 50%;
+          filter: blur(70px);
+          opacity: .20;
+          pointer-events: none;
+        }
+
+        .glow-one {
+          top: -100px;
+          left: 15%;
+          background: #a855f7;
+        }
+
+        .glow-two {
+          right: -90px;
+          bottom: 10%;
+          background: #ec4899;
+        }
+
         .ai-video {
           position: relative;
           min-height: 520px;
           overflow: hidden;
           border-radius: 18px;
           background:
-            linear-gradient(
-              135deg,
-              #101827,
-              #172554 50%,
-              #111827
-            );
+            radial-gradient(circle at 50% 35%, rgba(168,85,247,.16), transparent 28%),
+            linear-gradient(145deg, #09090f 0%, #15111f 48%, #0c0a12 100%);
           box-shadow:
             0 20px 60px rgba(15,23,42,.18);
         }
@@ -1951,7 +1570,7 @@ export default function InterviewRoom() {
             ),
             radial-gradient(
               circle at 80% 20%,
-              rgba(139,92,246,.2),
+              rgba(232,121,249,.20),
               transparent 25%
             );
         }
@@ -1976,12 +1595,12 @@ export default function InterviewRoom() {
           background:
             linear-gradient(
               145deg,
-              #4f46e5,
-              #7c3aed
+              #c026d3,
+              #c026d3
             );
           box-shadow:
-            0 0 0 10px rgba(99,102,241,.08),
-            0 25px 70px rgba(79,70,229,.4);
+            0 0 0 10px rgba(168,85,247,.08),
+            0 25px 70px rgba(124,58,237,.4);
           animation: aiFloat 4s ease-in-out infinite;
         }
 
@@ -2003,13 +1622,13 @@ export default function InterviewRoom() {
         @keyframes aiSpeak {
           0%, 100% {
             box-shadow:
-              0 0 0 10px rgba(99,102,241,.08),
-              0 25px 70px rgba(79,70,229,.4);
+              0 0 0 10px rgba(168,85,247,.08),
+              0 25px 70px rgba(124,58,237,.4);
           }
           50% {
             box-shadow:
-              0 0 0 22px rgba(99,102,241,.08),
-              0 25px 90px rgba(124,58,237,.55);
+              0 0 0 22px rgba(168,85,247,.08),
+              0 25px 90px rgba(192,38,211,.55);
           }
         }
 
@@ -2201,7 +1820,7 @@ export default function InterviewRoom() {
         }
 
         .control-btn.mic-active {
-          color: #60a5fa;
+          color: #f59e0b;
         }
 
         .control-btn small {
@@ -2288,8 +1907,8 @@ export default function InterviewRoom() {
           background:
             linear-gradient(
               90deg,
-              #4f46e5,
-              #8b5cf6
+              #c026d3,
+              #e879f9
             );
           transition: width .4s ease;
         }
@@ -2308,8 +1927,8 @@ export default function InterviewRoom() {
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #6366f1;
-          background: rgba(99,102,241,.1);
+          color: #a855f7;
+          background: rgba(168,85,247,.10);
         }
 
         .question-label {
@@ -2332,7 +1951,7 @@ export default function InterviewRoom() {
           overflow: hidden;
           border: 1px solid var(--border);
           border-radius: 18px;
-          background: var(--bg-secondary);
+          background: color-mix(in srgb, var(--bg-secondary) 96%, #7c3aed 4%);
           box-shadow: 0 15px 40px rgba(15,23,42,.07);
         }
 
@@ -2399,8 +2018,8 @@ export default function InterviewRoom() {
         }
 
         .message-avatar.ai {
-          background: rgba(99,102,241,.12);
-          color: #6366f1;
+          background: rgba(168,85,247,.12);
+          color: #a855f7;
         }
 
         .message-avatar.user {
@@ -2437,8 +2056,8 @@ export default function InterviewRoom() {
           background:
             linear-gradient(
               135deg,
-              #4f46e5,
-              #6366f1
+              #c026d3,
+              #a855f7
             );
           color: white;
         }
@@ -2450,8 +2069,8 @@ export default function InterviewRoom() {
           padding: .65rem;
           margin-top: .5rem;
           border-radius: 10px;
-          background: rgba(99,102,241,.08);
-          border: 1px solid rgba(99,102,241,.15);
+          background: rgba(168,85,247,.08);
+          border: 1px solid rgba(168,85,247,.15);
         }
 
         .listening-icon {
@@ -2461,7 +2080,7 @@ export default function InterviewRoom() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #6366f1;
+          background: #a855f7;
           color: white;
           animation: micPulse 1.3s infinite;
         }
@@ -2487,7 +2106,7 @@ export default function InterviewRoom() {
           align-items: center;
           gap: 2px;
           height: 20px;
-          color: #6366f1;
+          color: #a855f7;
         }
 
         .answer-panel {
@@ -2530,10 +2149,10 @@ export default function InterviewRoom() {
         }
 
         .answer-panel textarea:focus {
-          border-color: #6366f1;
+          border-color: #a855f7;
           box-shadow:
             0 0 0 3px
-            rgba(99,102,241,.1);
+            rgba(168,85,247,.10);
         }
 
         .answer-actions {
@@ -2573,8 +2192,8 @@ export default function InterviewRoom() {
 
         .voice-btn.listening {
           color: white;
-          background: #6366f1;
-          border-color: #6366f1;
+          background: #a855f7;
+          border-color: #a855f7;
         }
 
         .pause-btn {
@@ -2588,8 +2207,8 @@ export default function InterviewRoom() {
           background:
             linear-gradient(
               135deg,
-              #4f46e5,
-              #7c3aed
+              #c026d3,
+              #c026d3
             );
           border-color: transparent !important;
         }
@@ -2597,6 +2216,17 @@ export default function InterviewRoom() {
         .spin {
           animation:
             spin 1s linear infinite;
+        }
+
+        ::selection {
+          background: rgba(168,85,247,.28);
+          color: var(--text-primary);
+        }
+
+        .live-interview-page button:focus-visible,
+        .live-interview-page textarea:focus-visible {
+          outline: 2px solid rgba(232,121,249,.75);
+          outline-offset: 2px;
         }
 
         .live-footer {
@@ -2622,10 +2252,10 @@ export default function InterviewRoom() {
 
         @keyframes micPulse {
           0%, 100% {
-            box-shadow: 0 0 0 0 rgba(99,102,241,.25);
+            box-shadow: 0 0 0 0 rgba(168,85,247,.25);
           }
           50% {
-            box-shadow: 0 0 0 8px rgba(99,102,241,0);
+            box-shadow: 0 0 0 8px rgba(168,85,247,0);
           }
         }
 
@@ -2758,7 +2388,7 @@ export default function InterviewRoom() {
         }
       `}</style>
     </div>
-  )
+  );
 }
 
 /*
@@ -2771,14 +2401,14 @@ function MessageIcon() {
         width: 26,
         height: 26,
         borderRadius: 8,
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(99,102,241,.12)',
-        color: '#6366f1',
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(168,85,247,.12)",
+        color: "#a855f7",
       }}
     >
       <Sparkles size={14} />
     </span>
-  )
+  );
 }
