@@ -1,5 +1,7 @@
 /*
- * API Service — Interviewer Buddy AI
+ * ============================================================
+ * Interviewer Buddy AI — API Service
+ * ============================================================
  *
  * Authentication:
  * - Signup → Email OTP verification
@@ -11,27 +13,58 @@
  *
  * Storage:
  * - Zustand persist → ib-auth
+ *
+ * Environments:
+ * - Local → http://127.0.0.1:8000/api
+ * - Production → https://ai-interviewbuddy.onrender.com/api
+ * ============================================================
  */
 
-// ============================================================
-// API BASE URL
-// ============================================================
 
-// Local development:
-//   VITE_API_URL=http://127.0.0.1:8000/api
-//
-// Production:
-//   VITE_API_URL=https://ai-interviewbuddy.onrender.com/api
-//
-// If VITE_API_URL is not provided, fall back to /api.
+/* ============================================================
+ * API BASE URL
+ * ============================================================
+ *
+ * VITE_API_URL should be configured in Render:
+ *
+ * VITE_API_URL=https://ai-interviewbuddy.onrender.com/api
+ *
+ * We also keep safe fallbacks so the application does not
+ * accidentally call the frontend's /api route in production.
+ * ============================================================
+ */
+
+const PRODUCTION_API_URL =
+  "https://ai-interviewbuddy.onrender.com/api";
+
+const LOCAL_API_URL =
+  "http://127.0.0.1:8000/api";
+
+const ENV_API_URL =
+  import.meta.env.VITE_API_URL?.trim();
 
 const BASE = (
-  import.meta.env.VITE_API_URL || "/api"
+  ENV_API_URL ||
+  (import.meta.env.PROD
+    ? PRODUCTION_API_URL
+    : LOCAL_API_URL)
 ).replace(/\/+$/, "");
 
-// ============================================================
-// AUTH STORAGE
-// ============================================================
+
+/* ============================================================
+ * DEBUG API URL
+ * ============================================================
+ */
+
+if (import.meta.env.DEV) {
+  console.log("API Base URL:", BASE);
+}
+
+
+/* ============================================================
+ * AUTH STORAGE
+ * ============================================================
+ */
 
 function getAuthState(): any | null {
   try {
@@ -47,9 +80,11 @@ function getAuthState(): any | null {
   }
 }
 
-// ============================================================
-// ACCESS TOKEN
-// ============================================================
+
+/* ============================================================
+ * ACCESS TOKEN
+ * ============================================================
+ */
 
 function getToken(): string | null {
   const auth = getAuthState();
@@ -57,9 +92,11 @@ function getToken(): string | null {
   return auth?.state?.token ?? null;
 }
 
-// ============================================================
-// REFRESH TOKEN
-// ============================================================
+
+/* ============================================================
+ * REFRESH TOKEN
+ * ============================================================
+ */
 
 function getRefreshToken(): string | null {
   const auth = getAuthState();
@@ -71,9 +108,11 @@ function getRefreshToken(): string | null {
   );
 }
 
-// ============================================================
-// SAVE NEW TOKENS
-// ============================================================
+
+/* ============================================================
+ * SAVE NEW TOKENS
+ * ============================================================
+ */
 
 function saveTokens(
   accessToken: string,
@@ -110,9 +149,11 @@ function saveTokens(
   }
 }
 
-// ============================================================
-// CLEAR AUTH
-// ============================================================
+
+/* ============================================================
+ * CLEAR AUTH
+ * ============================================================
+ */
 
 function clearAuth(): void {
   try {
@@ -122,9 +163,11 @@ function clearAuth(): void {
   }
 }
 
-// ============================================================
-// HEADERS
-// ============================================================
+
+/* ============================================================
+ * AUTH HEADERS
+ * ============================================================
+ */
 
 function authHeaders(): Record<string, string> {
   const token = getToken();
@@ -140,16 +183,22 @@ function authHeaders(): Record<string, string> {
   return headers;
 }
 
-// ============================================================
-// REFRESH STATE
-// ============================================================
 
-// Prevent multiple simultaneous refresh requests.
+/* ============================================================
+ * REFRESH STATE
+ * ============================================================
+ *
+ * Prevent multiple simultaneous refresh requests.
+ * ============================================================
+ */
+
 let refreshPromise: Promise<string | null> | null = null;
 
-// ============================================================
-// REFRESH ACCESS TOKEN
-// ============================================================
+
+/* ============================================================
+ * REFRESH ACCESS TOKEN
+ * ============================================================
+ */
 
 async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) {
@@ -212,9 +261,11 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshPromise;
 }
 
-// ============================================================
-// JWT EXPIRATION
-// ============================================================
+
+/* ============================================================
+ * JWT EXPIRATION
+ * ============================================================
+ */
 
 function getTokenExpiration(
   token: string | null,
@@ -234,7 +285,6 @@ function getTokenExpiration(
       .replace(/-/g, "+")
       .replace(/_/g, "/");
 
-    // Add missing Base64 padding if necessary.
     const paddedBase64 =
       base64 +
       "=".repeat(
@@ -255,9 +305,15 @@ function getTokenExpiration(
   }
 }
 
-// ============================================================
-// ENSURE VALID ACCESS TOKEN
-// ============================================================
+
+/* ============================================================
+ * ENSURE VALID ACCESS TOKEN
+ * ============================================================
+ *
+ * Refresh the access token approximately two minutes
+ * before expiration.
+ * ============================================================
+ */
 
 async function ensureValidToken(): Promise<string | null> {
   const token = getToken();
@@ -269,15 +325,16 @@ async function ensureValidToken(): Promise<string | null> {
   const expiration =
     getTokenExpiration(token);
 
-  // If expiration cannot be decoded,
-  // keep using the existing token.
+  /*
+   * If the token cannot be decoded,
+   * keep using the existing token.
+   */
   if (!expiration) {
     return token;
   }
 
   const now = Date.now();
 
-  // Refresh 2 minutes before expiration.
   const refreshBefore =
     2 * 60 * 1000;
 
@@ -294,9 +351,11 @@ async function ensureValidToken(): Promise<string | null> {
   return token;
 }
 
-// ============================================================
-// GENERIC REQUEST
-// ============================================================
+
+/* ============================================================
+ * GENERIC REQUEST
+ * ============================================================
+ */
 
 async function request<T>(
   method: string,
@@ -304,26 +363,54 @@ async function request<T>(
   body?: unknown,
   retry = true,
 ): Promise<T> {
-  // Make sure the access token is valid
-  // before making the request.
+
+  /*
+   * Make sure the access token is valid
+   * before making the request.
+   */
   await ensureValidToken();
 
-  let res = await fetch(
-    `${BASE}${path}`,
-    {
-      method,
-      headers: authHeaders(),
-      body:
-        body !== undefined
-          ? JSON.stringify(body)
-          : undefined,
-    },
-  );
 
-  // ==========================================================
-  // TOKEN EXPIRED
-  // REFRESH → RETRY
-  // ==========================================================
+  /* ----------------------------------------------------------
+   * FIRST REQUEST
+   * ----------------------------------------------------------
+   */
+
+  let res: Response;
+
+  try {
+    res = await fetch(
+      `${BASE}${path}`,
+      {
+        method,
+        headers: authHeaders(),
+        body:
+          body !== undefined
+            ? JSON.stringify(body)
+            : undefined,
+      },
+    );
+  } catch (error) {
+    console.error(
+      "API request failed:",
+      {
+        url: `${BASE}${path}`,
+        error,
+      },
+    );
+
+    throw new Error(
+      "Unable to connect to the server. Please check your internet connection or try again.",
+    );
+  }
+
+
+  /* ==========================================================
+   * TOKEN EXPIRED
+   *
+   * 401 → REFRESH → RETRY
+   * ==========================================================
+   */
 
   if (
     res.status === 401 &&
@@ -333,17 +420,28 @@ async function request<T>(
       await refreshAccessToken();
 
     if (newToken) {
-      res = await fetch(
-        `${BASE}${path}`,
-        {
-          method,
-          headers: authHeaders(),
-          body:
-            body !== undefined
-              ? JSON.stringify(body)
-              : undefined,
-        },
-      );
+      try {
+        res = await fetch(
+          `${BASE}${path}`,
+          {
+            method,
+            headers: authHeaders(),
+            body:
+              body !== undefined
+                ? JSON.stringify(body)
+                : undefined,
+          },
+        );
+      } catch (error) {
+        console.error(
+          "Retry request failed:",
+          error,
+        );
+
+        throw new Error(
+          "Unable to connect to the server. Please try again.",
+        );
+      }
     } else {
       clearAuth();
 
@@ -353,12 +451,15 @@ async function request<T>(
     }
   }
 
-  // ==========================================================
-  // OTHER ERRORS
-  // ==========================================================
+
+  /* ==========================================================
+   * OTHER HTTP ERRORS
+   * ==========================================================
+   */
 
   if (!res.ok) {
-    let message = `HTTP ${res.status}`;
+    let message =
+      `HTTP ${res.status}`;
 
     try {
       const data = await res.json();
@@ -379,50 +480,71 @@ async function request<T>(
           .join(", ");
       }
     } catch {
-      // Ignore JSON parsing errors.
+      // Ignore JSON parsing errors
     }
 
     throw new Error(message);
   }
 
-  // Handle empty responses safely.
+
+  /* ==========================================================
+   * EMPTY RESPONSE
+   * ==========================================================
+   */
+
   if (res.status === 204) {
     return undefined as T;
   }
 
+
+  /* ==========================================================
+   * JSON RESPONSE
+   * ==========================================================
+   */
+
   return res.json() as Promise<T>;
 }
 
-// ============================================================
-// AUTH TYPES
-// ============================================================
+
+/* ============================================================
+ * AUTH TYPES
+ * ============================================================
+ */
 
 export interface UserResponse {
   id: string;
   email: string;
   name: string;
+
   college?: string;
   target_role?: string;
   experience?: string;
+
   skills: string[];
+
   github?: string;
   linkedin?: string;
   portfolio?: string;
+
   profile_complete: boolean;
 }
 
-// ============================================================
-// OTP RESPONSE
-// ============================================================
+
+/* ============================================================
+ * OTP RESPONSE
+ * ============================================================
+ */
 
 export interface OTPResponse {
   message: string;
   email: string;
 }
 
-// ============================================================
-// TOKEN RESPONSE
-// ============================================================
+
+/* ============================================================
+ * TOKEN RESPONSE
+ * ============================================================
+ */
 
 export interface TokenResponse {
   access_token: string;
@@ -431,15 +553,20 @@ export interface TokenResponse {
   user: UserResponse;
 }
 
-// ============================================================
-// AUTH API
-// ============================================================
+
+/* ============================================================
+ * AUTH API
+ * ============================================================
+ */
 
 export const authApi = {
-  // ----------------------------------------------------------
-  // SIGNUP
-  // Register → OTP sent to email
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * SIGNUP
+   *
+   * Register → OTP sent to email
+   * ----------------------------------------------------------
+   */
 
   register: (
     name: string,
@@ -456,10 +583,13 @@ export const authApi = {
       },
     ),
 
-  // ----------------------------------------------------------
-  // VERIFY SIGNUP OTP
-  // OTP → Access + Refresh Token
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * VERIFY SIGNUP OTP
+   *
+   * OTP → Access + Refresh Token
+   * ----------------------------------------------------------
+   */
 
   verifySignupOTP: (
     email: string,
@@ -474,9 +604,11 @@ export const authApi = {
       },
     ),
 
-  // ----------------------------------------------------------
-  // RESEND SIGNUP OTP
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * RESEND SIGNUP OTP
+   * ----------------------------------------------------------
+   */
 
   resendSignupOTP: (
     email: string,
@@ -489,9 +621,11 @@ export const authApi = {
       },
     ),
 
-  // ----------------------------------------------------------
-  // OLD COMPONENT COMPATIBILITY
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * OLD COMPONENT COMPATIBILITY
+   * ----------------------------------------------------------
+   */
 
   resendOTP: (
     email: string,
@@ -504,10 +638,13 @@ export const authApi = {
       },
     ),
 
-  // ----------------------------------------------------------
-  // LOGIN
-  // Email + Password → JWT
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * LOGIN
+   *
+   * Email + Password → JWT
+   * ----------------------------------------------------------
+   */
 
   login: (
     email: string,
@@ -522,9 +659,11 @@ export const authApi = {
       },
     ),
 
-  // ----------------------------------------------------------
-  // CURRENT USER
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * CURRENT USER
+   * ----------------------------------------------------------
+   */
 
   me: () =>
     request<UserResponse>(
@@ -532,9 +671,11 @@ export const authApi = {
       "/auth/me",
     ),
 
-  // ----------------------------------------------------------
-  // UPDATE PROFILE
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * UPDATE PROFILE
+   * ----------------------------------------------------------
+   */
 
   updateProfile: (
     data: Partial<UserResponse>,
@@ -546,21 +687,26 @@ export const authApi = {
     ),
 };
 
-// ============================================================
-// DASHBOARD
-// ============================================================
+
+/* ============================================================
+ * DASHBOARD
+ * ============================================================
+ */
 
 export interface DashboardStats {
   overall_score: number;
   interviews_completed: number;
   average_score: number;
   best_score: number;
+
   current_streak: number;
   questions_answered: number;
   practice_hours: number;
+
   recent_interviews: RecentInterview[];
   weekly_performance: WeeklyPerf[];
 }
+
 
 export interface RecentInterview {
   id: string;
@@ -568,10 +714,13 @@ export interface RecentInterview {
   type: string;
   difficulty: string;
   status: string;
+
   score: number | null;
+
   duration: string;
   date: string | null;
 }
+
 
 export interface WeeklyPerf {
   week: string;
@@ -579,7 +728,9 @@ export interface WeeklyPerf {
   interviews: number;
 }
 
+
 export const dashboardApi = {
+
   get: () =>
     request<DashboardStats>(
       "GET",
@@ -587,101 +738,140 @@ export const dashboardApi = {
     ),
 };
 
-// ============================================================
-// INTERVIEWS
-// ============================================================
+
+/* ============================================================
+ * INTERVIEWS
+ * ============================================================
+ */
 
 export interface InterviewListItem {
   id: string;
   role: string;
   type: string;
   status: string;
+
   score: number | null;
+
   created_at: string;
 }
 
+
 export interface CreateInterviewResponse {
   id: string;
+
   interview_type: string;
   role: string;
   difficulty: string;
+
   duration_minutes: number;
   total_questions: number;
+
   status: string;
 }
 
+
 export interface InterviewQuestionResponse {
   question_id: string;
+
   question: string;
   question_type: string;
   difficulty: string;
+
   topic: string | null;
+
   question_number: number;
   total_questions: number;
+
   is_last: boolean;
 }
+
 
 export interface AnswerEvaluation {
   score: number;
+
   feedback: string;
+
   strengths: string[];
+
   improvements: string[];
+
   suggested_answer: string;
 }
 
+
 export interface SubmitAnswerResponse {
   question_id: string;
+
   score: number;
+
   evaluation: AnswerEvaluation;
+
   question_number: number;
   total_questions: number;
+
   is_last: boolean;
 }
+
 
 export interface CommunicationMetrics {
   speaking_speed: number;
   filler_words: number;
   avg_pause: number;
+
   clarity: number;
   vocabulary: number;
   answer_structure: number;
 }
 
+
 export interface StarScores {
   overall: number;
+
   situation: number;
   task: number;
   action: number;
   result: number;
 }
 
+
 export interface FinalInterviewReport {
   overall: number;
+
   technical: number;
   communication: number;
   confidence: number;
   clarity: number;
   problem_solving: number;
   behavioral: number;
+
   strengths: string[];
   improvements: string[];
   recommendations: string[];
+
   communication_metrics: CommunicationMetrics;
+
   star_scores: StarScores;
 }
 
+
 export interface CompleteInterviewResponse {
   id: string;
+
   status: string;
+
   total_questions: number;
   answered_questions: number;
+
   report: FinalInterviewReport | null;
 }
 
+
 export const interviewsApi = {
-  // ----------------------------------------------------------
-  // LIST INTERVIEWS
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * LIST INTERVIEWS
+   * ----------------------------------------------------------
+   */
 
   list: () =>
     request<InterviewListItem[]>(
@@ -689,9 +879,11 @@ export const interviewsApi = {
       "/interviews",
     ),
 
-  // ----------------------------------------------------------
-  // CREATE INTERVIEW
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * CREATE INTERVIEW
+   * ----------------------------------------------------------
+   */
 
   create: (data: {
     role: string;
@@ -707,9 +899,11 @@ export const interviewsApi = {
       data,
     ),
 
-  // ----------------------------------------------------------
-  // START INTERVIEW
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * START INTERVIEW
+   * ----------------------------------------------------------
+   */
 
   start: (id: string) =>
     request<InterviewQuestionResponse>(
@@ -717,9 +911,11 @@ export const interviewsApi = {
       `/interviews/${id}/start`,
     ),
 
-  // ----------------------------------------------------------
-  // SUBMIT ANSWER
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * SUBMIT ANSWER
+   * ----------------------------------------------------------
+   */
 
   answer: (
     id: string,
@@ -737,9 +933,11 @@ export const interviewsApi = {
       },
     ),
 
-  // ----------------------------------------------------------
-  // NEXT QUESTION
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * NEXT QUESTION
+   * ----------------------------------------------------------
+   */
 
   nextQuestion: (id: string) =>
     request<InterviewQuestionResponse>(
@@ -747,9 +945,11 @@ export const interviewsApi = {
       `/interviews/${id}/next-question`,
     ),
 
-  // ----------------------------------------------------------
-  // COMPLETE INTERVIEW
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * COMPLETE INTERVIEW
+   * ----------------------------------------------------------
+   */
 
   complete: (id: string) =>
     request<CompleteInterviewResponse>(
@@ -757,9 +957,11 @@ export const interviewsApi = {
       `/interviews/${id}/complete`,
     ),
 
-  // ----------------------------------------------------------
-  // INTERVIEW REPORT
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * INTERVIEW REPORT
+   * ----------------------------------------------------------
+   */
 
   report: (id: string) =>
     request<CompleteInterviewResponse>(
@@ -768,13 +970,17 @@ export const interviewsApi = {
     ),
 };
 
-// ============================================================
-// RESUME
-// ============================================================
+
+/* ============================================================
+ * RESUME
+ * ============================================================
+ */
 
 export interface ResumeItem {
   id: string;
+
   filename: string;
+
   overall_score: number | null;
   ats_score: number | null;
   skills_score: number | null;
@@ -782,14 +988,20 @@ export interface ResumeItem {
   projects_score: number | null;
   keywords_score: number | null;
   formatting_score: number | null;
+
   extracted_skills: string[];
+
   strengths: string[];
+
   improvements: string[];
+
   analyzed_at: string | null;
 }
 
+
 export interface ResumeAnalysisResponse {
   id: string;
+
   overall_score: number;
   ats_score: number;
   skills_score: number;
@@ -797,15 +1009,21 @@ export interface ResumeAnalysisResponse {
   projects_score: number;
   keywords_score: number;
   formatting_score: number;
+
   extracted_skills: string[];
+
   strengths: string[];
+
   improvements: string[];
 }
 
+
 export const resumeApi = {
-  // ----------------------------------------------------------
-  // LIST RESUMES
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * LIST RESUMES
+   * ----------------------------------------------------------
+   */
 
   list: () =>
     request<ResumeItem[]>(
@@ -813,11 +1031,14 @@ export const resumeApi = {
       "/resume",
     ),
 
-  // ----------------------------------------------------------
-  // UPLOAD RESUME
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * UPLOAD RESUME
+   * ----------------------------------------------------------
+   */
 
   upload: async (file: File) => {
+
     await ensureValidToken();
 
     let token = getToken();
@@ -829,41 +1050,82 @@ export const resumeApi = {
       file,
     );
 
-    let res = await fetch(
-      `${BASE}/resume/upload`,
-      {
-        method: "POST",
-        headers: token
-          ? {
-            Authorization: `Bearer ${token}`,
-          }
-          : {},
-        body: formData,
-      },
-    );
 
-    // --------------------------------------------------------
-    // Retry upload after token refresh
-    // --------------------------------------------------------
+    /* --------------------------------------------------------
+     * FIRST UPLOAD REQUEST
+     * --------------------------------------------------------
+     */
+
+    let res: Response;
+
+    try {
+      res = await fetch(
+        `${BASE}/resume/upload`,
+        {
+          method: "POST",
+
+          headers: token
+            ? {
+              Authorization: `Bearer ${token}`,
+            }
+            : {},
+
+          body: formData,
+        },
+      );
+    } catch (error) {
+      console.error(
+        "Resume upload failed:",
+        error,
+      );
+
+      throw new Error(
+        "Unable to connect to the server.",
+      );
+    }
+
+
+    /* --------------------------------------------------------
+     * RETRY AFTER TOKEN REFRESH
+     * --------------------------------------------------------
+     */
 
     if (res.status === 401) {
+
       const newToken =
         await refreshAccessToken();
 
       if (newToken) {
+
         token = newToken;
 
-        res = await fetch(
-          `${BASE}/resume/upload`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${newToken}`,
+        try {
+          res = await fetch(
+            `${BASE}/resume/upload`,
+            {
+              method: "POST",
+
+              headers: {
+                Authorization:
+                  `Bearer ${newToken}`,
+              },
+
+              body: formData,
             },
-            body: formData,
-          },
-        );
+          );
+        } catch (error) {
+          console.error(
+            "Resume retry failed:",
+            error,
+          );
+
+          throw new Error(
+            "Unable to connect to the server.",
+          );
+        }
+
       } else {
+
         clearAuth();
 
         throw new Error(
@@ -872,12 +1134,16 @@ export const resumeApi = {
       }
     }
 
-    // --------------------------------------------------------
-    // Upload error
-    // --------------------------------------------------------
+
+    /* --------------------------------------------------------
+     * UPLOAD ERROR
+     * --------------------------------------------------------
+     */
 
     if (!res.ok) {
-      let message = `HTTP ${res.status}`;
+
+      let message =
+        `HTTP ${res.status}`;
 
       try {
         const data = await res.json();
@@ -886,6 +1152,7 @@ export const resumeApi = {
           typeof data?.detail === "string"
         ) {
           message = data.detail;
+
         } else if (
           Array.isArray(data?.detail)
         ) {
@@ -898,11 +1165,17 @@ export const resumeApi = {
             .join(", ");
         }
       } catch {
-        // Ignore JSON parsing errors.
+        // Ignore JSON parsing errors
       }
 
       throw new Error(message);
     }
+
+
+    /* --------------------------------------------------------
+     * SUCCESS
+     * --------------------------------------------------------
+     */
 
     return res.json() as Promise<{
       id: string;
@@ -911,9 +1184,11 @@ export const resumeApi = {
     }>;
   },
 
-  // ----------------------------------------------------------
-  // ANALYZE RESUME
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * ANALYZE RESUME
+   * ----------------------------------------------------------
+   */
 
   analyze: (
     resumeId: string,
@@ -924,39 +1199,57 @@ export const resumeApi = {
     ),
 };
 
-// ============================================================
-// JOBS
-// ============================================================
+
+/* ============================================================
+ * JOBS
+ * ============================================================
+ */
 
 export interface JobSkillMatch {
   name: string;
+
   status:
   | "matched"
   | "partial"
   | "missing";
+
   level: number;
 }
 
+
 export interface JobAnalysisResponse {
   match_score: number;
+
   title: string;
+
   company?: string;
+
   skills: JobSkillMatch[];
+
   required_exp: string;
+
   seniority: string;
+
   interview_topics: string[];
+
   preparation_strategy: string;
+
   missing_skills: string[];
 }
 
+
 export const jobsApi = {
-  // ----------------------------------------------------------
-  // ANALYZE JOB
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * ANALYZE JOB
+   * ----------------------------------------------------------
+   */
 
   analyze: (data: {
     job_description: string;
+
     title?: string;
+
     company?: string;
   }) =>
     request<JobAnalysisResponse>(
@@ -966,14 +1259,18 @@ export const jobsApi = {
     ),
 };
 
-// ============================================================
-// PRACTICE
-// ============================================================
+
+/* ============================================================
+ * PRACTICE
+ * ============================================================
+ */
 
 export const practiceApi = {
-  // ----------------------------------------------------------
-  // GET PRACTICE QUESTION
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * GET PRACTICE QUESTION
+   * ----------------------------------------------------------
+   */
 
   getQuestion: (
     category: string,
@@ -981,8 +1278,11 @@ export const practiceApi = {
   ) =>
     request<{
       id: string;
+
       question: string;
+
       category: string;
+
       difficulty: string;
     }>(
       "POST",
@@ -993,9 +1293,11 @@ export const practiceApi = {
       },
     ),
 
-  // ----------------------------------------------------------
-  // EVALUATE PRACTICE ANSWER
-  // ----------------------------------------------------------
+
+  /* ----------------------------------------------------------
+   * EVALUATE PRACTICE ANSWER
+   * ----------------------------------------------------------
+   */
 
   evaluate: (
     question: string,
@@ -1003,9 +1305,13 @@ export const practiceApi = {
   ) =>
     request<{
       score: number;
+
       feedback: string;
+
       strengths: string[];
+
       improvements: string[];
+
       suggested_answer: string;
     }>(
       "POST",
@@ -1016,3 +1322,14 @@ export const practiceApi = {
       },
     ),
 };
+
+
+/* ============================================================
+ * OPTIONAL DEBUG EXPORT
+ * ============================================================
+ *
+ * Useful if you want to verify the API URL from another file.
+ * ============================================================
+ */
+
+export const API_BASE_URL = BASE;
