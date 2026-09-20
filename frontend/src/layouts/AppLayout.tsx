@@ -772,9 +772,9 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
           top: 0;
           z-index: 50;
           width: 100%;
-          background-color: #0B0F19;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+          background-color: #15e89aba;
+          border-bottom: 1px solid rgba(163, 28, 28, 0.77);
+          box-shadow: 0 4px 20px rgba(154, 168, 20, 0.53);
         }
 
         .navbar-container {
@@ -806,13 +806,13 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
           width: 36px;
           height: 36px;
           border-radius: 10px;
-          background: #111827;
-          border: 1px solid rgba(139, 92, 246, 0.35);
+          background: #0d2455c3;
+          border: 1px solid rgba(7, 224, 220, 0.71);
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 4px 14px rgba(105, 174, 240, 0.33);
         }
 
         .brand-text-wrap {
@@ -825,7 +825,7 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
           font-size: 1.05rem;
           font-weight: 750;
           letter-spacing: -0.025em;
-          color: #F8FAFC;
+          color: #09417876;
           font-family: var(--font-sans);
           white-space: nowrap;
         }
