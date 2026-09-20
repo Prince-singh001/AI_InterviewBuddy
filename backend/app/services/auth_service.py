@@ -2,6 +2,7 @@ import json
 import hashlib
 import secrets
 import smtplib
+import base64
 
 from datetime import datetime, timedelta
 from typing import Any
@@ -10,6 +11,10 @@ import httpx
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.message import EmailMessage
+
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi import HTTPException
@@ -143,6 +148,175 @@ def verify_otp_hash(
 
 
 # ============================================================
+# GMAIL API EMAIL SENDING
+# ============================================================
+
+async def send_email_using_gmail_api(
+    to_email: str,
+    subject: str,
+    html_body: str,
+) -> bool:
+    """
+    Send email using Gmail API over HTTPS.
+
+    Gmail API is the primary email provider because
+    cloud platforms such as Render may block SMTP
+    connections on port 587.
+
+    Required settings:
+
+        GMAIL_CLIENT_ID
+        GMAIL_CLIENT_SECRET
+        GMAIL_REFRESH_TOKEN
+        GMAIL_FROM_EMAIL
+    """
+
+    try:
+
+        gmail_client_id = getattr(
+            settings,
+            "GMAIL_CLIENT_ID",
+            None,
+        )
+
+        gmail_client_secret = getattr(
+            settings,
+            "GMAIL_CLIENT_SECRET",
+            None,
+        )
+
+        gmail_refresh_token = getattr(
+            settings,
+            "GMAIL_REFRESH_TOKEN",
+            None,
+        )
+
+        gmail_from_email = getattr(
+            settings,
+            "GMAIL_FROM_EMAIL",
+            None,
+        )
+
+        # ----------------------------------------------------
+        # CHECK CONFIGURATION
+        # ----------------------------------------------------
+
+        if not gmail_client_id:
+
+            raise RuntimeError(
+                "GMAIL_CLIENT_ID is missing"
+            )
+
+        if not gmail_client_secret:
+
+            raise RuntimeError(
+                "GMAIL_CLIENT_SECRET is missing"
+            )
+
+        if not gmail_refresh_token:
+
+            raise RuntimeError(
+                "GMAIL_REFRESH_TOKEN is missing"
+            )
+
+        if not gmail_from_email:
+
+            raise RuntimeError(
+                "GMAIL_FROM_EMAIL is missing"
+            )
+
+        # ----------------------------------------------------
+        # CREATE GOOGLE CREDENTIALS
+        # ----------------------------------------------------
+
+        credentials = Credentials(
+            token=None,
+            refresh_token=gmail_refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=gmail_client_id,
+            client_secret=gmail_client_secret,
+            scopes=[
+                "https://www.googleapis.com/auth/gmail.send"
+            ],
+        )
+
+        # ----------------------------------------------------
+        # CREATE GMAIL SERVICE
+        # ----------------------------------------------------
+
+        service = build(
+            "gmail",
+            "v1",
+            credentials=credentials,
+        )
+
+        # ----------------------------------------------------
+        # CREATE EMAIL
+        # ----------------------------------------------------
+
+        message = EmailMessage()
+
+        message["To"] = to_email
+        message["From"] = gmail_from_email
+        message["Subject"] = subject
+
+        # Plain-text fallback
+        message.set_content(
+            "Your email client does not support HTML emails."
+        )
+
+        # HTML email
+        message.add_alternative(
+            html_body,
+            subtype="html",
+        )
+
+        # ----------------------------------------------------
+        # ENCODE EMAIL
+        # ----------------------------------------------------
+
+        encoded_message = (
+            base64.urlsafe_b64encode(
+                message.as_bytes()
+            )
+            .decode("utf-8")
+        )
+
+        # ----------------------------------------------------
+        # SEND EMAIL
+        # ----------------------------------------------------
+
+        result = (
+            service.users()
+            .messages()
+            .send(
+                userId="me",
+                body={
+                    "raw": encoded_message
+                },
+            )
+            .execute()
+        )
+
+        print(
+            f"Gmail API email sent successfully "
+            f"to {to_email}. "
+            f"Message ID: {result.get('id')}"
+        )
+
+        return True
+
+    except Exception as exc:
+
+        print(
+            f"Gmail API email error: "
+            f"{type(exc).__name__}: {exc}"
+        )
+
+        return False
+
+
+# ============================================================
 # EMAIL SENDING
 # ============================================================
 
@@ -152,17 +326,78 @@ async def send_email(
     html_body: str,
 ):
     """
-    Send email using:
+    Send email using the following priority:
 
-    1. Resend HTTPS API
-    2. Gmail SMTP fallback
+    1. Gmail API
+    2. Resend HTTPS API
+    3. Gmail SMTP
 
-    Resend is preferred because it works well with
-    cloud deployments such as Render.
-
-    Gmail SMTP is used as fallback when Resend is
-    unavailable or rejected.
+    Gmail API is the primary provider because it works
+    through HTTPS and avoids Render SMTP restrictions.
     """
+
+    # ========================================================
+    # GMAIL API CONFIGURATION
+    # ========================================================
+
+    gmail_client_id = getattr(
+        settings,
+        "GMAIL_CLIENT_ID",
+        None,
+    )
+
+    gmail_client_secret = getattr(
+        settings,
+        "GMAIL_CLIENT_SECRET",
+        None,
+    )
+
+    gmail_refresh_token = getattr(
+        settings,
+        "GMAIL_REFRESH_TOKEN",
+        None,
+    )
+
+    gmail_from_email = getattr(
+        settings,
+        "GMAIL_FROM_EMAIL",
+        None,
+    )
+
+    # ========================================================
+    # TRY GMAIL API FIRST
+    # ========================================================
+
+    if (
+        gmail_client_id
+        and gmail_client_secret
+        and gmail_refresh_token
+        and gmail_from_email
+    ):
+
+        gmail_api_success = (
+            await send_email_using_gmail_api(
+                to_email=to_email,
+                subject=subject,
+                html_body=html_body,
+            )
+        )
+
+        if gmail_api_success:
+
+            return
+
+        print(
+            "Gmail API failed. "
+            "Trying Resend fallback..."
+        )
+
+    else:
+
+        print(
+            "Gmail API configuration is incomplete. "
+            "Trying Resend fallback..."
+        )
 
     # ========================================================
     # RESEND CONFIGURATION
@@ -215,7 +450,7 @@ async def send_email(
     )
 
     # ========================================================
-    # TRY RESEND FIRST
+    # TRY RESEND
     # ========================================================
 
     if resend_api_key and resend_from_email:
@@ -362,7 +597,8 @@ async def send_email(
 
     raise RuntimeError(
         "Unable to send email. "
-        "Configure Resend or Gmail SMTP correctly."
+        "Configure Gmail API, Resend, "
+        "or Gmail SMTP correctly."
     )
 
 
