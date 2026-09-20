@@ -1,5 +1,8 @@
 # Environment variables / secrets
 .env
+.env.*
+!.env.example
+
 # Backend Python
 backend/venv/
 backend/.venv/
@@ -11,13 +14,19 @@ backend/*.sqlite3
 backend/uploads/*
 backend/.pytest_cache/
 
+# Google OAuth credentials
+credentials.json
+token.json
+
 # Frontend
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 frontend/tsconfig.tsbuildinfo
 
+# Root Node modules
+node_modules/
+
 # Logs / OS
 *.log
-.DS_Storenode_modules/
-node_modules/
+.DS_Store
