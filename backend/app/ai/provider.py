@@ -1221,9 +1221,9 @@ Generate the final interview scores.
         return result
 
 
-# ============================================================
+# =====================
 # PROVIDER FACTORY
-# ============================================================
+# =====================
 
 def get_provider() -> GeminiProvider:
     """

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { useAuthStore } from '@/store/authStore'
-import { useThemeStore } from '@/store/themeStore'
+//import { useThemeStore } from '@/store/themeStore'
 import { queryClient } from './main'
 
 // Layouts
@@ -43,7 +43,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const { theme } = useThemeStore()
+  //const { theme } = useThemeStore()
   const { isAuthenticated } = useAuthStore()
   const prevAuthRef = useRef(isAuthenticated)
 

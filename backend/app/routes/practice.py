@@ -270,8 +270,6 @@ PRACTICE_QUESTIONS = {
 # ============================================================
 # CATEGORY ALIASES
 # ============================================================
-#
-# Allows different frontend/backend spellings to resolve to
 # the same category.
 # ============================================================
 
