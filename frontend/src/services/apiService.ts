@@ -1,37 +1,13 @@
 /*
- * ============================================================
- * Interviewer Buddy AI — API Service
- * ============================================================
- *
- * Authentication:
- * - Signup → Email OTP verification
- * - Login → Email + Password
- * - Access token
- * - Refresh token
- * - Automatic token refresh
- * - Automatic retry after 401
- *
- * Storage:
- * - Zustand persist → ib-auth
- *
- * Environments:
- * - Local → http://127.0.0.1:8000/api
- * - Production → https://ai-interviewbuddy.onrender.com/api
- * ============================================================
+ * ======================
+ * Interviewer Buddy AI
+ * =======================
  */
 
 
-/* ============================================================
+/* ====================
  * API BASE URL
- * ============================================================
- *
- * VITE_API_URL should be configured in Render:
- *
- * VITE_API_URL=https://ai-interviewbuddy.onrender.com/api
- *
- * We also keep safe fallbacks so the application does not
- * accidentally call the frontend's /api route in production.
- * ============================================================
+ * ====================
  */
 
 const PRODUCTION_API_URL =
@@ -563,8 +539,6 @@ export const authApi = {
 
   /* ----------------------------------------------------------
    * SIGNUP
-   *
-   * Register → OTP sent to email
    * ----------------------------------------------------------
    */
 
@@ -586,8 +560,6 @@ export const authApi = {
 
   /* ----------------------------------------------------------
    * VERIFY SIGNUP OTP
-   *
-   * OTP → Access + Refresh Token
    * ----------------------------------------------------------
    */
 
@@ -641,8 +613,6 @@ export const authApi = {
 
   /* ----------------------------------------------------------
    * LOGIN
-   *
-   * Email + Password → JWT
    * ----------------------------------------------------------
    */
 
@@ -1265,60 +1235,82 @@ export const jobsApi = {
  * ============================================================
  */
 
+
+/* ------------------------------------------------------------
+ * PRACTICE QUESTION
+ * ------------------------------------------------------------
+ */
+
+export interface PracticeQuestion {
+  id: string;
+
+  question: string;
+
+  category: string;
+
+  difficulty: string;
+}
+
+
+/* ------------------------------------------------------------
+ * PRACTICE EVALUATION
+ * ------------------------------------------------------------
+ */
+
+export interface EvalResult {
+  score: number;
+
+  feedback: string;
+
+  strengths: string[];
+
+  improvements: string[];
+
+  suggested_answer: string;
+}
+
+
+/* ------------------------------------------------------------
+ * PRACTICE API
+ * ------------------------------------------------------------
+ */
+
 export const practiceApi = {
 
-  /* ----------------------------------------------------------
-   * GET PRACTICE QUESTION
-   * ----------------------------------------------------------
-   */
+  // ----------------------------------------------------------
+   // GET PRACTICE QUESTION
+   //---------------------------------------------------------
 
   getQuestion: (
     category: string,
     difficulty: string,
   ) =>
-    request<{
-      id: string;
-
-      question: string;
-
-      category: string;
-
-      difficulty: string;
-    }>(
+    request<PracticeQuestion>(
       "POST",
       "/practice/question",
       {
-        category,
-        difficulty,
+        category: category.trim(),
+        difficulty: difficulty.trim(),
       },
     ),
 
 
-  /* ----------------------------------------------------------
-   * EVALUATE PRACTICE ANSWER
-   * ----------------------------------------------------------
-   */
+  //Evaluate the user's answer to a practice question
 
   evaluate: (
     question: string,
     answer: string,
+    category?: string,
+    difficulty?: string,
   ) =>
-    request<{
-      score: number;
-
-      feedback: string;
-
-      strengths: string[];
-
-      improvements: string[];
-
-      suggested_answer: string;
-    }>(
+    request<EvalResult>(
       "POST",
       "/practice/evaluate",
       {
-        question,
-        answer,
+        question: question.trim(),
+        answer: answer.trim(),
+        category: category?.trim(),
+        difficulty: difficulty?.trim(),
       },
     ),
 };
@@ -1326,9 +1318,6 @@ export const practiceApi = {
 
 /* ============================================================
  * OPTIONAL DEBUG EXPORT
- * ============================================================
- *
- * Useful if you want to verify the API URL from another file.
  * ============================================================
  */
 
