@@ -1,191 +1,688 @@
-import { motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { CheckCircle, AlertTriangle, Target, TrendingUp, ArrowRight, Zap, Lightbulb, AlertCircle, RefreshCw } from 'lucide-react'
-import { interviewsApi, type InterviewListItem } from '@/services/apiService'
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowRight,
+  BarChart3,
+  BookOpen,
+  Brain,
+  CheckCircle,
+  FileText,
+  Lightbulb,
+  RefreshCw,
+  Route,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Trophy,
+  Zap,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+import { interviewsApi, type InterviewListItem } from "@/services/apiService";
+
+/* =========================================================
+   AI VISUAL
+========================================================= */
+
+function AIInsightVisual() {
+  return (
+    <div className="ai-insight-visual">
+      <div className="ai-orbit ai-orbit-one" />
+      <div className="ai-orbit ai-orbit-two" />
+
+      <div className="ai-glow" />
+
+      <motion.div
+        className="ai-brain-container"
+        animate={{
+          y: [0, -8, 0],
+          rotate: [0, 1.5, 0, -1.5, 0],
+        }}
+        transition={{
+          duration: 5,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      >
+        <Brain size={74} strokeWidth={1.5} />
+
+        <div className="ai-pulse-dot dot-one" />
+        <div className="ai-pulse-dot dot-two" />
+        <div className="ai-pulse-dot dot-three" />
+      </motion.div>
+
+      <motion.div
+        className="ai-floating-card card-one"
+        animate={{ y: [0, -6, 0] }}
+        transition={{ duration: 3.2, repeat: Infinity }}
+      >
+        <BarChart3 size={17} />
+        <span>Performance</span>
+      </motion.div>
+
+      <motion.div
+        className="ai-floating-card card-two"
+        animate={{ y: [0, 7, 0] }}
+        transition={{ duration: 3.8, repeat: Infinity }}
+      >
+        <Sparkles size={17} />
+        <span>AI Analysis</span>
+      </motion.div>
+
+      <motion.div
+        className="ai-floating-card card-three"
+        animate={{ y: [0, -5, 0] }}
+        transition={{ duration: 4.2, repeat: Infinity }}
+      >
+        <Target size={17} />
+        <span>Growth</span>
+      </motion.div>
+    </div>
+  );
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
 
 function EmptyInsights({ onStart }: { onStart: () => void }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      style={{ maxWidth: 500, margin: '4rem auto', textAlign: 'center' }}>
-      <Lightbulb size={48} style={{ color: 'var(--text-muted)', margin: '0 auto 1.5rem' }} />
-      <h2 style={{ fontSize: '1.375rem', fontWeight: 700, marginBottom: '0.75rem' }}>No AI insights available</h2>
-      <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '2rem' }}>
-        Complete an interview to unlock personalized AI-powered insights.
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="insights-empty-state"
+    >
+      <div className="empty-icon-wrapper">
+        <Lightbulb size={38} />
+      </div>
+
+      <h2>No AI insights yet</h2>
+
+      <p>
+        Complete your first interview and InterviewerBuddy AI will analyze your
+        performance, strengths, weaknesses, and improvement areas.
       </p>
-      <button onClick={onStart} className="btn btn-purple btn-lg" style={{ gap: '0.5rem' }}>
-        <Zap size={18} /> Start Your First Interview
+
+      <button onClick={onStart} className="insights-primary-btn">
+        <Zap size={18} />
+        Start Your First Interview
+        <ArrowRight size={16} />
       </button>
     </motion.div>
-  )
+  );
 }
 
-export default function AIInsights() {
-  const navigate = useNavigate()
+/* =========================================================
+   STAT CARD
+========================================================= */
 
-  const { data: interviews = [], isLoading, isError, refetch } = useQuery<InterviewListItem[]>({
-    queryKey: ['interviews'],
+function StatCard({
+  icon,
+  label,
+  value,
+  description,
+  delay = 0,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  description: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      className="insight-stat-card"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      whileHover={{ y: -5 }}
+    >
+      <div className="insight-stat-icon">{icon}</div>
+
+      <div className="insight-stat-content">
+        <span>{label}</span>
+
+        <strong>{value}</strong>
+
+        <small>{description}</small>
+      </div>
+    </motion.div>
+  );
+}
+
+/* =========================================================
+   MAIN PAGE
+========================================================= */
+
+export default function AIInsights() {
+  const navigate = useNavigate();
+
+  const {
+    data: interviews = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<InterviewListItem[]>({
+    queryKey: ["interviews"],
     queryFn: interviewsApi.list,
     staleTime: 1000 * 60 * 2,
     retry: 1,
-  })
+  });
+
+  /* =======================================================
+     LOADING
+  ======================================================= */
 
   if (isLoading) {
     return (
-      <div style={{ maxWidth: 1100 }}>
-        <div className="skeleton" style={{ height: 36, width: 220, borderRadius: 8, marginBottom: 32 }} />
-        <div className="skeleton" style={{ height: 200, borderRadius: 'var(--radius-lg)', marginBottom: '1.5rem' }} />
-        <div className="skeleton" style={{ height: 200, borderRadius: 'var(--radius-lg)' }} />
+      <div className="ai-insights-page">
+        <div className="insights-loading-hero">
+          <div>
+            <div className="skeleton loading-title" />
+            <div className="skeleton loading-subtitle" />
+          </div>
+
+          <div className="skeleton loading-visual" />
+        </div>
+
+        <div className="loading-grid">
+          {[1, 2, 3, 4].map((item) => (
+            <div key={item} className="skeleton loading-card" />
+          ))}
+        </div>
       </div>
-    )
+    );
   }
+
+  /* =======================================================
+     ERROR
+  ======================================================= */
 
   if (isError) {
     return (
-      <div style={{ maxWidth: 500, margin: '4rem auto', textAlign: 'center' }}>
-        <AlertCircle size={40} style={{ color: 'var(--red)', margin: '0 auto 1rem' }} />
-        <h2 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Unable to load insights</h2>
-        <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>There was a problem fetching your data.</p>
-        <button onClick={() => refetch()} className="btn btn-primary" style={{ gap: '0.5rem' }}>
-          <RefreshCw size={16} /> Retry
+      <div className="insights-error-state">
+        <div className="error-icon-wrapper">
+          <AlertCircle size={38} />
+        </div>
+
+        <h2>Unable to load insights</h2>
+
+        <p>
+          We couldn't fetch your interview data right now. Please try again.
+        </p>
+
+        <button onClick={() => refetch()} className="insights-primary-btn">
+          <RefreshCw size={17} />
+          Retry
         </button>
       </div>
-    )
+    );
   }
 
-  const completed = interviews.filter((i) => i.status === 'completed' && i.score != null)
+  /* =======================================================
+     DATA
+  ======================================================= */
+
+  const completed = interviews.filter(
+    (i) => i.status === "completed" && i.score != null,
+  );
+
   if (completed.length === 0) {
-    return <EmptyInsights onStart={() => navigate('/interview/setup')} />
+    return (
+      <div className="ai-insights-page">
+        <EmptyInsights onStart={() => navigate("/interview/setup")} />
+      </div>
+    );
   }
 
-  const avgScore = Math.round(completed.reduce((a, i) => a + (i.score ?? 0), 0) / completed.length)
-  const best = Math.max(...completed.map((i) => i.score ?? 0))
-  const worst = Math.min(...completed.map((i) => i.score ?? 0))
-  const improving = completed.length >= 2
-    ? (completed[completed.length - 1].score ?? 0) > (completed[0].score ?? 0)
-    : false
+  const scores = completed.map((i) => i.score ?? 0);
 
-  // Derive strengths/improvements from actual score data
-  const highScoreInterviews = completed.filter((i) => (i.score ?? 0) >= 80)
-  const lowScoreInterviews  = completed.filter((i) => (i.score ?? 0) < 70)
-  const strongTypes  = [...new Set(highScoreInterviews.map((i) => i.type))]
-  const weakTypes    = [...new Set(lowScoreInterviews.map((i) => i.type))]
+  const avgScore = Math.round(
+    scores.reduce((a, b) => a + b, 0) / scores.length,
+  );
+
+  const best = Math.max(...scores);
+
+  const improving =
+    completed.length >= 2
+      ? (completed[completed.length - 1].score ?? 0) > (completed[0].score ?? 0)
+      : false;
+
+  const highScoreInterviews = completed.filter((i) => (i.score ?? 0) >= 80);
+
+  const lowScoreInterviews = completed.filter((i) => (i.score ?? 0) < 70);
+
+  const strongTypes = [...new Set(highScoreInterviews.map((i) => i.type))];
+
+  const weakTypes = [...new Set(lowScoreInterviews.map((i) => i.type))];
+
+  /* =======================================================
+     SCORE LABEL
+  ======================================================= */
+
+  const getScoreMessage = () => {
+    if (avgScore >= 80) {
+      return "Your interview performance is consistently strong.";
+    }
+
+    if (avgScore >= 70) {
+      return "You have a solid foundation with room to improve.";
+    }
+
+    return "Focus on consistent practice to strengthen your performance.";
+  };
 
   return (
-    <div style={{ maxWidth: 1100 }}>
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem' }}>AI Insights</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          Analysis based on your {completed.length} completed interview{completed.length !== 1 ? 's' : ''}
-        </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
-          <div className="badge badge-purple">AI Evaluation</div>
-          <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Based on {completed.length} session{completed.length !== 1 ? 's' : ''}</span>
-        </div>
-      </motion.div>
+    <div className="ai-insights-page">
+      {/* =================================================
+          HERO
+      ================================================= */}
 
-      {/* Strengths */}
+      <motion.section
+        className="insights-hero"
+        initial={{ opacity: 0, y: -15 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="hero-content">
+          <div className="hero-badge">
+            <Sparkles size={14} />
+            AI-Powered Performance Analysis
+          </div>
+
+          <h1>
+            Your Interview
+            <span> Intelligence</span>
+          </h1>
+
+          <p className="hero-description">
+            Get a clearer picture of your interview performance, discover your
+            strengths, and identify where you can improve.
+          </p>
+
+          <div className="hero-session-info">
+            <div className="hero-session-icon">
+              <CheckCircle size={17} />
+            </div>
+
+            <div>
+              <strong>
+                {completed.length} completed session
+                {completed.length !== 1 ? "s" : ""}
+              </strong>
+
+              <span>{getScoreMessage()}</span>
+            </div>
+          </div>
+
+          <div className="hero-actions">
+            <button
+              onClick={() => navigate("/practice")}
+              className="insights-primary-btn"
+            >
+              <Zap size={17} />
+              Practice Now
+              <ArrowRight size={16} />
+            </button>
+
+            <button
+              onClick={() => navigate("/reports")}
+              className="insights-secondary-btn"
+            >
+              <FileText size={17} />
+              View Reports
+            </button>
+          </div>
+        </div>
+
+        <AIInsightVisual />
+      </motion.section>
+
+      {/* =================================================
+          QUICK STATS
+      ================================================= */}
+
+      <section className="insights-stats-grid">
+        <StatCard
+          icon={<BarChart3 size={21} />}
+          label="Average Score"
+          value={`${avgScore}%`}
+          description={`Across ${completed.length} session${completed.length !== 1 ? "s" : ""}`}
+          delay={0.1}
+        />
+
+        <StatCard
+          icon={<Trophy size={21} />}
+          label="Best Session"
+          value={`${best}%`}
+          description="Your highest score"
+          delay={0.15}
+        />
+
+        <StatCard
+          icon={<TrendingUp size={21} />}
+          label="Current Trend"
+          value={
+            completed.length >= 2
+              ? improving
+                ? "↑ Improving"
+                : "↓ Review"
+              : "—"
+          }
+          description={
+            completed.length >= 2
+              ? "Based on recent sessions"
+              : "Complete another session"
+          }
+          delay={0.2}
+        />
+
+        <StatCard
+          icon={<Target size={21} />}
+          label="Sessions"
+          value={completed.length}
+          description="Completed interviews"
+          delay={0.25}
+        />
+      </section>
+
+      {/* =================================================
+          SCORE OVERVIEW
+      ================================================= */}
+
+      <motion.section
+        className="score-overview-card"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <div className="section-heading">
+          <div>
+            <span className="section-eyebrow">PERFORMANCE</span>
+
+            <h2>Overall performance</h2>
+
+            <p>Your average score across completed interviews.</p>
+          </div>
+
+          <div className="large-score">
+            <strong>{avgScore}</strong>
+            <span>/100</span>
+          </div>
+        </div>
+
+        <div className="score-progress-wrapper">
+          <div className="score-progress-track">
+            <motion.div
+              className="score-progress-fill"
+              initial={{ width: 0 }}
+              animate={{ width: `${avgScore}%` }}
+              transition={{
+                duration: 1.2,
+                delay: 0.5,
+                ease: "easeOut",
+              }}
+            />
+          </div>
+
+          <div className="score-progress-labels">
+            <span>0</span>
+            <span>50</span>
+            <span>100</span>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* =================================================
+          STRENGTHS
+      ================================================= */}
+
       {strongTypes.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="card" style={{ marginBottom: '1.5rem', background: 'rgba(16,185,129,0.03)', borderColor: 'rgba(16,185,129,0.12)' }}>
-          <h2 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '1.25rem', color: 'var(--green-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <CheckCircle size={20} /> Strong Interview Types
-          </h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-            {strongTypes.map((type, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.875rem 1rem', background: 'rgba(16,185,129,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16,185,129,0.12)' }}>
-                <CheckCircle size={16} color="var(--green)" />
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {type} — scoring ≥80%
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
+        <motion.section
+          className="insight-section strengths-section"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <div className="section-heading">
+            <div>
+              <span className="section-eyebrow">STRENGTHS</span>
 
-      {/* Improvements */}
-      {weakTypes.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="card" style={{ marginBottom: '1.5rem', background: 'rgba(245,158,11,0.03)', borderColor: 'rgba(245,158,11,0.12)' }}>
-          <h2 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '1.25rem', color: 'var(--orange-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <AlertTriangle size={20} /> Areas Needing Improvement
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {weakTypes.map((type, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'rgba(245,158,11,0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(245,158,11,0.12)' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: 'var(--orange)' }} />
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {type} — scoring below 70%
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
+              <h2>Where you're performing well</h2>
 
-      {/* Recommendations */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-        className="card" style={{ marginBottom: '1.5rem', background: 'rgba(99,102,241,0.04)', borderColor: 'rgba(99,102,241,0.15)' }}>
-        <h2 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '1.25rem', color: 'var(--blue-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Target size={20} /> Recommendations
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
-          {[
-            { text: 'Practice more interviews to get richer AI insights', action: 'New Interview', link: '/interview/setup' },
-            { text: weakTypes.length > 0 ? `Focus on ${weakTypes[0]} — your lowest-scoring type` : 'Try different interview types to diversify your skills', action: 'Practice Now', link: '/practice' },
-            { text: 'Review your past interview reports to identify patterns', action: 'View Reports', link: '/reports' },
-            { text: 'Follow a structured study plan with the career roadmap', action: 'View Roadmap', link: '/career-roadmap' },
-          ].map((item, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.08 }}
-              className="card card-interactive"
-              style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)' }}
-              onClick={() => navigate(item.link)}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>🎯</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem', lineHeight: 1.4 }}>
-                    {item.text}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: '0.625rem' }}>
-                    <button className="btn btn-primary btn-sm" style={{ fontSize: '0.75rem' }}>
-                      {item.action} <ArrowRight size={12} />
-                    </button>
-                  </div>
+              <p>Interview categories where you've achieved strong scores.</p>
+            </div>
+
+            <div className="section-heading-icon">
+              <CheckCircle size={22} />
+            </div>
+          </div>
+
+          <div className="insight-types-grid">
+            {strongTypes.map((type, index) => (
+              <motion.div
+                key={type}
+                className="insight-type-card"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.45 + index * 0.08 }}
+                whileHover={{
+                  y: -4,
+                  scale: 1.01,
+                }}
+              >
+                <div className="type-icon success">
+                  <CheckCircle size={18} />
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
 
-      {/* Quick stats — derived from real data */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-        {[
-          { label: 'Average Score',    value: `${avgScore}%`,          color: 'var(--blue)',   desc: `Over ${completed.length} sessions` },
-          { label: 'Best Session',     value: `${best}%`,              color: 'var(--green)',  desc: 'All time high' },
-          { label: 'Trend',            value: improving ? '↑ Up' : completed.length >= 2 ? '↓ Down' : '—', color: improving ? 'var(--green)' : completed.length >= 2 ? 'var(--orange)' : 'var(--text-muted)', desc: 'Recent direction' },
-          { label: 'Sessions',         value: completed.length,        color: 'var(--purple)', desc: 'Completed interviews' },
-        ].map((stat, i) => (
-          <div key={i} className="card" style={{ textAlign: 'center', padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{stat.label}</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: stat.color, marginBottom: '0.25rem' }}>{stat.value}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{stat.desc}</div>
+                <div>
+                  <strong>{type}</strong>
+                  <span>Strong performance area</span>
+                </div>
+
+                <ArrowRight size={16} />
+              </motion.div>
+            ))}
           </div>
-        ))}
-      </motion.div>
+        </motion.section>
+      )}
 
-      {/* CTA */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
-        style={{ display: 'flex', gap: '1rem', marginTop: '2rem', justifyContent: 'center' }}>
-        <button onClick={() => navigate('/practice')} className="btn btn-primary btn-lg">
-          Start Practice Session
+      {/* =================================================
+          IMPROVEMENTS
+      ================================================= */}
+
+      {weakTypes.length > 0 && (
+        <motion.section
+          className="insight-section improvement-section"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <div className="section-heading">
+            <div>
+              <span className="section-eyebrow">FOCUS AREAS</span>
+
+              <h2>Areas to improve</h2>
+
+              <p>Categories where additional practice may help.</p>
+            </div>
+
+            <div className="section-heading-icon warning">
+              <AlertTriangle size={22} />
+            </div>
+          </div>
+
+          <div className="insight-types-grid">
+            {weakTypes.map((type, index) => (
+              <motion.div
+                key={type}
+                className="insight-type-card improvement-card"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.55 + index * 0.08 }}
+                whileHover={{
+                  y: -4,
+                  scale: 1.01,
+                }}
+              >
+                <div className="type-icon warning">
+                  <AlertTriangle size={18} />
+                </div>
+
+                <div>
+                  <strong>{type}</strong>
+                  <span>Consider more practice</span>
+                </div>
+
+                <ArrowRight size={16} />
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+      )}
+
+      {/* =================================================
+          RECOMMENDATIONS
+      ================================================= */}
+
+      <motion.section
+        className="recommendations-section"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+      >
+        <div className="section-heading">
+          <div>
+            <span className="section-eyebrow">NEXT STEPS</span>
+
+            <h2>Recommended for you</h2>
+
+            <p>Continue building your interview skills.</p>
+          </div>
+
+          <div className="section-heading-icon">
+            <Target size={22} />
+          </div>
+        </div>
+
+        <div className="recommendations-grid">
+          <RecommendationCard
+            icon={<Zap size={20} />}
+            title="Start a new interview"
+            description="Test your skills with another AI-powered interview."
+            action="New Interview"
+            onClick={() => navigate("/interview/setup")}
+          />
+
+          <RecommendationCard
+            icon={<BookOpen size={20} />}
+            title={
+              weakTypes.length > 0
+                ? `Practice ${weakTypes[0]}`
+                : "Practice your skills"
+            }
+            description={
+              weakTypes.length > 0
+                ? "Spend more time on one of your improvement areas."
+                : "Keep practicing to build stronger interview consistency."
+            }
+            action="Practice Now"
+            onClick={() => navigate("/practice")}
+          />
+
+          <RecommendationCard
+            icon={<FileText size={20} />}
+            title="Review your reports"
+            description="Look back at previous interview evaluations."
+            action="View Reports"
+            onClick={() => navigate("/reports")}
+          />
+
+          <RecommendationCard
+            icon={<Route size={20} />}
+            title="Follow your roadmap"
+            description="Use your career roadmap to structure your preparation."
+            action="View Roadmap"
+            onClick={() => navigate("/career-roadmap")}
+          />
+        </div>
+      </motion.section>
+
+      {/* =================================================
+          BOTTOM CTA
+      ================================================= */}
+
+      <motion.section
+        className="insights-bottom-cta"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.75 }}
+      >
+        <div className="cta-icon">
+          <Brain size={25} />
+        </div>
+
+        <div className="cta-content">
+          <h3>Ready for your next interview?</h3>
+          <p>Practice consistently and use your AI insights to improve.</p>
+        </div>
+
+        <button
+          onClick={() => navigate("/practice")}
+          className="insights-primary-btn"
+        >
+          Start Practice
+          <ArrowRight size={16} />
         </button>
-        <button onClick={() => navigate('/career-roadmap')} className="btn btn-ghost btn-lg">
-          <TrendingUp size={18} /> View Career Roadmap
-        </button>
-      </motion.div>
+      </motion.section>
     </div>
-  )
+  );
+}
+
+/* =========================================================
+   RECOMMENDATION CARD
+========================================================= */
+
+function RecommendationCard({
+  icon,
+  title,
+  description,
+  action,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  action: string;
+  onClick: () => void;
+}) {
+  return (
+    <motion.div
+      className="recommendation-card"
+      whileHover={{
+        y: -6,
+      }}
+      onClick={onClick}
+    >
+      <div className="recommendation-icon">{icon}</div>
+
+      <div className="recommendation-content">
+        <h3>{title}</h3>
+
+        <p>{description}</p>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          className="recommendation-action"
+        >
+          {action}
+          <ArrowRight size={14} />
+        </button>
+      </div>
+    </motion.div>
+  );
 }
