@@ -1,19 +1,24 @@
 import { motion } from 'framer-motion'
 import {
   ArrowRight,
+  Award,
   BarChart3,
   Bot,
   BrainCircuit,
   Briefcase,
   CheckCircle2,
   ChevronDown,
+  Code2,
+  FileCheck,
   FileText,
+  Layers,
   Menu,
   MessageSquare,
   Play,
   ShieldCheck,
   Sparkles,
   Target,
+  TrendingUp,
   X,
   Zap,
 } from 'lucide-react'
@@ -21,7 +26,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 // ============================================================
-// FEATURES
+// DATA DEFINITIONS
 // ============================================================
 
 const features = [
@@ -29,161 +34,113 @@ const features = [
     icon: Bot,
     title: 'AI Mock Interviews',
     description:
-      'Practice technical, behavioral, HR, coding, and role-specific interviews with an AI interviewer.',
-  },
-  {
-    icon: FileText,
-    title: 'Resume Intelligence',
-    description:
-      'Analyze your resume for ATS readiness, skills, strengths, gaps, and actionable improvements.',
-  },
-  {
-    icon: Briefcase,
-    title: 'Job Match Analysis',
-    description:
-      'Compare your profile with a job description and identify relevant skills and preparation gaps.',
+      'Practice realistic interviews across technical, behavioral, HR, and AI/ML tracks with an adaptive AI interviewer.',
   },
   {
     icon: BrainCircuit,
     title: 'Adaptive Questions',
     description:
-      'Questions adapt to your selected role, difficulty, interview type, and previous responses.',
+      'Questions dynamically adjust in depth and complexity based on your responses, target role, and seniority level.',
+  },
+  {
+    icon: FileText,
+    title: 'Resume Intelligence',
+    description:
+      'Extract critical skills, detect ATS gaps, and receive targeted improvement recommendations tailored to your profile.',
+  },
+  {
+    icon: Briefcase,
+    title: 'Job Match Analysis',
+    description:
+      'Compare your background with target job descriptions to identify missing keywords, requirements, and prep priorities.',
   },
   {
     icon: BarChart3,
     title: 'Performance Analytics',
     description:
-      'Track interview scores, answer quality, strengths, improvements, and overall progress.',
+      'Measure your answer clarity, relevance, technical depth, and track your readiness progression over time.',
   },
   {
     icon: Target,
     title: 'Career Preparation',
     description:
-      'Convert your interview and resume insights into a focused preparation strategy.',
+      'Convert interview feedback and resume analysis into a structured, step-by-step career advancement plan.',
   },
 ]
-
-// ============================================================
-// HOW IT WORKS
-// ============================================================
 
 const steps = [
   {
     number: '01',
     icon: FileText,
-    title: 'Create Your Profile',
+    title: 'Build your profile',
     description:
-      'Add your target role, skills, experience, and career information.',
+      'Configure your target role, primary tech stack, seniority, and preferred interview domains.',
   },
   {
     number: '02',
     icon: Briefcase,
-    title: 'Analyze Your Target',
+    title: 'Understand your target',
     description:
-      'Upload your resume or analyze a job description to understand what to improve.',
+      'Upload your resume or paste a job description to pinpoint key skill gaps and focus areas.',
   },
   {
     number: '03',
     icon: Bot,
-    title: 'Practice With AI',
+    title: 'Practice with AI',
     description:
-      'Start a personalized mock interview and answer questions in a realistic environment.',
+      'Engage in interactive mock interviews with conversational audio or text-based question simulations.',
   },
   {
     number: '04',
     icon: BarChart3,
-    title: 'Improve With Feedback',
+    title: 'Improve with feedback',
     description:
-      'Review AI evaluation, scores, strengths, weaknesses, and recommendations.',
+      'Receive structured scoring on relevance, technical accuracy, clarity, and personalized recommendations.',
   },
 ]
 
-// ============================================================
-// FAQ
-// ============================================================
+const interviewTypes = [
+  { label: 'Technical', count: '120+ Scenarios', icon: Code2 },
+  { label: 'Behavioral', count: 'STAR Method', icon: MessageSquare },
+  { label: 'HR', count: 'Culture & Fit', icon: Briefcase },
+  { label: 'AI / ML', count: 'Deep Learning & LLMs', icon: BrainCircuit },
+  { label: 'Python', count: 'Algorithms & Architecture', icon: Layers },
+  { label: 'Software Engineering', count: 'System Design', icon: Target },
+  { label: 'Coding', count: 'Live Problem Solving', icon: Zap },
+  { label: 'Role Specific', count: 'Tailored Tracks', icon: Award },
+]
 
 const faqs = [
   {
     question: 'How does the AI interview work?',
     answer:
-      'Select your target role, interview type, difficulty, duration, and mode. Interviewer Buddy AI generates questions and evaluates your responses throughout the interview.',
+      'You choose your target role, interview type (technical, behavioral, or HR), seniority, and format. Interviewer Buddy AI generates realistic, context-aware interview questions, listens to your answers, and dynamically adapts follow-up questions just like a human interviewer.',
   },
   {
     question: 'What types of interviews can I practice?',
     answer:
-      'You can prepare for technical, behavioral, HR, coding, AI/ML, software engineering, and other role-specific interview scenarios.',
+      'You can practice technical engineering interviews, system design discussions, behavioral sessions (STAR framework), HR screening calls, and specialized AI/ML or Python role assessments.',
   },
   {
     question: 'Can I analyze my resume?',
     answer:
-      'Yes. Upload your resume to receive AI-powered insights including ATS-related analysis, extracted skills, strengths, and improvement suggestions.',
+      'Yes. Upload your PDF or doc resume to receive automated ATS readiness scores, extracted competencies, identified experience gaps, and tailored suggestions to strengthen your applications.',
   },
   {
     question: 'Can I analyze a job description?',
     answer:
-      'Yes. Paste a job description to understand required skills, seniority, interview topics, missing skills, and your overall job match.',
+      'Yes. Simply paste the job description text. Our AI analyzes the role requirements, compares them against your experience, and generates a personalized preparation plan highlighting missing qualifications.',
   },
   {
     question: 'How are interview answers evaluated?',
     answer:
-      'Answers are evaluated based on relevance, technical quality, clarity, structure, problem-solving, communication, and the requirements of the selected interview.',
+      'Each answer is evaluated across multiple dimensions: contextual relevance, technical correctness, structural coherence, communication clarity, and problem-solving depth. You receive concrete suggestions to elevate your score.',
   },
 ]
 
-// ============================================================
-// FAQ ITEM
-// ============================================================
-
-function FAQItem({
-  question,
-  answer,
-  index,
-}: {
-  question: string
-  answer: string
-  index: number
-}) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.05 }}
-      className={`faq-item ${open ? 'faq-open' : ''}`}
-    >
-      <button
-        type="button"
-        className="faq-question"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-      >
-        <span>{question}</span>
-
-        <ChevronDown
-          size={19}
-          className={`faq-chevron ${open ? 'rotate' : ''}`}
-        />
-      </button>
-
-      {open && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          className="faq-answer"
-        >
-          <p>{answer}</p>
-        </motion.div>
-      )}
-    </motion.div>
-  )
-}
-
-// ============================================================
-// GITHUB ICON
-// Inline SVG avoids lucide-react Github export issues.
-// ============================================================
+// ======================
+// HELPER COMPONENTS
+// ======================
 
 function GitHubIcon({ size = 18 }: { size?: number }) {
   return (
@@ -199,154 +156,206 @@ function GitHubIcon({ size = 18 }: { size?: number }) {
   )
 }
 
-// ============================================================
-// HERO PRODUCT VISUAL
-// ============================================================
+function FAQItem({
+  question,
+  answer,
+  index,
+}: {
+  question: string
+  answer: string
+  index: number
+}) {
+  const [open, setOpen] = useState(false)
 
-function InterviewDashboardPreview() {
   return (
     <motion.div
-      className="hero-preview"
-      initial={{ opacity: 0, y: 30, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.8, delay: 0.2 }}
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.35, delay: index * 0.05 }}
+      className={`faq-item ${open ? 'faq-item-open' : ''}`}
     >
-      <div className="preview-glow" />
+      <button
+        type="button"
+        className="faq-question-btn"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+      >
+        <span className="faq-question-text">{question}</span>
+        <span className="faq-icon-wrapper">
+          <ChevronDown
+            size={18}
+            className={`faq-chevron ${open ? 'faq-chevron-rotated' : ''}`}
+          />
+        </span>
+      </button>
 
-      <div className="browser-window">
-        <div className="browser-bar">
-          <div className="browser-dots">
-            <span />
-            <span />
-            <span />
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          transition={{ duration: 0.25 }}
+          className="faq-answer-body"
+        >
+          <p>{answer}</p>
+        </motion.div>
+      )}
+    </motion.div>
+  )
+}
+
+// ============================================================
+// HERO DASHBOARD MOCKUP
+// ============================================================
+
+function HeroDashboardMockup() {
+  return (
+    <div className="hero-mockup-wrapper">
+      <div className="mockup-subtle-glow" />
+
+      {/* Main Mockup Window */}
+      <div className="mockup-window">
+        {/* Browser Top Bar */}
+        <div className="mockup-header-bar">
+          <div className="window-dots">
+            <span className="dot dot-one" />
+            <span className="dot dot-two" />
+            <span className="dot dot-three" />
           </div>
 
-          <div className="browser-url">
-            interviewer-buddy.ai / interview
+          <div className="window-url-pill">
+            <ShieldCheck size={13} className="url-shield" />
+            <span>interviewerbuddy.ai/session/python-developer</span>
           </div>
 
-          <div className="browser-secure">
-            <ShieldCheck size={12} />
+          <div className="window-status-pill">
+            <span className="pulse-indicator" />
+            <span className="status-label">Live AI Session</span>
           </div>
         </div>
 
-        <div className="dashboard-preview">
-          <aside className="preview-sidebar">
-            <div className="preview-brand">
-              <div className="preview-logo">
-                <Bot size={16} />
+        {/* Dashboard Content */}
+        <div className="mockup-body">
+          {/* Inner Sidebar */}
+          <div className="mockup-sidebar">
+            <div className="sidebar-brand">
+              <div className="sidebar-logo-box">
+                <Bot size={15} />
               </div>
-
-              <span>Buddy AI</span>
+              <span className="sidebar-brand-name">Buddy AI</span>
             </div>
 
-            <div className="preview-menu active">
-              <MessageSquare size={14} />
-              <span>Interview</span>
-            </div>
-
-            <div className="preview-menu">
-              <BarChart3 size={14} />
-              <span>Analytics</span>
-            </div>
-
-            <div className="preview-menu">
-              <FileText size={14} />
-              <span>Resume</span>
-            </div>
-
-            <div className="preview-menu">
-              <Briefcase size={14} />
-              <span>Jobs</span>
-            </div>
-          </aside>
-
-          <div className="preview-main">
-            <div className="preview-top">
-              <div>
-                <small>LIVE AI INTERVIEW</small>
-                <h3>Python Developer</h3>
+            <div className="sidebar-nav-items">
+              <div className="sidebar-item active">
+                <MessageSquare size={14} />
+                <span>Interview</span>
               </div>
-
-              <div className="live-pill">
-                <span />
-                AI Active
+              <div className="sidebar-item">
+                <BarChart3 size={14} />
+                <span>Analytics</span>
+              </div>
+              <div className="sidebar-item">
+                <FileText size={14} />
+                <span>Resume</span>
+              </div>
+              <div className="sidebar-item">
+                <Briefcase size={14} />
+                <span>Job Match</span>
               </div>
             </div>
 
-            <div className="question-card">
-              <div className="question-label">
+            <div className="sidebar-session-box">
+              <span className="session-tag">TRACK</span>
+              <span className="session-role">Python Developer</span>
+            </div>
+          </div>
+
+          {/* Main Interview Panel */}
+          <div className="mockup-content">
+            {/* Header / Info */}
+            <div className="interview-top-row">
+              <div className="role-meta">
+                <span className="role-sub">AI MOCK INTERVIEW</span>
+                <h4 className="role-title">Python Developer — Technical Round</h4>
+              </div>
+
+              <div className="duration-tag">
+                <span className="recording-dot" />
+                <span>AI Listening</span>
+              </div>
+            </div>
+
+            {/* Question Card */}
+            <div className="mockup-question-box">
+              <div className="question-badge">
                 <Sparkles size={13} />
-                Question 04
+                <span>Question 04 of 08</span>
               </div>
 
-              <h4>
-                Explain the difference between a list and a tuple in Python.
-              </h4>
+              <h5 className="question-text">
+                "Explain the difference between a list and a tuple in Python, and when would you choose one over the other for performance-critical systems?"
+              </h5>
 
-              <div className="answer-line">
-                <span className="answer-dot" />
-                <span />
-                <span />
-              </div>
-
-              <div className="answer-line short">
-                <span className="answer-dot" />
-                <span />
-              </div>
-
-              <div className="answer-status">
-                <span>Answer evaluation</span>
-                <strong>AI listening...</strong>
-              </div>
-            </div>
-
-            <div className="preview-stats">
-              <div className="preview-stat">
-                <div className="stat-icon blue">
-                  <Target size={14} />
+              {/* Real-time wave / answer state */}
+              <div className="answer-capture-box">
+                <div className="capture-status">
+                  <span className="wave-bars">
+                    <span className="bar" />
+                    <span className="bar" />
+                    <span className="bar" />
+                    <span className="bar" />
+                    <span className="bar" />
+                  </span>
+                  <span className="capture-text">Candidate responding (01:42)...</span>
                 </div>
-
-                <div>
-                  <small>Relevance</small>
-                  <strong>92%</strong>
-                </div>
-              </div>
-
-              <div className="preview-stat">
-                <div className="stat-icon purple">
-                  <MessageSquare size={14} />
-                </div>
-
-                <div>
-                  <small>Clarity</small>
-                  <strong>91%</strong>
-                </div>
-              </div>
-
-              <div className="preview-stat">
-                <div className="stat-icon green">
-                  <BarChart3 size={14} />
-                </div>
-
-                <div>
-                  <small>Progress</small>
-                  <strong>68%</strong>
+                <div className="answer-preview-snippet">
+                  "Lists are mutable and incur additional over-allocation overhead, whereas tuples are immutable, memory-efficient, and can be hashed..."
                 </div>
               </div>
             </div>
 
-            <div className="ai-feedback">
-              <div className="feedback-icon">
-                <Sparkles size={14} />
+            {/* Metrics Row */}
+            <div className="mockup-scores-grid">
+              <div className="score-tile">
+                <div className="score-icon-box">
+                  <Target size={15} />
+                </div>
+                <div className="score-details">
+                  <span className="tile-label">Relevance Score</span>
+                  <strong className="tile-value">94%</strong>
+                </div>
               </div>
 
-              <div>
-                <strong>AI Feedback</strong>
+              <div className="score-tile">
+                <div className="score-icon-box">
+                  <MessageSquare size={15} />
+                </div>
+                <div className="score-details">
+                  <span className="tile-label">Clarity Score</span>
+                  <strong className="tile-value">91%</strong>
+                </div>
+              </div>
 
-                <p>
-                  Good concept coverage. Add a practical example to make your
-                  answer stronger.
+              <div className="score-tile">
+                <div className="score-icon-box">
+                  <TrendingUp size={15} />
+                </div>
+                <div className="score-details">
+                  <span className="tile-label">Overall Progress</span>
+                  <strong className="tile-value">68%</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Feedback Strip */}
+            <div className="mockup-feedback-banner">
+              <div className="feedback-bot-avatar">
+                <Bot size={15} />
+              </div>
+              <div className="feedback-content">
+                <span className="feedback-title">Real-time AI Feedback</span>
+                <p className="feedback-p">
+                  Precise distinction of memory allocation. Mentioning dictionary key hashing reinforced strong senior-level comprehension.
                 </p>
               </div>
             </div>
@@ -354,164 +363,186 @@ function InterviewDashboardPreview() {
         </div>
       </div>
 
+      {/* Floating Widget 1: Score */}
       <motion.div
-        className="floating-card floating-card-left"
-        animate={{ y: [0, -7, 0] }}
-        transition={{
-          repeat: Infinity,
-          duration: 3.5,
-          ease: 'easeInOut',
-        }}
+        className="floating-widget float-top-right"
+        animate={{ y: [0, -6, 0] }}
+        transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
       >
-        <div className="floating-icon">
-          <CheckCircle2 size={15} />
-        </div>
-
-        <div>
-          <small>Answer Quality</small>
-          <strong>Excellent</strong>
+        <div className="widget-score-pill">8.8</div>
+        <div className="widget-info">
+          <span className="widget-label">AI Interview Score</span>
+          <strong className="widget-highlight">Strong answer structure</strong>
         </div>
       </motion.div>
 
+      {/* Floating Widget 2: Feedback */}
       <motion.div
-        className="floating-card floating-card-right"
-        animate={{ y: [0, 7, 0] }}
-        transition={{
-          repeat: Infinity,
-          duration: 4,
-          ease: 'easeInOut',
-        }}
+        className="floating-widget float-bottom-left"
+        animate={{ y: [0, 6, 0] }}
+        transition={{ repeat: Infinity, duration: 4.5, ease: 'easeInOut' }}
       >
-        <div className="floating-score">8.7</div>
-
-        <div>
-          <small>AI Score</small>
-          <strong>Strong answer</strong>
+        <div className="widget-icon-pill">
+          <CheckCircle2 size={16} />
+        </div>
+        <div className="widget-info">
+          <span className="widget-label">AI Feedback</span>
+          <strong className="widget-highlight">High relevance & depth</strong>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   )
 }
 
 // ============================================================
-// LANDING PAGE
+// MAIN LANDING COMPONENT
 // ============================================================
 
 export default function Landing() {
   const navigate = useNavigate()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  const [mobileMenu, setMobileMenu] = useState(false)
-
-  const closeMenu = () => {
-    setMobileMenu(false)
-  }
-
-  const goToRegister = () => {
-    closeMenu()
+  const handleRegister = () => {
+    setMobileMenuOpen(false)
     navigate('/register')
   }
 
-  const goToLogin = () => {
-    closeMenu()
+  const handleLogin = () => {
+    setMobileMenuOpen(false)
     navigate('/login')
   }
 
   return (
-    <div className="landing-page">
+    <div className="landing-wrapper">
       {/* ======================================================
-          HEADER
+          STICKY NAVBAR
       ====================================================== */}
-
-      <header className="landing-header">
-        <div className="header-inner">
+      <header className="sticky-navbar">
+        <div className="navbar-container">
+          {/* Logo & Product Name */}
           <button
             type="button"
-            className="brand"
+            className="navbar-brand-btn"
             onClick={() => navigate('/')}
-            aria-label="Interviewer Buddy AI home"
+            aria-label="Interviewer Buddy AI Home"
           >
-            <div className="brand-icon">
-              <Bot size={21} />
+            <div className="brand-logo-icon">
+              <Bot size={22} />
             </div>
-
-            <div className="brand-text">
-              <strong>Interviewer Buddy AI</strong>
-              <span>AI Interview Preparation</span>
+            <div className="brand-text-col">
+              <span className="brand-title">Interviewer Buddy AI</span>
+              <span className="brand-subtitle">AI Interview Preparation</span>
             </div>
           </button>
 
-          <nav className="desktop-nav">
-            <a href="#features">Features</a>
-            <a href="#how-it-works">How It Works</a>
-            <a href="#ai-capabilities">AI Capabilities</a>
-            <a href="#faq">FAQ</a>
+          {/* Desktop Navigation Links */}
+          <nav className="navbar-desktop-nav" aria-label="Main Navigation">
+            <a href="#features" className="nav-anchor">
+              Features
+            </a>
+            <a href="#how-it-works" className="nav-anchor">
+              How It Works
+            </a>
+            <a href="#ai-capabilities" className="nav-anchor">
+              AI Capabilities
+            </a>
+            <a href="#resume-intelligence" className="nav-anchor">
+              Resume Intelligence
+            </a>
+            <a href="#faq" className="nav-anchor">
+              FAQ
+            </a>
           </nav>
 
-          <div className="header-actions">
+          {/* Desktop Action Buttons */}
+          <div className="navbar-action-group">
             <button
               type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={goToLogin}
+              className="btn btn-outline-clean"
+              onClick={handleLogin}
             >
               Sign In
             </button>
-
             <button
               type="button"
-              className="btn btn-primary btn-sm"
-              onClick={goToRegister}
+              className="btn btn-primary-blue"
+              onClick={handleRegister}
             >
               Get Started
-              <ArrowRight size={14} />
+              <ArrowRight size={15} />
             </button>
           </div>
 
+          {/* Mobile Menu Toggle Button */}
           <button
             type="button"
-            className="mobile-menu-button"
-            onClick={() => setMobileMenu((value) => !value)}
-            aria-label="Toggle navigation"
-            aria-expanded={mobileMenu}
+            className="mobile-menu-toggle"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label="Toggle mobile menu"
+            aria-expanded={mobileMenuOpen}
           >
-            {mobileMenu ? <X size={20} /> : <Menu size={20} />}
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
 
-        {mobileMenu && (
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
           <motion.div
-            className="mobile-nav"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mobile-drawer"
           >
-            <a href="#features" onClick={closeMenu}>
-              Features
-            </a>
+            <div className="mobile-nav-links">
+              <a
+                href="#features"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mobile-link"
+              >
+                Features
+              </a>
+              <a
+                href="#how-it-works"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mobile-link"
+              >
+                How It Works
+              </a>
+              <a
+                href="#ai-capabilities"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mobile-link"
+              >
+                AI Capabilities
+              </a>
+              <a
+                href="#resume-intelligence"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mobile-link"
+              >
+                Resume Intelligence
+              </a>
+              <a
+                href="#faq"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mobile-link"
+              >
+                FAQ
+              </a>
+            </div>
 
-            <a href="#how-it-works" onClick={closeMenu}>
-              How It Works
-            </a>
-
-            <a href="#ai-capabilities" onClick={closeMenu}>
-              AI Capabilities
-            </a>
-
-            <a href="#faq" onClick={closeMenu}>
-              FAQ
-            </a>
-
-            <div className="mobile-nav-actions">
+            <div className="mobile-actions-row">
               <button
                 type="button"
-                className="btn btn-outline"
-                onClick={goToLogin}
+                className="btn btn-outline-clean w-full"
+                onClick={handleLogin}
               >
                 Sign In
               </button>
-
               <button
                 type="button"
-                className="btn btn-primary"
-                onClick={goToRegister}
+                className="btn btn-primary-blue w-full"
+                onClick={handleRegister}
               >
                 Get Started
               </button>
@@ -520,172 +551,176 @@ export default function Landing() {
         )}
       </header>
 
-      {/* ======================================================
-          HERO
-      ====================================================== */}
-
       <main>
+        {/* ====================================================
+            HERO SECTION
+        ==================================================== */}
         <section className="hero-section">
-          <div className="hero-grid" />
-          <div className="hero-orb hero-orb-one" />
-          <div className="hero-orb hero-orb-two" />
+          {/* Subtle background overlay image with clean light blue tint */}
+          <div className="hero-bg-visual" />
+          <div className="hero-radial-backdrop" />
 
-          <div className="hero-container">
+          <div className="section-container hero-grid-container">
+            {/* Left Column: Copy & Actions */}
             <motion.div
-              className="hero-content"
-              initial={{ opacity: 0, y: 25 }}
+              className="hero-text-block"
+              initial={{ opacity: 0, y: 22 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
+              transition={{ duration: 0.6 }}
             >
-              <div className="hero-badge">
-                <span className="badge-dot" />
-                <Sparkles size={14} />
-                AI-powered interview preparation
+              <div className="hero-badge-pill">
+                <span className="badge-sparkle-dot" />
+                <Sparkles size={14} className="badge-sparkle-icon" />
+                <span>Next-Generation AI Interview Platform</span>
               </div>
 
-              <h1>
-                Prepare Smarter.
+              <h1 className="hero-heading">
+                Prepare smarter.
                 <br />
-
-                <span className="gradient-text">
-                  Interview Better.
-                </span>
+                <span className="hero-heading-gradient">Interview better.</span>
               </h1>
 
-              <p className="hero-description">
-                Practice realistic interviews, analyze your resume, understand
-                job requirements, and improve with personalized AI feedback.
+              <p className="hero-subtext">
+                Practice realistic interviews, analyze your resume, understand job requirements, and improve with structured AI feedback.
               </p>
 
-              <div className="hero-actions">
-                <motion.button
+              <div className="hero-cta-buttons">
+                <button
                   type="button"
-                  className="btn btn-primary btn-xl"
-                  onClick={goToRegister}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
+                  className="btn btn-hero-primary"
+                  onClick={handleRegister}
                 >
                   <Zap size={18} />
-                  Start Practicing
+                  <span>Start Practicing</span>
                   <ArrowRight size={17} />
-                </motion.button>
+                </button>
 
-                <motion.a
-                  href="#how-it-works"
-                  className="btn btn-outline btn-xl"
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                >
+                <a href="#how-it-works" className="btn btn-hero-secondary">
                   <Play size={16} />
-                  See How It Works
-                </motion.a>
+                  <span>See How It Works</span>
+                </a>
               </div>
 
-              <div className="hero-trust">
-                <div>
-                  <CheckCircle2 size={15} />
+              {/* Supporting Points */}
+              <div className="hero-supporting-points">
+                <div className="support-item">
+                  <div className="support-check">
+                    <CheckCircle2 size={16} />
+                  </div>
                   <span>Technical interviews</span>
                 </div>
 
-                <div>
-                  <CheckCircle2 size={15} />
+                <div className="support-item">
+                  <div className="support-check">
+                    <CheckCircle2 size={16} />
+                  </div>
                   <span>Behavioral interviews</span>
                 </div>
 
-                <div>
-                  <CheckCircle2 size={15} />
+                <div className="support-item">
+                  <div className="support-check">
+                    <CheckCircle2 size={16} />
+                  </div>
                   <span>AI/ML preparation</span>
                 </div>
               </div>
             </motion.div>
 
-            <InterviewDashboardPreview />
+            {/* Right Column: Hero Dashboard Mockup */}
+            <motion.div
+              className="hero-visual-block"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.15 }}
+            >
+              <HeroDashboardMockup />
+            </motion.div>
           </div>
         </section>
 
         {/* ====================================================
-            INTRO STRIP
+            METRIC STRIP / TRUST BANNER
         ==================================================== */}
-
-        <section className="intro-strip">
-          <div className="section-container intro-inner">
-            <div className="intro-title">
-              <span>Built for serious interview preparation</span>
+        <section className="metric-strip-section">
+          <div className="section-container metric-strip-grid">
+            <div className="metric-col">
+              <Bot size={20} className="metric-icon" />
+              <div className="metric-text">
+                <span className="metric-title">Adaptive Simulations</span>
+                <span className="metric-desc">Contextual AI questions matching real roles</span>
+              </div>
             </div>
 
-            <div className="intro-items">
-              <div>
-                <Bot size={16} />
-                <span>AI Mock Interviews</span>
+            <div className="metric-col">
+              <FileCheck size={20} className="metric-icon" />
+              <div className="metric-text">
+                <span className="metric-title">Resume & ATS Screening</span>
+                <span className="metric-desc">Uncover critical gaps before recruiters do</span>
               </div>
+            </div>
 
-              <div>
-                <FileText size={16} />
-                <span>Resume Analysis</span>
+            <div className="metric-col">
+              <Briefcase size={20} className="metric-icon" />
+              <div className="metric-text">
+                <span className="metric-title">Job Match Intelligence</span>
+                <span className="metric-desc">Map competencies directly to requirements</span>
               </div>
+            </div>
 
-              <div>
-                <Briefcase size={16} />
-                <span>Job Matching</span>
-              </div>
-
-              <div>
-                <BarChart3 size={16} />
-                <span>Performance Insights</span>
+            <div className="metric-col">
+              <BarChart3 size={20} className="metric-icon" />
+              <div className="metric-text">
+                <span className="metric-title">Deep Performance Analytics</span>
+                <span className="metric-desc">Granular scores on clarity, depth, and pacing</span>
               </div>
             </div>
           </div>
         </section>
 
         {/* ====================================================
-            FEATURES
+            FEATURES SECTION (6 CARDS)
         ==================================================== */}
-
-        <section id="features" className="section features-section">
+        <section id="features" className="section-padding features-section">
           <div className="section-container">
-            <div className="section-heading">
-              <span className="section-eyebrow">
+            <div className="section-heading-box text-center">
+              <div className="section-pill-tag">
                 <Sparkles size={13} />
-                Powerful preparation tools
-              </span>
-
-              <h2>
-                Everything you need to
-                <span className="gradient-text"> prepare with confidence</span>
+                <span>Comprehensive Preparation</span>
+              </div>
+              <h2 className="section-headline">
+                Everything you need to master your interview
               </h2>
-
-              <p>
-                One platform to practice interviews, understand your profile,
-                identify gaps, and improve your performance.
+              <p className="section-subheadline">
+                Built specifically for software engineers, data scientists, and tech professionals aiming for top-tier roles.
               </p>
             </div>
 
-            <div className="features-grid">
-              {features.map((feature, index) => {
-                const Icon = feature.icon
-
+            <div className="features-grid-6">
+              {features.map((item, index) => {
+                const IconComponent = item.icon
                 return (
-                  <motion.article
-                    key={feature.title}
-                    className="feature-card"
-                    initial={{ opacity: 0, y: 20 }}
+                  <motion.div
+                    key={item.title}
+                    className="feature-card-white"
+                    initial={{ opacity: 0, y: 18 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: index * 0.06 }}
-                    whileHover={{ y: -5 }}
+                    transition={{ duration: 0.4, delay: index * 0.07 }}
                   >
-                    <div className="feature-icon">
-                      <Icon size={21} />
+                    <div className="feature-icon-bubble">
+                      <IconComponent size={22} />
                     </div>
 
-                    <h3>{feature.title}</h3>
+                    <h3 className="feature-card-title">{item.title}</h3>
+                    <p className="feature-card-desc">{item.description}</p>
 
-                    <p>{feature.description}</p>
-
-                    <div className="feature-arrow">
-                      <ArrowRight size={15} />
+                    <div className="feature-card-footer">
+                      <span className="explore-tag">
+                        Explore capabilities
+                        <ArrowRight size={14} className="explore-arrow" />
+                      </span>
                     </div>
-                  </motion.article>
+                  </motion.div>
                 )
               })}
             </div>
@@ -693,57 +728,47 @@ export default function Landing() {
         </section>
 
         {/* ====================================================
-            HOW IT WORKS
+            HOW IT WORKS (4-STEP WORKFLOW)
         ==================================================== */}
-
-        <section id="how-it-works" className="section process-section">
+        <section id="how-it-works" className="section-padding workflow-section">
           <div className="section-container">
-            <div className="section-heading centered">
-              <span className="section-eyebrow">
+            <div className="section-heading-box text-center">
+              <div className="section-pill-tag">
                 <Target size={13} />
-                Simple workflow
-              </span>
-
-              <h2>
-                From preparation to
-                <span className="gradient-text"> interview-ready</span>
+                <span>Step-by-Step Workflow</span>
+              </div>
+              <h2 className="section-headline">
+                How Interviewer Buddy AI Works
               </h2>
-
-              <p>
-                Follow a focused preparation workflow designed around your
-                target role.
+              <p className="section-subheadline">
+                A proven 4-stage pipeline designed to take you from foundational preparation to interview mastery.
               </p>
             </div>
 
-            <div className="steps-grid">
+            <div className="steps-container-grid">
               {steps.map((step, index) => {
-                const Icon = step.icon
-
+                const StepIcon = step.icon
                 return (
                   <motion.div
                     key={step.number}
-                    className="step-card"
+                    className="step-card-item"
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: index * 0.08 }}
+                    transition={{ duration: 0.45, delay: index * 0.09 }}
                   >
-                    <div className="step-top">
-                      <span>{step.number}</span>
-
-                      <div className="step-icon">
-                        <Icon size={19} />
+                    <div className="step-top-badge-row">
+                      <span className="step-number-pill">{step.number}</span>
+                      <div className="step-icon-circle">
+                        <StepIcon size={20} />
                       </div>
                     </div>
 
-                    <h3>{step.title}</h3>
-
-                    <p>{step.description}</p>
+                    <h3 className="step-item-title">{step.title}</h3>
+                    <p className="step-item-desc">{step.description}</p>
 
                     {index < steps.length - 1 && (
-                      <div className="step-connector">
-                        <ArrowRight size={14} />
-                      </div>
+                      <div className="step-desktop-connector" aria-hidden="true" />
                     )}
                   </motion.div>
                 )
@@ -753,119 +778,437 @@ export default function Landing() {
         </section>
 
         {/* ====================================================
-            AI CAPABILITIES
+            AI INTERVIEW SHOWCASE SECTION
         ==================================================== */}
-
-        <section id="ai-capabilities" className="section capabilities-section">
+        <section id="ai-capabilities" className="section-padding showcase-section">
           <div className="section-container">
-            <div className="capabilities-card">
-              <div className="capabilities-content">
-                <span className="section-eyebrow">
+            <div className="showcase-two-column-layout">
+              {/* Left Column: AI Capabilities Explanation */}
+              <motion.div
+                className="showcase-info-col"
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="section-pill-tag">
                   <BrainCircuit size={13} />
-                  AI-powered preparation
-                </span>
+                  <span>Adaptive Intelligence</span>
+                </div>
 
-                <h2>
-                  Turn every practice session into
-                  <span className="gradient-text"> useful feedback</span>
+                <h2 className="showcase-headline">
+                  An AI interviewer that adapts to you in real time
                 </h2>
 
-                <p>
-                  Interviewer Buddy AI analyzes your responses and gives
-                  structured insights so you know exactly what to improve.
+                <p className="showcase-lead-p">
+                  Unlike static question banks, our AI simulates authentic conversation. It analyzes your syntax, architecture decisions, and thought articulation to guide you toward interview excellence.
                 </p>
 
-                <div className="capability-list">
-                  <div>
-                    <CheckCircle2 size={17} />
-                    <span>Technical answer evaluation</span>
+                <div className="showcase-feature-list">
+                  <div className="showcase-feature-item">
+                    <div className="feature-check-icon">
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <div className="feature-item-content">
+                      <strong>Role-aware questions</strong>
+                      <p>Questions tailored directly to your target company profile, tech stack, and seniority requirements.</p>
+                    </div>
                   </div>
 
-                  <div>
-                    <CheckCircle2 size={17} />
-                    <span>Communication and clarity analysis</span>
+                  <div className="showcase-feature-item">
+                    <div className="feature-check-icon">
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <div className="feature-item-content">
+                      <strong>Structured evaluation</strong>
+                      <p>Instant scoring broken down across relevance, clarity, depth of knowledge, and answer structure.</p>
+                    </div>
                   </div>
 
-                  <div>
-                    <CheckCircle2 size={17} />
-                    <span>Strengths and improvement areas</span>
-                  </div>
-
-                  <div>
-                    <CheckCircle2 size={17} />
-                    <span>Role-focused preparation insights</span>
+                  <div className="showcase-feature-item">
+                    <div className="feature-check-icon">
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <div className="feature-item-content">
+                      <strong>Progress-focused feedback</strong>
+                      <p>Actionable, non-judgmental guidance pinpointing exact moments you can sharpen your narrative.</p>
+                    </div>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={goToRegister}
-                >
-                  Explore AI Interviews
-                  <ArrowRight size={16} />
-                </button>
+                <div className="showcase-btn-row">
+                  <button
+                    type="button"
+                    className="btn btn-primary-blue"
+                    onClick={handleRegister}
+                  >
+                    Start AI Mock Interview
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+              </motion.div>
+
+              {/* Right Column: Professional Online Image with Dashboard Overlay */}
+              <motion.div
+                className="showcase-visual-col"
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.55 }}
+              >
+                <div className="showcase-image-wrapper">
+                  {/* Remote Professional Workspace / Interview Photo */}
+                  <img
+                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1000&q=80"
+                    alt="Professional candidate participating in a remote AI mock interview"
+                    className="showcase-base-img"
+                    loading="lazy"
+                  />
+                  <div className="showcase-blue-gradient-overlay" />
+
+                  {/* Overlaid Live AI Interview Dashboard Card */}
+                  <div className="showcase-overlay-card">
+                    <div className="overlay-card-header">
+                      <div className="overlay-badge">
+                        <Bot size={14} />
+                        <span>AI Interviewer</span>
+                      </div>
+                      <span className="overlay-status-live">
+                        <span className="live-pulsing-dot" />
+                        Live Status
+                      </span>
+                    </div>
+
+                    <div className="overlay-role-row">
+                      <strong className="overlay-role-name">Python Developer Track</strong>
+                      <span className="overlay-badge-blue">Senior Level</span>
+                    </div>
+
+                    <div className="overlay-question-strip">
+                      <span className="overlay-label">CURRENT QUESTION</span>
+                      <p className="overlay-q-text">
+                        "Describe how Python garbage collection manages reference cycles and the impact of the generational collector."
+                      </p>
+                    </div>
+
+                    <div className="overlay-metrics-bars">
+                      <div className="metric-bar-item">
+                        <div className="bar-labels">
+                          <span>Relevance</span>
+                          <strong>95%</strong>
+                        </div>
+                        <div className="bar-track">
+                          <div className="bar-fill" style={{ width: '95%' }} />
+                        </div>
+                      </div>
+
+                      <div className="metric-bar-item">
+                        <div className="bar-labels">
+                          <span>Clarity</span>
+                          <strong>92%</strong>
+                        </div>
+                        <div className="bar-track">
+                          <div className="bar-fill" style={{ width: '92%' }} />
+                        </div>
+                      </div>
+
+                      <div className="metric-bar-item">
+                        <div className="bar-labels">
+                          <span>Structure</span>
+                          <strong>90%</strong>
+                        </div>
+                        <div className="bar-track">
+                          <div className="bar-fill" style={{ width: '90%' }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====================================================
+            RESUME INTELLIGENCE SECTION
+        ==================================================== */}
+        <section id="resume-intelligence" className="section-padding resume-section">
+          <div className="section-container">
+            <div className="resume-grid-two-col">
+              {/* Left Column: Stylized Resume Document Card */}
+              <motion.div
+                className="resume-visual-col"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="stylized-resume-card">
+                  <div className="resume-header-row">
+                    <div className="resume-candidate-meta">
+                      <div className="resume-avatar-circle">AC</div>
+                      <div>
+                        <h4 className="resume-name">Alex Chen</h4>
+                        <span className="resume-title">Senior Software Engineer</span>
+                      </div>
+                    </div>
+
+                    <div className="resume-score-pill">
+                      <span className="score-num">88%</span>
+                      <span className="score-label">Resume Readiness</span>
+                    </div>
+                  </div>
+
+                  {/* Skills Section */}
+                  <div className="resume-section-block">
+                    <div className="resume-block-title">
+                      <Sparkles size={14} />
+                      <span>Skills Detected & Extracted</span>
+                    </div>
+                    <div className="resume-tags-list">
+                      <span className="resume-skill-tag highlight">Python 3.12</span>
+                      <span className="resume-skill-tag highlight">FastAPI</span>
+                      <span className="resume-skill-tag highlight">System Architecture</span>
+                      <span className="resume-skill-tag">PostgreSQL</span>
+                      <span className="resume-skill-tag">Docker</span>
+                      <span className="resume-skill-tag">Kubernetes</span>
+                      <span className="resume-skill-tag">AWS Cloud</span>
+                      <span className="resume-skill-tag">Redis</span>
+                    </div>
+                  </div>
+
+                  {/* Experience Section */}
+                  <div className="resume-section-block">
+                    <div className="resume-block-title">
+                      <Briefcase size={14} />
+                      <span>Experience & Highlights</span>
+                    </div>
+                    <div className="resume-exp-item">
+                      <div className="exp-row-top">
+                        <strong>Staff Backend Engineer • CloudTech</strong>
+                        <span>2021 — Present</span>
+                      </div>
+                      <p className="exp-bullet">
+                        • Spearheaded migration to asynchronous event-driven microservices serving 45,000 req/sec.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Projects Section */}
+                  <div className="resume-section-block">
+                    <div className="resume-block-title">
+                      <Code2 size={14} />
+                      <span>Projects & Open Source</span>
+                    </div>
+                    <div className="resume-proj-item">
+                      <strong>Distributed Task Orchestrator</strong>
+                      <p>High-throughput queue architecture built with Python & Redis.</p>
+                    </div>
+                  </div>
+
+                  {/* AI Insights Box */}
+                  <div className="resume-ai-insights-box">
+                    <div className="insight-top">
+                      <Bot size={15} />
+                      <strong>AI Resume Insights</strong>
+                    </div>
+                    <p className="insight-p">
+                      Strong backend architecture metrics. Adding quantitative throughput indicators in the primary project description will improve ATS score by ~7%.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Right Column: Copy & Explanation */}
+              <motion.div
+                className="resume-copy-col"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                <div className="section-pill-tag">
+                  <FileText size={13} />
+                  <span>Resume & Career Alignment</span>
+                </div>
+
+                <h2 className="section-headline">
+                  Turn your resume into your strongest competitive advantage
+                </h2>
+
+                <p className="resume-lead-text">
+                  Most candidates fail interviews before they begin due to mismatched resume positioning and undetected skill gaps. Our AI conducts deep parsing to ensure you stand out.
+                </p>
+
+                <div className="resume-benefits-list">
+                  <div className="benefit-item">
+                    <div className="benefit-icon-box">
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <div>
+                      <h4 className="benefit-title">Extract relevant skills</h4>
+                      <p className="benefit-desc">
+                        Identify hard competencies, framework proficiencies, and structural terminology across all sections.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="benefit-item">
+                    <div className="benefit-icon-box">
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <div>
+                      <h4 className="benefit-title">Identify resume improvements</h4>
+                      <p className="benefit-desc">
+                        Get specific, actionable phrasing suggestions to increase impact metrics and pass ATS filter thresholds.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="benefit-item">
+                    <div className="benefit-icon-box">
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <div>
+                      <h4 className="benefit-title">Compare skills with job requirements</h4>
+                      <p className="benefit-desc">
+                        Directly cross-reference your documented accomplishments against target job specs to evaluate match percentage.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="benefit-item">
+                    <div className="benefit-icon-box">
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <div>
+                      <h4 className="benefit-title">Turn gaps into preparation priorities</h4>
+                      <p className="benefit-desc">
+                        Automatically transform missing criteria into customized mock interview questions so you are never caught unprepared.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="resume-btn-row">
+                  <button
+                    type="button"
+                    className="btn btn-primary-blue"
+                    onClick={handleRegister}
+                  >
+                    Analyze Your Resume
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====================================================
+            INTERVIEW TYPES SECTION (PILLS / CHIPS)
+        ==================================================== */}
+        <section className="section-padding interview-types-section">
+          <div className="section-container">
+            <div className="section-heading-box text-center">
+              <div className="section-pill-tag">
+                <Layers size={13} />
+                <span>Diverse Interview Disciplines</span>
+              </div>
+              <h2 className="section-headline">
+                Practice across every major interview category
+              </h2>
+              <p className="section-subheadline">
+                Tailored interview sessions simulating realistic hiring committee evaluations across core domains.
+              </p>
+            </div>
+
+            <div className="interview-types-pills-grid">
+              {interviewTypes.map((type, index) => {
+                const TypeIcon = type.icon
+                return (
+                  <motion.div
+                    key={type.label}
+                    className="interview-type-pill"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.35, delay: index * 0.05 }}
+                    whileHover={{ y: -3 }}
+                  >
+                    <div className="pill-icon-box">
+                      <TypeIcon size={18} />
+                    </div>
+                    <div className="pill-text-block">
+                      <span className="pill-title">{type.label}</span>
+                      <span className="pill-subtitle">{type.count}</span>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ====================================================
+            WORKSPACE SHOWCASE STRIP
+        ==================================================== */}
+        <section className="section-padding workspace-strip-section">
+          <div className="section-container">
+            <div className="workspace-card-inner">
+              <div className="workspace-content-side">
+                <div className="section-pill-tag">
+                  <Award size={13} />
+                  <span>Real Interview Simulation</span>
+                </div>
+                <h2 className="workspace-title">
+                  Simulate high-stakes interviews in a realistic setting
+                </h2>
+                <p className="workspace-p">
+                  Our intuitive interface recreates the exact atmosphere of live screening calls. Practice verbal articulation, code whiteboard explanations, and scenario-based inquiries until confidence becomes second nature.
+                </p>
+                <div className="workspace-cta-wrap">
+                  <button
+                    type="button"
+                    className="btn btn-primary-blue"
+                    onClick={handleRegister}
+                  >
+                    Start Free Practice Session
+                    <ArrowRight size={15} />
+                  </button>
+                </div>
               </div>
 
-              <div className="capabilities-visual">
-                <div className="ai-ring ring-one" />
-                <div className="ai-ring ring-two" />
-
-                <motion.div
-                  className="ai-core"
-                  animate={{
-                    scale: [1, 1.05, 1],
-                  }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 3,
-                  }}
-                >
-                  <BrainCircuit size={42} />
-                </motion.div>
-
-                <div className="ai-chip chip-one">
-                  <Sparkles size={13} />
-                  AI Evaluation
-                </div>
-
-                <div className="ai-chip chip-two">
-                  <BarChart3 size={13} />
-                  Performance
-                </div>
-
-                <div className="ai-chip chip-three">
-                  <Target size={13} />
-                  Skill Gaps
-                </div>
+              <div className="workspace-image-side">
+                <img
+                  src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1000&q=80"
+                  alt="Modern tech workspace interview preparation"
+                  className="workspace-img"
+                  loading="lazy"
+                />
+                <div className="workspace-img-overlay" />
               </div>
             </div>
           </div>
         </section>
 
         {/* ====================================================
-            FAQ
+            ACCORDION FAQ SECTION
         ==================================================== */}
-
-        <section id="faq" className="section faq-section">
-          <div className="section-container faq-container">
-            <div className="section-heading centered">
-              <span className="section-eyebrow">
+        <section id="faq" className="section-padding faq-section">
+          <div className="section-container faq-constrained-container">
+            <div className="section-heading-box text-center">
+              <div className="section-pill-tag">
                 <MessageSquare size={13} />
-                FAQ
-              </span>
-
-              <h2>
-                Frequently asked
-                <span className="gradient-text"> questions</span>
-              </h2>
-
-              <p>
-                Everything you need to know about Interviewer Buddy AI.
+                <span>Got Questions?</span>
+              </div>
+              <h2 className="section-headline">Frequently Asked Questions</h2>
+              <p className="section-subheadline">
+                Everything you need to know about our AI interview platform, resume intelligence, and preparation workflows.
               </p>
             </div>
 
-            <div className="faq-list">
+            <div className="faq-accordion-list">
               {faqs.map((faq, index) => (
                 <FAQItem
                   key={faq.question}
@@ -879,51 +1222,48 @@ export default function Landing() {
         </section>
 
         {/* ====================================================
-            CTA
+            CALL TO ACTION (CTA) SECTION
         ==================================================== */}
-
-        <section className="cta-section">
+        <section className="section-padding cta-section-wrap">
           <div className="section-container">
             <motion.div
-              className="cta-card"
+              className="cta-gradient-card"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
             >
-              <div className="cta-glow" />
-
-              <div className="cta-content">
-                <span className="section-eyebrow">
+              <div className="cta-pattern-overlay" />
+              <div className="cta-inner-content">
+                <div className="section-pill-tag mx-auto">
                   <Zap size={13} />
-                  Start preparing today
-                </span>
+                  <span>Begin Today</span>
+                </div>
 
-                <h2>
-                  Your next interview deserves
-                  <span className="gradient-text"> better preparation.</span>
+                <h2 className="cta-headline">
+                  Your next interview starts with better preparation.
                 </h2>
 
-                <p>
-                  Practice with AI, understand your gaps, and walk into your
-                  next interview with greater confidence.
+                <p className="cta-subheadline">
+                  Join candidates preparing for technical, behavioral, and role-specific interviews with structured AI simulations and targeted feedback.
                 </p>
 
-                <div className="cta-actions">
+                <div className="cta-button-group">
                   <button
                     type="button"
-                    className="btn btn-primary btn-xl"
-                    onClick={goToRegister}
+                    className="btn btn-cta-main"
+                    onClick={handleRegister}
                   >
-                    Create Your Account
+                    <span>Create Your Account</span>
                     <ArrowRight size={17} />
                   </button>
 
                   <button
                     type="button"
-                    className="btn btn-outline btn-xl"
-                    onClick={goToLogin}
+                    className="btn btn-cta-secondary"
+                    onClick={handleLogin}
                   >
-                    Sign In
+                    <span>Sign In</span>
                   </button>
                 </div>
               </div>
@@ -933,2402 +1273,2195 @@ export default function Landing() {
       </main>
 
       {/* ======================================================
-          FOOTER
+          PROFESSIONAL FOOTER
       ====================================================== */}
-
-      <footer className="landing-footer">
+      <footer className="footer-container-wrap">
         <div className="section-container">
-          <div className="footer-main">
-            <div className="footer-brand">
-              <div className="footer-brand-row">
-                <div className="footer-logo">
-                  <Bot size={18} />
+          <div className="footer-top-grid">
+            {/* Branding Column */}
+            <div className="footer-brand-col">
+              <div className="footer-brand-badge">
+                <div className="footer-logo-box">
+                  <Bot size={20} />
                 </div>
-
-                <strong>Interviewer Buddy AI</strong>
+                <span className="footer-brand-name">Interviewer Buddy AI</span>
               </div>
-
-              <p>
-                AI-powered interview preparation for technical, behavioral,
-                HR, and role-specific interviews.
+              <p className="footer-brand-bio">
+                The premier AI-powered interview preparation platform. Master technical rounds, behavioral assessments, and resume alignment with actionable evaluation.
               </p>
+              <div className="footer-copyright-note">
+                © 2026 Interviewer Buddy AI. All rights reserved.
+              </div>
             </div>
 
-            <div className="footer-links">
-              <div>
-                <span>Product</span>
+            {/* Product Links */}
+            <div className="footer-col">
+              <h4 className="footer-col-heading">Product</h4>
+              <ul className="footer-nav-list">
+                <li>
+                  <a href="#features">Features</a>
+                </li>
+                <li>
+                  <a href="#how-it-works">How It Works</a>
+                </li>
+                <li>
+                  <a href="#ai-capabilities">AI Capabilities</a>
+                </li>
+                <li>
+                  <a href="#resume-intelligence">Resume Intelligence</a>
+                </li>
+              </ul>
+            </div>
 
-                <a href="#features">Features</a>
-                <a href="#how-it-works">How It Works</a>
-                <a href="#ai-capabilities">AI Capabilities</a>
-              </div>
+            {/* Resources & Support */}
+            <div className="footer-col">
+              <h4 className="footer-col-heading">Resources</h4>
+              <ul className="footer-nav-list">
+                <li>
+                  <a href="#faq">FAQ</a>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className="footer-link-btn"
+                    onClick={handleLogin}
+                  >
+                    Sign In
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className="footer-link-btn"
+                    onClick={handleRegister}
+                  >
+                    Create Account
+                  </button>
+                </li>
+              </ul>
+            </div>
 
-              <div>
-                <span>Support</span>
-
-                <a href="#faq">FAQ</a>
-
-                <button type="button" onClick={goToLogin}>
-                  Sign In
-                </button>
-
-                <button type="button" onClick={goToRegister}>
-                  Create Account
-                </button>
-              </div>
+            {/* GitHub & Connect */}
+            <div className="footer-col">
+              <h4 className="footer-col-heading">Connect</h4>
+              <p className="footer-connect-text">
+                Follow project development and open source updates.
+              </p>
+              <a
+                href="https://github.com/Prince-singh001"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="github-profile-link"
+                aria-label="Visit Prince Singh on GitHub"
+              >
+                <GitHubIcon size={18} />
+                <span>Prince-singh001</span>
+              </a>
             </div>
           </div>
 
-          <div className="footer-bottom">
-            <span>© 2026 Interviewer Buddy AI</span>
-
-            <span>Built with React, FastAPI & Generative AI</span>
-
-            <a
-              href="https://github.com/Prince-singh001"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub"
-              className="github-link"
-            >
-              <GitHubIcon size={17} />
-            </a>
+          <div className="footer-bottom-bar">
+            <span>Built with React, TypeScript & FastAPI</span>
+            <span className="footer-dot">•</span>
+            <span>Clean Light Blue Architecture</span>
           </div>
         </div>
       </footer>
 
       {/* ======================================================
-          STYLES
+          SELF-CONTAINED PRODUCTION STYLES
+          Color Palette Enforced:
+          - #E3F2FD (Very Light Blue)
+          - #90CAF9 (Soft Blue)
+          - #2196F3 (Primary Blue)
+          - #0D47A1 (Deep Blue)
+          - #FFFFFF (White)
       ====================================================== */}
-
       <style>{`
-        * {
+        /* Global Page Reset & Fonts */
+        .landing-wrapper {
+          width: 100%;
+          min-height: 100vh;
+          background-color: #FFFFFF;
+          color: #0D47A1;
+          font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif);
+          overflow-x: hidden;
+          line-height: 1.5;
+        }
+
+        .landing-wrapper *,
+        .landing-wrapper *::before,
+        .landing-wrapper *::after {
           box-sizing: border-box;
         }
 
-        html {
-          scroll-behavior: smooth;
-        }
-
-        body {
-          margin: 0;
-        }
-
-        button,
-        input,
-        textarea,
-        select {
-          font: inherit;
-        }
-
-        .landing-page {
-          min-height: 100vh;
-          overflow-x: hidden;
-          color: var(--text-primary);
-          background: var(--bg-base);
-          font-family: var(--font-sans);
-        }
-
+        /* Responsive Container */
         .section-container {
-          width: min(1160px, calc(100% - 40px));
-          margin: 0 auto;
+          width: 100%;
+          max-width: 1240px;
+          margin-left: auto;
+          margin-right: auto;
+          padding-left: 24px;
+          padding-right: 24px;
         }
 
-        .section {
-          padding: 110px 0;
+        .section-padding {
+          padding-top: 96px;
+          padding-bottom: 96px;
         }
 
-        /* ====================================================
-           HEADER
-        ==================================================== */
-
-        .landing-header {
-          position: sticky;
-          top: 0;
-          z-index: 1000;
-          border-bottom: 1px solid var(--border);
-          background: rgba(8, 11, 18, 0.82);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+        .text-center {
+          text-align: center;
         }
 
-        .header-inner {
-          width: min(1240px, calc(100% - 40px));
-          height: 72px;
-          margin: 0 auto;
-
-          display: flex;
-          align-items: center;
-          gap: 28px;
-        }
-
-        .brand {
-          display: flex;
-          align-items: center;
-          gap: 11px;
-
-          padding: 0;
-
-          color: inherit;
-          text-align: left;
-
-          border: 0;
-          background: transparent;
-
-          cursor: pointer;
-          flex-shrink: 0;
-        }
-
-        .brand-icon {
-          width: 40px;
-          height: 40px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          color: white;
-
-          border-radius: 11px;
-
-          background:
-            linear-gradient(
-              135deg,
-              #2563eb,
-              #7c3aed
-            );
-
-          box-shadow:
-            0 8px 28px
-            rgba(99, 102, 241, 0.28);
-        }
-
-        .brand-text {
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
-        }
-
-        .brand-text strong {
-          font-size: 0.94rem;
-          font-weight: 800;
-          line-height: 1.1;
-        }
-
-        .brand-text span {
-          color: var(--text-muted);
-          font-size: 0.65rem;
-        }
-
-        .desktop-nav {
-          display: flex;
-          align-items: center;
-          gap: 3px;
-
+        .mx-auto {
           margin-left: auto;
           margin-right: auto;
         }
 
-        .desktop-nav a {
-          padding: 9px 12px;
-
-          color: var(--text-secondary);
-          text-decoration: none;
-
-          border-radius: 9px;
-
-          font-size: 0.82rem;
-          font-weight: 550;
-
-          transition:
-            color 0.2s ease,
-            background 0.2s ease;
+        .w-full {
+          width: 100%;
         }
 
-        .desktop-nav a:hover {
-          color: var(--text-primary);
-          background: rgba(255,255,255,0.045);
+        /* Section Headings */
+        .section-heading-box {
+          max-width: 760px;
+          margin-bottom: 60px;
         }
 
-        .header-actions {
-          display: flex;
+        .section-pill-tag {
+          display: inline-flex;
           align-items: center;
           gap: 8px;
+          padding: 6px 14px;
+          border-radius: 9999px;
+          background-color: #E3F2FD;
+          color: #0D47A1;
+          border: 1px solid #90CAF9;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          letter-spacing: 0.02em;
+          margin-bottom: 18px;
         }
 
-        .mobile-menu-button {
-          display: none;
-
-          width: 40px;
-          height: 40px;
-
-          align-items: center;
-          justify-content: center;
-
-          color: var(--text-primary);
-
-          border: 1px solid var(--border);
-          border-radius: 10px;
-
-          background: var(--bg-card);
-
-          cursor: pointer;
+        .section-headline {
+          font-size: 2.25rem;
+          font-weight: 800;
+          color: #0D47A1;
+          line-height: 1.2;
+          letter-spacing: -0.025em;
+          margin-top: 0;
+          margin-bottom: 16px;
         }
 
-        .mobile-nav {
-          display: none;
+        .section-subheadline {
+          font-size: 1.0625rem;
+          color: #334155;
+          line-height: 1.6;
+          margin: 0;
         }
 
         /* ====================================================
            BUTTONS
         ==================================================== */
-
-        .landing-page .btn {
+        .btn {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-
-          min-height: 42px;
-          padding: 0 16px;
-
-          color: var(--text-primary);
-
-          border: 1px solid transparent;
-          border-radius: 10px;
-
-          font-weight: 650;
-          font-size: 0.84rem;
-
-          cursor: pointer;
-
-          text-decoration: none;
-
-          transition:
-            transform 0.2s ease,
-            box-shadow 0.2s ease,
-            background 0.2s ease,
-            border-color 0.2s ease;
-        }
-
-        .landing-page .btn-primary {
-          color: white;
-
-          background:
-            linear-gradient(
-              135deg,
-              #2563eb,
-              #6366f1
-            );
-
-          box-shadow:
-            0 9px 28px
-            rgba(59, 130, 246, 0.22);
-        }
-
-        .landing-page .btn-primary:hover {
-          box-shadow:
-            0 14px 35px
-            rgba(59, 130, 246, 0.32);
-        }
-
-        .landing-page .btn-outline {
-          color: var(--text-primary);
-
-          border-color: var(--border);
-
-          background: rgba(255,255,255,0.025);
-        }
-
-        .landing-page .btn-outline:hover {
-          background: rgba(255,255,255,0.055);
-          border-color: rgba(99,102,241,0.45);
-        }
-
-        .landing-page .btn-ghost {
-          color: var(--text-secondary);
-          background: transparent;
-        }
-
-        .landing-page .btn-ghost:hover {
-          color: var(--text-primary);
-          background: rgba(255,255,255,0.045);
-        }
-
-        .landing-page .btn-sm {
-          min-height: 38px;
-          padding: 0 13px;
-          font-size: 0.8rem;
-        }
-
-        .landing-page .btn-xl {
-          min-height: 53px;
-          padding: 0 19px;
-          font-size: 0.86rem;
-        }
-
-        /* ====================================================
-           HERO
-        ==================================================== */
-
-        .hero-section {
-          position: relative;
-
-          min-height: 760px;
-
-          display: flex;
-          align-items: center;
-
-          padding: 85px 0 100px;
-
-          overflow: hidden;
-
-          background:
-            radial-gradient(
-              ellipse 60% 55% at 7% 10%,
-              rgba(37,99,235,0.14),
-              transparent 68%
-            ),
-            radial-gradient(
-              ellipse 55% 55% at 93% 25%,
-              rgba(124,58,237,0.13),
-              transparent 68%
-            );
-        }
-
-        .hero-grid {
-          position: absolute;
-          inset: 0;
-
-          opacity: 0.18;
-
-          background-image:
-            linear-gradient(
-              rgba(255,255,255,0.035) 1px,
-              transparent 1px
-            ),
-            linear-gradient(
-              90deg,
-              rgba(255,255,255,0.035) 1px,
-              transparent 1px
-            );
-
-          background-size: 52px 52px;
-
-          mask-image:
-            linear-gradient(
-              to bottom,
-              black,
-              transparent 82%
-            );
-        }
-
-        .hero-orb {
-          position: absolute;
-
-          border-radius: 50%;
-
-          pointer-events: none;
-
-          filter: blur(1px);
-        }
-
-        .hero-orb-one {
-          width: 450px;
-          height: 450px;
-
-          left: -300px;
-          top: 100px;
-
-          background:
-            radial-gradient(
-              circle,
-              rgba(37,99,235,0.09),
-              transparent 70%
-            );
-        }
-
-        .hero-orb-two {
-          width: 500px;
-          height: 500px;
-
-          right: -320px;
-          bottom: -200px;
-
-          background:
-            radial-gradient(
-              circle,
-              rgba(124,58,237,0.09),
-              transparent 70%
-            );
-        }
-
-        .hero-container {
-          position: relative;
-          z-index: 2;
-
-          width: min(1240px, calc(100% - 40px));
-
-          margin: 0 auto;
-
-          display: grid;
-          grid-template-columns: 0.88fr 1.12fr;
-
-          align-items: center;
-
-          gap: 55px;
-        }
-
-        .hero-content {
-          max-width: 620px;
-        }
-
-        .hero-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-
-          margin-bottom: 22px;
-
-          padding: 7px 11px;
-
-          color: #a5b4fc;
-
-          border: 1px solid rgba(99,102,241,0.27);
-          border-radius: 999px;
-
-          background: rgba(99,102,241,0.08);
-
-          font-size: 0.71rem;
-          font-weight: 650;
-        }
-
-        .badge-dot {
-          width: 6px;
-          height: 6px;
-
-          border-radius: 50%;
-
-          background: #60a5fa;
-
-          box-shadow:
-            0 0 0 4px
-            rgba(96,165,250,0.09);
-        }
-
-        .hero-content h1 {
-          margin: 0;
-
-          font-size: clamp(3rem, 5.2vw, 4.55rem);
-          font-weight: 900;
-          line-height: 1.02;
-          letter-spacing: -0.045em;
-        }
-
-        .gradient-text {
-          color: transparent;
-
-          background:
-            linear-gradient(
-              135deg,
-              #60a5fa,
-              #818cf8,
-              #c084fc
-            );
-
-          -webkit-background-clip: text;
-          background-clip: text;
-        }
-
-        .hero-description {
-          max-width: 570px;
-
-          margin: 24px 0 29px;
-
-          color: var(--text-secondary);
-
-          font-size: 1rem;
-          line-height: 1.75;
-        }
-
-        .hero-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-
-          margin-bottom: 25px;
-        }
-
-        .hero-trust {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 14px;
-        }
-
-        .hero-trust div {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-
-          color: var(--text-muted);
-
-          font-size: 0.68rem;
-        }
-
-        .hero-trust svg {
-          color: #60a5fa;
-        }
-
-        /* ====================================================
-           HERO PREVIEW
-        ==================================================== */
-
-        .hero-preview {
-          position: relative;
-
-          min-height: 510px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .preview-glow {
-          position: absolute;
-
-          width: 390px;
-          height: 390px;
-
-          border-radius: 50%;
-
-          background:
-            radial-gradient(
-              circle,
-              rgba(99,102,241,0.17),
-              transparent 68%
-            );
-
-          filter: blur(12px);
-        }
-
-        .browser-window {
-          position: relative;
-          z-index: 2;
-
-          width: 100%;
-          max-width: 700px;
-
-          overflow: hidden;
-
-          border:
-            1px solid
-            rgba(255,255,255,0.1);
-
-          border-radius: 16px;
-
-          background: rgba(13,17,27,0.92);
-
-          box-shadow:
-            0 35px 90px
-            rgba(0,0,0,0.42),
-            0 0 0 1px
-            rgba(99,102,241,0.05);
-        }
-
-        .browser-bar {
-          height: 39px;
-
-          display: flex;
-          align-items: center;
-
-          padding: 0 12px;
-
-          border-bottom:
-            1px solid
-            rgba(255,255,255,0.07);
-
-          background:
-            rgba(255,255,255,0.025);
-        }
-
-        .browser-dots {
-          display: flex;
-          gap: 5px;
-        }
-
-        .browser-dots span {
-          width: 7px;
-          height: 7px;
-
-          border-radius: 50%;
-
-          background: rgba(255,255,255,0.2);
-        }
-
-        .browser-url {
-          margin: auto;
-
-          color: var(--text-muted);
-
-          font-size: 0.57rem;
-        }
-
-        .browser-secure {
-          color: #64748b;
-        }
-
-        .dashboard-preview {
-          display: grid;
-          grid-template-columns: 125px 1fr;
-
-          min-height: 420px;
-        }
-
-        .preview-sidebar {
-          padding: 16px 9px;
-
-          border-right:
-            1px solid
-            rgba(255,255,255,0.06);
-
-          background:
-            rgba(255,255,255,0.018);
-        }
-
-        .preview-brand {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-
-          padding: 5px 6px;
-
-          margin-bottom: 22px;
-
-          color: var(--text-primary);
-
-          font-size: 0.7rem;
-          font-weight: 750;
-        }
-
-        .preview-logo {
-          width: 25px;
-          height: 25px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          color: white;
-
-          border-radius: 7px;
-
-          background:
-            linear-gradient(
-              135deg,
-              #2563eb,
-              #7c3aed
-            );
-        }
-
-        .preview-menu {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-
-          padding: 9px 7px;
-
-          margin-bottom: 3px;
-
-          color: #64748b;
-
-          border-radius: 7px;
-
-          font-size: 0.62rem;
-        }
-
-        .preview-menu.active {
-          color: #c7d2fe;
-
-          background:
-            rgba(99,102,241,0.13);
-        }
-
-        .preview-main {
-          min-width: 0;
-
-          padding: 18px;
-        }
-
-        .preview-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-
-          margin-bottom: 16px;
-        }
-
-        .preview-top small {
-          color: #64748b;
-
-          font-size: 0.52rem;
-          font-weight: 700;
-          letter-spacing: 0.09em;
-        }
-
-        .preview-top h3 {
-          margin: 4px 0 0;
-
-          color: #f8fafc;
-
-          font-size: 0.88rem;
-        }
-
-        .live-pill {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-
-          padding: 5px 8px;
-
-          color: #86efac;
-
-          border: 1px solid rgba(34,197,94,0.17);
-          border-radius: 999px;
-
-          background: rgba(34,197,94,0.08);
-
-          font-size: 0.54rem;
-        }
-
-        .live-pill span {
-          width: 5px;
-          height: 5px;
-
-          border-radius: 50%;
-
-          background: #4ade80;
-        }
-
-        .question-card {
-          padding: 16px;
-
-          border:
-            1px solid
-            rgba(255,255,255,0.075);
-
-          border-radius: 11px;
-
-          background:
-            linear-gradient(
-              135deg,
-              rgba(255,255,255,0.035),
-              rgba(255,255,255,0.018)
-            );
-        }
-
-        .question-label {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-
-          margin-bottom: 12px;
-
-          color: #818cf8;
-
-          font-size: 0.57rem;
-          font-weight: 700;
-        }
-
-        .question-card h4 {
-          margin: 0 0 17px;
-
-          color: #e2e8f0;
-
-          font-size: 0.83rem;
-          line-height: 1.55;
-        }
-
-        .answer-line {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-
-          margin-bottom: 7px;
-        }
-
-        .answer-line span:not(.answer-dot) {
-          height: 5px;
-
-          flex: 1;
-
-          border-radius: 99px;
-
-          background: rgba(148,163,184,0.12);
-        }
-
-        .answer-line span:nth-child(2) {
-          max-width: 75%;
-        }
-
-        .answer-line.short span:nth-child(2) {
-          max-width: 52%;
-        }
-
-        .answer-dot {
-          width: 4px;
-          height: 4px;
-
-          border-radius: 50%;
-
-          background: #6366f1;
-        }
-
-        .answer-status {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-
-          margin-top: 14px;
-          padding-top: 12px;
-
-          border-top:
-            1px solid
-            rgba(255,255,255,0.06);
-
-          color: #64748b;
-
-          font-size: 0.55rem;
-        }
-
-        .answer-status strong {
-          color: #93c5fd;
           font-weight: 600;
-        }
-
-        .preview-stats {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-
-          gap: 7px;
-
-          margin-top: 9px;
-        }
-
-        .preview-stat {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-
-          padding: 9px;
-
-          border:
-            1px solid
-            rgba(255,255,255,0.06);
-
-          border-radius: 9px;
-
-          background: rgba(255,255,255,0.018);
-        }
-
-        .stat-icon {
-          width: 25px;
-          height: 25px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          flex-shrink: 0;
-
-          border-radius: 7px;
-        }
-
-        .stat-icon.blue {
-          color: #60a5fa;
-          background: rgba(59,130,246,0.11);
-        }
-
-        .stat-icon.purple {
-          color: #c084fc;
-          background: rgba(168,85,247,0.11);
-        }
-
-        .stat-icon.green {
-          color: #4ade80;
-          background: rgba(34,197,94,0.11);
-        }
-
-        .preview-stat small,
-        .floating-card small {
-          display: block;
-
-          margin-bottom: 2px;
-
-          color: #64748b;
-
-          font-size: 0.47rem;
-        }
-
-        .preview-stat strong,
-        .floating-card strong {
-          color: #e2e8f0;
-
-          font-size: 0.67rem;
-        }
-
-        .ai-feedback {
-          display: flex;
-          gap: 8px;
-
-          margin-top: 9px;
-          padding: 10px;
-
-          border:
-            1px solid
-            rgba(99,102,241,0.12);
-
-          border-radius: 9px;
-
-          background:
-            rgba(99,102,241,0.055);
-        }
-
-        .feedback-icon {
-          width: 25px;
-          height: 25px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          flex-shrink: 0;
-
-          color: #a78bfa;
-
-          border-radius: 7px;
-
-          background:
-            rgba(139,92,246,0.12);
-        }
-
-        .ai-feedback strong {
-          color: #cbd5e1;
-          font-size: 0.6rem;
-        }
-
-        .ai-feedback p {
-          margin: 3px 0 0;
-
-          color: #64748b;
-
-          font-size: 0.52rem;
-          line-height: 1.45;
-        }
-
-        .floating-card {
-          position: absolute;
-          z-index: 4;
-
-          display: flex;
-          align-items: center;
-          gap: 8px;
-
-          min-width: 145px;
-
-          padding: 9px 10px;
-
-          border:
-            1px solid
-            rgba(255,255,255,0.09);
-
           border-radius: 10px;
-
-          background:
-            rgba(15,20,32,0.92);
-
-          backdrop-filter: blur(12px);
-
-          box-shadow:
-            0 15px 35px
-            rgba(0,0,0,0.3);
+          cursor: pointer;
+          transition: all 0.2s ease-in-out;
+          text-decoration: none;
+          border: none;
+          font-family: inherit;
         }
 
-        .floating-card-left {
-          left: -15px;
-          top: 100px;
+        .btn-outline-clean {
+          background-color: #FFFFFF;
+          color: #0D47A1;
+          border: 1px solid #90CAF9;
+          padding: 8px 18px;
+          font-size: 0.875rem;
         }
 
-        .floating-card-right {
-          right: -18px;
-          bottom: 90px;
+        .btn-outline-clean:hover {
+          background-color: #E3F2FD;
+          border-color: #2196F3;
         }
 
-        .floating-icon {
-          width: 28px;
-          height: 28px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          color: #4ade80;
-
-          border-radius: 8px;
-
-          background: rgba(34,197,94,0.1);
+        .btn-primary-blue {
+          background-color: #2196F3;
+          color: #FFFFFF;
+          padding: 9px 20px;
+          font-size: 0.875rem;
+          box-shadow: 0 4px 12px rgba(33, 150, 243, 0.28);
         }
 
-        .floating-score {
-          width: 31px;
-          height: 31px;
+        .btn-primary-blue:hover {
+          background-color: #0D47A1;
+          box-shadow: 0 6px 16px rgba(13, 71, 161, 0.32);
+          transform: translateY(-1px);
+        }
 
-          display: flex;
-          align-items: center;
-          justify-content: center;
+        .btn-hero-primary {
+          background-color: #2196F3;
+          color: #FFFFFF;
+          padding: 14px 28px;
+          font-size: 1rem;
+          border-radius: 12px;
+          box-shadow: 0 6px 20px rgba(33, 150, 243, 0.35);
+        }
 
-          color: #c4b5fd;
+        .btn-hero-primary:hover {
+          background-color: #0D47A1;
+          transform: translateY(-2px);
+          box-shadow: 0 10px 24px rgba(13, 71, 161, 0.35);
+        }
 
-          border-radius: 8px;
+        .btn-hero-secondary {
+          background-color: #FFFFFF;
+          color: #0D47A1;
+          border: 1.5px solid #90CAF9;
+          padding: 14px 26px;
+          font-size: 1rem;
+          border-radius: 12px;
+        }
 
-          background: rgba(139,92,246,0.13);
-
-          font-size: 0.7rem;
-          font-weight: 800;
+        .btn-hero-secondary:hover {
+          background-color: #E3F2FD;
+          border-color: #2196F3;
+          transform: translateY(-2px);
         }
 
         /* ====================================================
-           INTRO STRIP
+           HEADER & NAVBAR
         ==================================================== */
-
-        .intro-strip {
-          border-top:
-            1px solid
-            var(--border);
-
-          border-bottom:
-            1px solid
-            var(--border);
-
-          background:
-            rgba(255,255,255,0.012);
+        .sticky-navbar {
+          position: sticky;
+          top: 0;
+          z-index: 1000;
+          background-color: rgba(255, 255, 255, 0.94);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-bottom: 1px solid #E3F2FD;
+          box-shadow: 0 2px 10px rgba(13, 71, 161, 0.04);
         }
 
-        .intro-inner {
-          min-height: 70px;
-
+        .navbar-container {
           display: flex;
           align-items: center;
           justify-content: space-between;
-
-          gap: 30px;
+          height: 72px;
+          max-width: 1240px;
+          margin: 0 auto;
+          padding: 0 24px;
         }
 
-        .intro-title {
-          color: var(--text-muted);
-
-          font-size: 0.69rem;
-        }
-
-        .intro-items {
+        .navbar-brand-btn {
           display: flex;
           align-items: center;
-          gap: 24px;
+          gap: 12px;
+          background: none;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          text-align: left;
         }
 
-        .intro-items div {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-
-          color: var(--text-secondary);
-
-          font-size: 0.66rem;
-        }
-
-        .intro-items svg {
-          color: #818cf8;
-        }
-
-        /* ====================================================
-           SECTION HEADING
-        ==================================================== */
-
-        .section-heading {
-          max-width: 720px;
-
-          margin-bottom: 48px;
-        }
-
-        .section-heading.centered {
-          margin-left: auto;
-          margin-right: auto;
-
-          text-align: center;
-        }
-
-        .section-eyebrow {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-
-          margin-bottom: 12px;
-
-          color: #818cf8;
-
-          font-size: 0.68rem;
-          font-weight: 750;
-          letter-spacing: 0.03em;
-        }
-
-        .section-heading h2,
-        .capabilities-content h2,
-        .cta-content h2 {
-          margin: 0;
-
-          color: var(--text-primary);
-
-          font-size: clamp(2rem, 4vw, 3rem);
-          font-weight: 850;
-          line-height: 1.1;
-          letter-spacing: -0.035em;
-        }
-
-        .section-heading p,
-        .capabilities-content > p,
-        .cta-content > p {
-          margin: 16px 0 0;
-
-          color: var(--text-secondary);
-
-          font-size: 0.92rem;
-          line-height: 1.7;
-        }
-
-        /* ====================================================
-           FEATURES
-        ==================================================== */
-
-        .features-section {
-          background:
-            radial-gradient(
-              ellipse 60% 40% at 50% 0%,
-              rgba(99,102,241,0.045),
-              transparent 70%
-            );
-        }
-
-        .features-grid {
-          display: grid;
-
-          grid-template-columns:
-            repeat(3, 1fr);
-
-          gap: 13px;
-        }
-
-        .feature-card {
-          position: relative;
-
-          min-height: 205px;
-
-          padding: 23px;
-
-          border:
-            1px solid
-            var(--border);
-
-          border-radius: 15px;
-
-          background:
-            linear-gradient(
-              145deg,
-              rgba(255,255,255,0.025),
-              rgba(255,255,255,0.012)
-            );
-
-          transition:
-            border-color 0.2s ease,
-            box-shadow 0.2s ease;
-        }
-
-        .feature-card:hover {
-          border-color:
-            rgba(99,102,241,0.3);
-
-          box-shadow:
-            0 18px 40px
-            rgba(0,0,0,0.16);
-        }
-
-        .feature-icon {
+        .brand-logo-icon {
           width: 42px;
           height: 42px;
-
+          border-radius: 10px;
+          background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
+          color: #FFFFFF;
           display: flex;
           align-items: center;
           justify-content: center;
-
-          margin-bottom: 17px;
-
-          color: #93c5fd;
-
-          border:
-            1px solid
-            rgba(99,102,241,0.15);
-
-          border-radius: 11px;
-
-          background:
-            linear-gradient(
-              135deg,
-              rgba(59,130,246,0.1),
-              rgba(139,92,246,0.1)
-            );
+          box-shadow: 0 4px 14px rgba(33, 150, 243, 0.3);
         }
 
-        .feature-card h3 {
-          margin: 0 0 8px;
-
-          color: var(--text-primary);
-
-          font-size: 0.91rem;
+        .brand-text-col {
+          display: flex;
+          flex-direction: column;
         }
 
-        .feature-card p {
-          max-width: 330px;
-
-          margin: 0;
-
-          color: var(--text-muted);
-
-          font-size: 0.7rem;
-          line-height: 1.7;
+        .brand-title {
+          font-size: 1.05rem;
+          font-weight: 800;
+          color: #0D47A1;
+          letter-spacing: -0.015em;
+          line-height: 1.2;
         }
 
-        .feature-arrow {
-          position: absolute;
-
-          right: 20px;
-          top: 23px;
-
-          color: var(--text-disabled);
-
-          transition:
-            color 0.2s ease,
-            transform 0.2s ease;
+        .brand-subtitle {
+          font-size: 0.75rem;
+          font-weight: 500;
+          color: #2196F3;
         }
 
-        .feature-card:hover .feature-arrow {
-          color: #818cf8;
-          transform: translateX(3px);
-        }
-
-        /* ====================================================
-           PROCESS
-        ==================================================== */
-
-        .process-section {
-          background:
-            rgba(255,255,255,0.012);
-        }
-
-        .steps-grid {
-          display: grid;
-
-          grid-template-columns:
-            repeat(4, 1fr);
-
-          gap: 13px;
-        }
-
-        .step-card {
-          position: relative;
-
-          padding: 23px;
-
-          min-height: 225px;
-
-          border:
-            1px solid
-            var(--border);
-
-          border-radius: 15px;
-
-          background:
-            rgba(255,255,255,0.018);
-        }
-
-        .step-top {
+        .navbar-desktop-nav {
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          gap: 28px;
+        }
 
+        .nav-anchor {
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #334155;
+          text-decoration: none;
+          transition: color 0.18s ease;
+        }
+
+        .nav-anchor:hover {
+          color: #2196F3;
+        }
+
+        .navbar-action-group {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .mobile-menu-toggle {
+          display: none;
+          background: none;
+          border: 1px solid #90CAF9;
+          border-radius: 8px;
+          padding: 7px;
+          color: #0D47A1;
+          cursor: pointer;
+        }
+
+        .mobile-drawer {
+          display: none;
+          padding: 20px 24px;
+          background-color: #FFFFFF;
+          border-bottom: 1px solid #90CAF9;
+        }
+
+        .mobile-nav-links {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
           margin-bottom: 24px;
         }
 
-        .step-top > span {
-          color: var(--text-disabled);
-
-          font-size: 0.67rem;
-          font-weight: 800;
-          letter-spacing: 0.08em;
+        .mobile-link {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #0D47A1;
+          text-decoration: none;
         }
 
-        .step-icon {
-          width: 38px;
-          height: 38px;
-
+        .mobile-actions-row {
           display: flex;
-          align-items: center;
-          justify-content: center;
-
-          color: #a5b4fc;
-
-          border-radius: 10px;
-
-          background:
-            rgba(99,102,241,0.09);
-        }
-
-        .step-card h3 {
-          margin: 0 0 9px;
-
-          font-size: 0.9rem;
-        }
-
-        .step-card p {
-          margin: 0;
-
-          color: var(--text-muted);
-
-          font-size: 0.7rem;
-          line-height: 1.7;
-        }
-
-        .step-connector {
-          position: absolute;
-
-          right: -18px;
-          top: 50%;
-
-          width: 30px;
-          height: 30px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          color: #64748b;
-
-          border:
-            1px solid
-            var(--border);
-
-          border-radius: 50%;
-
-          background: var(--bg-base);
-
-          transform: translateY(-50%);
-
-          z-index: 5;
+          flex-direction: column;
+          gap: 10px;
         }
 
         /* ====================================================
-           CAPABILITIES
+           HERO SECTION
         ==================================================== */
-
-        .capabilities-card {
+        .hero-section {
           position: relative;
-
-          display: grid;
-          grid-template-columns: 1fr 0.8fr;
-
+          padding-top: 80px;
+          padding-bottom: 100px;
+          background: linear-gradient(180deg, #FFFFFF 0%, #E3F2FD 50%, #FFFFFF 100%);
           overflow: hidden;
-
-          border:
-            1px solid
-            var(--border);
-
-          border-radius: 22px;
-
-          background:
-            linear-gradient(
-              135deg,
-              rgba(59,130,246,0.045),
-              rgba(139,92,246,0.055)
-            );
         }
 
-        .capabilities-content {
-          padding: 60px;
-        }
-
-        .capabilities-content > p {
-          max-width: 550px;
-        }
-
-        .capability-list {
-          display: grid;
-          gap: 12px;
-
-          margin: 25px 0 28px;
-        }
-
-        .capability-list div {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-
-          color: var(--text-secondary);
-
-          font-size: 0.73rem;
-        }
-
-        .capability-list svg {
-          color: #60a5fa;
-          flex-shrink: 0;
-        }
-
-        .capabilities-visual {
-          position: relative;
-
-          min-height: 400px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          overflow: hidden;
-
-          border-left:
-            1px solid
-            var(--border);
-        }
-
-        .ai-ring {
+        .hero-bg-visual {
           position: absolute;
+          inset: 0;
+          background-image: url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1400&q=80');
+          background-size: cover;
+          background-position: center;
+          opacity: 0.035;
+          pointer-events: none;
+        }
 
-          border:
-            1px solid
-            rgba(129,140,248,0.16);
+        .hero-radial-backdrop {
+          position: absolute;
+          top: -100px;
+          right: -100px;
+          width: 600px;
+          height: 600px;
+          background: radial-gradient(circle, rgba(144, 202, 249, 0.4) 0%, rgba(227, 242, 253, 0) 70%);
+          pointer-events: none;
+        }
 
+        .hero-grid-container {
+          position: relative;
+          z-index: 10;
+          display: grid;
+          grid-template-columns: 1fr 1.08fr;
+          gap: 48px;
+          align-items: center;
+        }
+
+        .hero-text-block {
+          max-width: 580px;
+        }
+
+        .hero-badge-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 14px;
+          border-radius: 9999px;
+          background-color: #FFFFFF;
+          color: #0D47A1;
+          border: 1px solid #90CAF9;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          margin-bottom: 24px;
+          box-shadow: 0 2px 8px rgba(13, 71, 161, 0.05);
+        }
+
+        .badge-sparkle-dot {
+          width: 7px;
+          height: 7px;
           border-radius: 50%;
+          background-color: #2196F3;
         }
 
-        .ring-one {
-          width: 230px;
-          height: 230px;
+        .badge-sparkle-icon {
+          color: #2196F3;
         }
 
-        .ring-two {
-          width: 320px;
-          height: 320px;
+        .hero-heading {
+          font-size: 3.5rem;
+          font-weight: 850;
+          color: #0D47A1;
+          line-height: 1.08;
+          letter-spacing: -0.03em;
+          margin-top: 0;
+          margin-bottom: 20px;
         }
 
-        .ai-core {
+        .hero-heading-gradient {
+          color: #2196F3;
+          display: inline-block;
+        }
+
+        .hero-subtext {
+          font-size: 1.125rem;
+          color: #334155;
+          line-height: 1.65;
+          margin-top: 0;
+          margin-bottom: 32px;
+        }
+
+        .hero-cta-buttons {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 36px;
+        }
+
+        .hero-supporting-points {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 20px;
+        }
+
+        .support-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #0D47A1;
+        }
+
+        .support-check {
+          color: #2196F3;
+          display: flex;
+          align-items: center;
+        }
+
+        /* ====================================================
+           HERO DASHBOARD MOCKUP
+        ==================================================== */
+        .hero-mockup-wrapper {
+          position: relative;
+          width: 100%;
+        }
+
+        .mockup-subtle-glow {
+          position: absolute;
+          inset: -15px;
+          background: radial-gradient(circle, rgba(33, 150, 243, 0.15) 0%, rgba(227, 242, 253, 0) 70%);
+          border-radius: 24px;
+          filter: blur(20px);
+          z-index: 1;
+        }
+
+        .mockup-window {
           position: relative;
           z-index: 2;
-
-          width: 100px;
-          height: 100px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          color: white;
-
-          border:
-            1px solid
-            rgba(255,255,255,0.15);
-
-          border-radius: 28px;
-
-          background:
-            linear-gradient(
-              135deg,
-              #2563eb,
-              #7c3aed
-            );
-
-          box-shadow:
-            0 25px 60px
-            rgba(99,102,241,0.35);
+          background-color: #FFFFFF;
+          border: 1.5px solid #90CAF9;
+          border-radius: 16px;
+          box-shadow: 0 20px 40px rgba(13, 71, 161, 0.12), 0 1px 3px rgba(13, 71, 161, 0.05);
+          overflow: hidden;
         }
 
-        .ai-chip {
-          position: absolute;
-
-          z-index: 3;
-
-          display: flex;
-          align-items: center;
-          gap: 6px;
-
-          padding: 8px 10px;
-
-          color: var(--text-secondary);
-
-          border:
-            1px solid
-            rgba(255,255,255,0.08);
-
-          border-radius: 8px;
-
-          background:
-            rgba(12,16,25,0.9);
-
-          box-shadow:
-            0 12px 25px
-            rgba(0,0,0,0.25);
-
-          font-size: 0.6rem;
-          font-weight: 650;
-        }
-
-        .ai-chip svg {
-          color: #a78bfa;
-        }
-
-        .chip-one {
-          top: 78px;
-          right: 45px;
-        }
-
-        .chip-two {
-          bottom: 75px;
-          left: 35px;
-        }
-
-        .chip-three {
-          bottom: 105px;
-          right: 35px;
-        }
-
-        /* ====================================================
-           FAQ
-        ==================================================== */
-
-        .faq-container {
-          max-width: 800px;
-        }
-
-        .faq-list {
-          border-top:
-            1px solid
-            var(--border);
-        }
-
-        .faq-item {
-          border-bottom:
-            1px solid
-            var(--border);
-        }
-
-        .faq-question {
-          width: 100%;
-
+        .mockup-header-bar {
           display: flex;
           align-items: center;
           justify-content: space-between;
-
-          gap: 20px;
-
-          padding: 21px 2px;
-
-          color: var(--text-primary);
-
-          border: 0;
-
-          background: transparent;
-
-          text-align: left;
-
-          cursor: pointer;
-
-          font-size: 0.82rem;
-          font-weight: 650;
+          padding: 10px 16px;
+          background-color: #E3F2FD;
+          border-bottom: 1px solid #90CAF9;
         }
 
-        .faq-chevron {
-          color: var(--text-muted);
-
-          flex-shrink: 0;
-
-          transition:
-            transform 0.2s ease;
+        .window-dots {
+          display: flex;
+          gap: 6px;
         }
 
-        .faq-chevron.rotate {
-          transform: rotate(180deg);
+        .dot {
+          width: 9px;
+          height: 9px;
+          border-radius: 50%;
         }
 
-        .faq-answer {
+        .dot-one { background-color: #90CAF9; }
+        .dot-two { background-color: #2196F3; }
+        .dot-three { background-color: #0D47A1; }
+
+        .window-url-pill {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 3px 12px;
+          background-color: #FFFFFF;
+          border-radius: 6px;
+          border: 1px solid #90CAF9;
+          font-size: 0.6875rem;
+          color: #0D47A1;
+          font-weight: 500;
+        }
+
+        .url-shield {
+          color: #2196F3;
+        }
+
+        .window-status-pill {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .pulse-indicator {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background-color: #2196F3;
+          box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.25);
+        }
+
+        .status-label {
+          font-size: 0.6875rem;
+          font-weight: 700;
+          color: #0D47A1;
+        }
+
+        .mockup-body {
+          display: grid;
+          grid-template-columns: 140px 1fr;
+          min-height: 380px;
+        }
+
+        .mockup-sidebar {
+          background-color: #FFFFFF;
+          border-right: 1px solid #E3F2FD;
+          padding: 16px 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .sidebar-brand {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .sidebar-logo-box {
+          width: 26px;
+          height: 26px;
+          background: #2196F3;
+          color: #FFFFFF;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .sidebar-brand-name {
+          font-size: 0.8125rem;
+          font-weight: 800;
+          color: #0D47A1;
+        }
+
+        .sidebar-nav-items {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .sidebar-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 7px 10px;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #475569;
+        }
+
+        .sidebar-item.active {
+          background-color: #E3F2FD;
+          color: #0D47A1;
+        }
+
+        .sidebar-session-box {
+          margin-top: auto;
+          background-color: #E3F2FD;
+          border: 1px solid #90CAF9;
+          border-radius: 6px;
+          padding: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .session-tag {
+          font-size: 0.5625rem;
+          font-weight: 700;
+          color: #2196F3;
+        }
+
+        .session-role {
+          font-size: 0.6875rem;
+          font-weight: 700;
+          color: #0D47A1;
+          white-space: nowrap;
           overflow: hidden;
+          text-overflow: ellipsis;
         }
 
-        .faq-answer p {
-          margin: 0;
-          padding: 0 35px 21px 2px;
+        .mockup-content {
+          padding: 20px;
+          background-color: #FFFFFF;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
 
-          color: var(--text-muted);
+        .interview-top-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
 
-          font-size: 0.73rem;
-          line-height: 1.75;
+        .role-sub {
+          font-size: 0.625rem;
+          font-weight: 700;
+          color: #2196F3;
+          letter-spacing: 0.05em;
+        }
+
+        .role-title {
+          font-size: 0.9375rem;
+          font-weight: 800;
+          color: #0D47A1;
+          margin: 2px 0 0 0;
+        }
+
+        .duration-tag {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          background-color: #E3F2FD;
+          border: 1px solid #90CAF9;
+          border-radius: 20px;
+          font-size: 0.6875rem;
+          font-weight: 700;
+          color: #0D47A1;
+        }
+
+        .recording-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background-color: #2196F3;
+        }
+
+        .mockup-question-box {
+          background-color: #FFFFFF;
+          border: 1.5px solid #90CAF9;
+          border-radius: 12px;
+          padding: 16px;
+          box-shadow: 0 4px 12px rgba(13, 71, 161, 0.04);
+        }
+
+        .question-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          color: #2196F3;
+          font-size: 0.6875rem;
+          font-weight: 700;
+          margin-bottom: 8px;
+        }
+
+        .question-text {
+          font-size: 0.875rem;
+          font-weight: 700;
+          color: #0D47A1;
+          line-height: 1.45;
+          margin: 0 0 12px 0;
+        }
+
+        .answer-capture-box {
+          background-color: #E3F2FD;
+          border-radius: 8px;
+          padding: 10px 12px;
+          border-left: 3px solid #2196F3;
+        }
+
+        .capture-status {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 4px;
+        }
+
+        .wave-bars {
+          display: flex;
+          align-items: center;
+          gap: 3px;
+          height: 12px;
+        }
+
+        .wave-bars .bar {
+          width: 2px;
+          background-color: #2196F3;
+          border-radius: 2px;
+          animation: wave 1.2s infinite ease-in-out;
+        }
+
+        .wave-bars .bar:nth-child(1) { height: 6px; animation-delay: 0.1s; }
+        .wave-bars .bar:nth-child(2) { height: 12px; animation-delay: 0.2s; }
+        .wave-bars .bar:nth-child(3) { height: 8px; animation-delay: 0.3s; }
+        .wave-bars .bar:nth-child(4) { height: 11px; animation-delay: 0.4s; }
+        .wave-bars .bar:nth-child(5) { height: 5px; animation-delay: 0.5s; }
+
+        @keyframes wave {
+          0%, 100% { transform: scaleY(0.5); }
+          50% { transform: scaleY(1); }
+        }
+
+        .capture-text {
+          font-size: 0.6875rem;
+          font-weight: 700;
+          color: #0D47A1;
+        }
+
+        .answer-preview-snippet {
+          font-size: 0.75rem;
+          color: #334155;
+          font-style: italic;
+          line-height: 1.35;
+        }
+
+        .mockup-scores-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+        }
+
+        .score-tile {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background-color: #FFFFFF;
+          border: 1px solid #90CAF9;
+          border-radius: 8px;
+          padding: 8px 10px;
+        }
+
+        .score-icon-box {
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+          background-color: #E3F2FD;
+          color: #2196F3;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .score-details {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .tile-label {
+          font-size: 0.5625rem;
+          font-weight: 600;
+          color: #475569;
+        }
+
+        .tile-value {
+          font-size: 0.9375rem;
+          font-weight: 800;
+          color: #0D47A1;
+          line-height: 1.1;
+        }
+
+        .mockup-feedback-banner {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 10px 12px;
+          background-color: #E3F2FD;
+          border: 1px solid #90CAF9;
+          border-radius: 8px;
+        }
+
+        .feedback-bot-avatar {
+          width: 26px;
+          height: 26px;
+          border-radius: 6px;
+          background-color: #2196F3;
+          color: #FFFFFF;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .feedback-title {
+          font-size: 0.6875rem;
+          font-weight: 800;
+          color: #0D47A1;
+          display: block;
+        }
+
+        .feedback-p {
+          font-size: 0.7188rem;
+          color: #334155;
+          margin: 2px 0 0 0;
+          line-height: 1.35;
+        }
+
+        /* Floating Cards */
+        .floating-widget {
+          position: absolute;
+          z-index: 20;
+          background-color: #FFFFFF;
+          border: 1.5px solid #90CAF9;
+          border-radius: 12px;
+          padding: 10px 14px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          box-shadow: 0 12px 28px rgba(13, 71, 161, 0.16);
+        }
+
+        .float-top-right {
+          top: -24px;
+          right: -20px;
+        }
+
+        .float-bottom-left {
+          bottom: -20px;
+          left: -20px;
+        }
+
+        .widget-score-pill {
+          background-color: #2196F3;
+          color: #FFFFFF;
+          font-weight: 800;
+          font-size: 1rem;
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .widget-icon-pill {
+          background-color: #E3F2FD;
+          color: #2196F3;
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .widget-info {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .widget-label {
+          font-size: 0.625rem;
+          font-weight: 600;
+          color: #475569;
+        }
+
+        .widget-highlight {
+          font-size: 0.8125rem;
+          font-weight: 750;
+          color: #0D47A1;
         }
 
         /* ====================================================
-           CTA
+           METRIC STRIP
         ==================================================== */
-
-        .cta-section {
-          padding: 20px 0 110px;
+        .metric-strip-section {
+          background-color: #FFFFFF;
+          border-top: 1px solid #E3F2FD;
+          border-bottom: 1px solid #E3F2FD;
+          padding: 36px 0;
         }
 
-        .cta-card {
-          position: relative;
+        .metric-strip-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 24px;
+        }
 
+        .metric-col {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .metric-icon {
+          color: #2196F3;
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .metric-text {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .metric-title {
+          font-size: 0.9375rem;
+          font-weight: 800;
+          color: #0D47A1;
+        }
+
+        .metric-desc {
+          font-size: 0.8125rem;
+          color: #475569;
+          line-height: 1.4;
+        }
+
+        /* ====================================================
+           FEATURES SECTION (6 CARDS)
+        ==================================================== */
+        .features-section {
+          background-color: #FFFFFF;
+        }
+
+        .features-grid-6 {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 28px;
+        }
+
+        .feature-card-white {
+          background-color: #FFFFFF;
+          border: 1.5px solid #90CAF9;
+          border-radius: 16px;
+          padding: 32px 28px;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 4px 16px rgba(13, 71, 161, 0.05);
+          transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+        }
+
+        .feature-card-white:hover {
+          transform: translateY(-4px);
+          border-color: #2196F3;
+          box-shadow: 0 12px 30px rgba(33, 150, 243, 0.16);
+        }
+
+        .feature-icon-bubble {
+          width: 50px;
+          height: 50px;
+          border-radius: 12px;
+          background: #E3F2FD;
+          color: #2196F3;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 22px;
+          border: 1px solid #90CAF9;
+        }
+
+        .feature-card-title {
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: #0D47A1;
+          margin: 0 0 12px 0;
+        }
+
+        .feature-card-desc {
+          font-size: 0.9375rem;
+          color: #334155;
+          line-height: 1.6;
+          margin: 0 0 24px 0;
+          flex-grow: 1;
+        }
+
+        .feature-card-footer {
+          margin-top: auto;
+        }
+
+        .explore-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.8125rem;
+          font-weight: 700;
+          color: #2196F3;
+        }
+
+        .explore-arrow {
+          transition: transform 0.18s ease;
+        }
+
+        .feature-card-white:hover .explore-arrow {
+          transform: translateX(4px);
+        }
+
+        /* ====================================================
+           HOW IT WORKS (4 STEPS)
+        ==================================================== */
+        .workflow-section {
+          background-color: #E3F2FD;
+        }
+
+        .steps-container-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 24px;
+          position: relative;
+        }
+
+        .step-card-item {
+          position: relative;
+          background-color: #FFFFFF;
+          border: 1.5px solid #90CAF9;
+          border-radius: 16px;
+          padding: 30px 24px;
+          box-shadow: 0 6px 18px rgba(13, 71, 161, 0.05);
+        }
+
+        .step-top-badge-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 20px;
+        }
+
+        .step-number-pill {
+          font-size: 0.875rem;
+          font-weight: 850;
+          color: #0D47A1;
+          background-color: #E3F2FD;
+          border: 1px solid #90CAF9;
+          padding: 4px 12px;
+          border-radius: 20px;
+        }
+
+        .step-icon-circle {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          background-color: #2196F3;
+          color: #FFFFFF;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .step-item-title {
+          font-size: 1.125rem;
+          font-weight: 800;
+          color: #0D47A1;
+          margin: 0 0 10px 0;
+        }
+
+        .step-item-desc {
+          font-size: 0.875rem;
+          color: #334155;
+          line-height: 1.55;
+          margin: 0;
+        }
+
+        /* ====================================================
+           AI INTERVIEW SHOWCASE SECTION
+        ==================================================== */
+        .showcase-section {
+          background-color: #FFFFFF;
+        }
+
+        .showcase-two-column-layout {
+          display: grid;
+          grid-template-columns: 1fr 1.05fr;
+          gap: 60px;
+          align-items: center;
+        }
+
+        .showcase-info-col {
+          max-width: 540px;
+        }
+
+        .showcase-headline {
+          font-size: 2.375rem;
+          font-weight: 850;
+          color: #0D47A1;
+          line-height: 1.2;
+          letter-spacing: -0.025em;
+          margin: 16px 0 18px 0;
+        }
+
+        .showcase-lead-p {
+          font-size: 1.0625rem;
+          color: #334155;
+          line-height: 1.65;
+          margin: 0 0 28px 0;
+        }
+
+        .showcase-feature-list {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          margin-bottom: 36px;
+        }
+
+        .showcase-feature-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 14px;
+        }
+
+        .feature-check-icon {
+          color: #2196F3;
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .feature-item-content strong {
+          display: block;
+          font-size: 1rem;
+          color: #0D47A1;
+          margin-bottom: 4px;
+        }
+
+        .feature-item-content p {
+          font-size: 0.875rem;
+          color: #475569;
+          margin: 0;
+          line-height: 1.5;
+        }
+
+        .showcase-image-wrapper {
+          position: relative;
+          border-radius: 20px;
           overflow: hidden;
-
-          padding: 75px 40px;
-
-          text-align: center;
-
-          border:
-            1px solid
-            rgba(99,102,241,0.18);
-
-          border-radius: 22px;
-
-          background:
-            radial-gradient(
-              ellipse 70% 90% at 50% 100%,
-              rgba(99,102,241,0.11),
-              transparent 70%
-            ),
-            rgba(255,255,255,0.018);
+          border: 1.5px solid #90CAF9;
+          box-shadow: 0 20px 48px rgba(13, 71, 161, 0.15);
         }
 
-        .cta-glow {
+        .showcase-base-img {
+          width: 100%;
+          height: 480px;
+          object-fit: cover;
+          display: block;
+        }
+
+        .showcase-blue-gradient-overlay {
           position: absolute;
-
-          width: 300px;
-          height: 300px;
-
-          top: -180px;
-          left: 50%;
-
-          border-radius: 50%;
-
-          background:
-            radial-gradient(
-              circle,
-              rgba(59,130,246,0.11),
-              transparent 70%
-            );
-
-          transform: translateX(-50%);
+          inset: 0;
+          background: linear-gradient(180deg, rgba(13, 71, 161, 0.15) 0%, rgba(13, 71, 161, 0.85) 100%);
         }
 
-        .cta-content {
+        .showcase-overlay-card {
+          position: absolute;
+          bottom: 20px;
+          left: 20px;
+          right: 20px;
+          background-color: rgba(255, 255, 255, 0.96);
+          backdrop-filter: blur(10px);
+          border: 1px solid #90CAF9;
+          border-radius: 14px;
+          padding: 18px 20px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+        }
+
+        .overlay-card-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 10px;
+        }
+
+        .overlay-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background-color: #2196F3;
+          color: #FFFFFF;
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 700;
+        }
+
+        .overlay-status-live {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #0D47A1;
+        }
+
+        .live-pulsing-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #2196F3;
+          box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.3);
+        }
+
+        .overlay-role-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 12px;
+        }
+
+        .overlay-role-name {
+          font-size: 1rem;
+          font-weight: 800;
+          color: #0D47A1;
+        }
+
+        .overlay-badge-blue {
+          background-color: #E3F2FD;
+          color: #0D47A1;
+          border: 1px solid #90CAF9;
+          border-radius: 4px;
+          padding: 2px 8px;
+          font-size: 0.6875rem;
+          font-weight: 700;
+        }
+
+        .overlay-question-strip {
+          background-color: #E3F2FD;
+          border-radius: 8px;
+          padding: 10px 12px;
+          margin-bottom: 14px;
+        }
+
+        .overlay-label {
+          font-size: 0.625rem;
+          font-weight: 800;
+          color: #2196F3;
+          letter-spacing: 0.05em;
+          display: block;
+          margin-bottom: 2px;
+        }
+
+        .overlay-q-text {
+          font-size: 0.8125rem;
+          color: #0D47A1;
+          font-weight: 600;
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        .overlay-metrics-bars {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+        }
+
+        .metric-bar-item {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .bar-labels {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.6875rem;
+          color: #475569;
+        }
+
+        .bar-labels strong {
+          color: #0D47A1;
+        }
+
+        .bar-track {
+          height: 6px;
+          background-color: #E3F2FD;
+          border-radius: 3px;
+          overflow: hidden;
+        }
+
+        .bar-fill {
+          height: 100%;
+          background-color: #2196F3;
+          border-radius: 3px;
+        }
+
+        /* ====================================================
+           RESUME INTELLIGENCE SECTION
+        ==================================================== */
+        .resume-section {
+          background-color: #FFFFFF;
+          border-top: 1px solid #E3F2FD;
+        }
+
+        .resume-grid-two-col {
+          display: grid;
+          grid-template-columns: 1.05fr 1fr;
+          gap: 60px;
+          align-items: center;
+        }
+
+        .stylized-resume-card {
+          background-color: #FFFFFF;
+          border: 1.5px solid #90CAF9;
+          border-radius: 18px;
+          padding: 28px;
+          box-shadow: 0 16px 36px rgba(13, 71, 161, 0.08);
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+
+        .resume-header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-bottom: 1px solid #E3F2FD;
+          padding-bottom: 16px;
+        }
+
+        .resume-candidate-meta {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .resume-avatar-circle {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background: #2196F3;
+          color: #FFFFFF;
+          font-weight: 800;
+          font-size: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .resume-name {
+          font-size: 1.0625rem;
+          font-weight: 800;
+          color: #0D47A1;
+          margin: 0;
+        }
+
+        .resume-title {
+          font-size: 0.8125rem;
+          color: #475569;
+          font-weight: 500;
+        }
+
+        .resume-score-pill {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          background-color: #E3F2FD;
+          border: 1px solid #90CAF9;
+          border-radius: 8px;
+          padding: 6px 12px;
+        }
+
+        .score-num {
+          font-size: 1.125rem;
+          font-weight: 850;
+          color: #0D47A1;
+          line-height: 1.1;
+        }
+
+        .score-label {
+          font-size: 0.625rem;
+          font-weight: 600;
+          color: #2196F3;
+        }
+
+        .resume-section-block {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .resume-block-title {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.75rem;
+          font-weight: 750;
+          color: #2196F3;
+          letter-spacing: 0.03em;
+        }
+
+        .resume-tags-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .resume-skill-tag {
+          font-size: 0.75rem;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 6px;
+          background-color: #E3F2FD;
+          color: #0D47A1;
+          border: 1px solid #90CAF9;
+        }
+
+        .resume-skill-tag.highlight {
+          background-color: #2196F3;
+          color: #FFFFFF;
+          border-color: #2196F3;
+        }
+
+        .resume-exp-item,
+        .resume-proj-item {
+          background-color: #FFFFFF;
+          border: 1px solid #E3F2FD;
+          border-radius: 8px;
+          padding: 10px 12px;
+          font-size: 0.8125rem;
+        }
+
+        .exp-row-top {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 4px;
+        }
+
+        .exp-row-top strong {
+          color: #0D47A1;
+        }
+
+        .exp-row-top span {
+          color: #64748B;
+          font-size: 0.75rem;
+        }
+
+        .exp-bullet {
+          color: #334155;
+          margin: 0;
+          line-height: 1.4;
+        }
+
+        .resume-proj-item strong {
+          color: #0D47A1;
+          display: block;
+          margin-bottom: 2px;
+        }
+
+        .resume-proj-item p {
+          color: #475569;
+          margin: 0;
+          line-height: 1.35;
+        }
+
+        .resume-ai-insights-box {
+          background-color: #E3F2FD;
+          border-left: 3px solid #2196F3;
+          border-radius: 8px;
+          padding: 12px 14px;
+        }
+
+        .insight-top {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: #0D47A1;
+          font-size: 0.8125rem;
+          margin-bottom: 4px;
+        }
+
+        .insight-p {
+          font-size: 0.7813rem;
+          color: #334155;
+          margin: 0;
+          line-height: 1.45;
+        }
+
+        .resume-copy-col {
+          max-width: 540px;
+        }
+
+        .resume-lead-text {
+          font-size: 1.0625rem;
+          color: #334155;
+          line-height: 1.6;
+          margin: 0 0 28px 0;
+        }
+
+        .resume-benefits-list {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          margin-bottom: 36px;
+        }
+
+        .benefit-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 14px;
+        }
+
+        .benefit-icon-box {
+          color: #2196F3;
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .benefit-title {
+          font-size: 1rem;
+          font-weight: 800;
+          color: #0D47A1;
+          margin: 0 0 3px 0;
+        }
+
+        .benefit-desc {
+          font-size: 0.875rem;
+          color: #475569;
+          margin: 0;
+          line-height: 1.45;
+        }
+
+        /* ====================================================
+           INTERVIEW TYPES SECTION (PILLS)
+        ==================================================== */
+        .interview-types-section {
+          background-color: #E3F2FD;
+        }
+
+        .interview-types-pills-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 18px;
+        }
+
+        .interview-type-pill {
+          background-color: #FFFFFF;
+          border: 1.5px solid #90CAF9;
+          border-radius: 12px;
+          padding: 16px 20px;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          box-shadow: 0 4px 12px rgba(13, 71, 161, 0.04);
+          transition: border-color 0.2s ease, transform 0.2s ease;
+          cursor: pointer;
+        }
+
+        .interview-type-pill:hover {
+          border-color: #2196F3;
+          background-color: #FFFFFF;
+        }
+
+        .pill-icon-box {
+          width: 42px;
+          height: 42px;
+          border-radius: 10px;
+          background-color: #E3F2FD;
+          color: #2196F3;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .pill-text-block {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .pill-title {
+          font-size: 0.9375rem;
+          font-weight: 800;
+          color: #0D47A1;
+        }
+
+        .pill-subtitle {
+          font-size: 0.75rem;
+          color: #475569;
+          font-weight: 500;
+        }
+
+        /* ====================================================
+           WORKSPACE SHOWCASE STRIP
+        ==================================================== */
+        .workspace-strip-section {
+          background-color: #FFFFFF;
+        }
+
+        .workspace-card-inner {
+          background-color: #FFFFFF;
+          border: 1.5px solid #90CAF9;
+          border-radius: 20px;
+          overflow: hidden;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          box-shadow: 0 16px 40px rgba(13, 71, 161, 0.08);
+        }
+
+        .workspace-content-side {
+          padding: 48px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .workspace-title {
+          font-size: 2.125rem;
+          font-weight: 850;
+          color: #0D47A1;
+          line-height: 1.25;
+          letter-spacing: -0.02em;
+          margin: 16px 0;
+        }
+
+        .workspace-p {
+          font-size: 1rem;
+          color: #334155;
+          line-height: 1.65;
+          margin: 0 0 28px 0;
+        }
+
+        .workspace-image-side {
           position: relative;
-          z-index: 2;
+          min-height: 380px;
+        }
 
+        .workspace-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .workspace-img-overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, rgba(255, 255, 255, 0.25) 0%, rgba(33, 150, 243, 0.2) 100%);
+        }
+
+        /* ====================================================
+           ACCORDION FAQ SECTION
+        ==================================================== */
+        .faq-section {
+          background-color: #E3F2FD;
+        }
+
+        .faq-constrained-container {
+          max-width: 860px;
+        }
+
+        .faq-accordion-list {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        .faq-item {
+          background-color: #FFFFFF;
+          border: 1.5px solid #90CAF9;
+          border-radius: 12px;
+          overflow: hidden;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .faq-item-open {
+          border-color: #2196F3;
+          box-shadow: 0 6px 20px rgba(33, 150, 243, 0.12);
+        }
+
+        .faq-question-btn {
+          width: 100%;
+          background: none;
+          border: none;
+          padding: 20px 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          text-align: left;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .faq-question-text {
+          font-size: 1.0625rem;
+          font-weight: 750;
+          color: #0D47A1;
+        }
+
+        .faq-icon-wrapper {
+          color: #2196F3;
+          display: flex;
+          align-items: center;
+        }
+
+        .faq-chevron {
+          transition: transform 0.25s ease;
+        }
+
+        .faq-chevron-rotated {
+          transform: rotate(180deg);
+        }
+
+        .faq-answer-body {
+          padding: 0 24px 20px 24px;
+          border-top: 1px solid #E3F2FD;
+        }
+
+        .faq-answer-body p {
+          font-size: 0.9375rem;
+          color: #334155;
+          line-height: 1.65;
+          margin: 16px 0 0 0;
+        }
+
+        /* ====================================================
+           CTA SECTION
+        ==================================================== */
+        .cta-section-wrap {
+          background-color: #FFFFFF;
+        }
+
+        .cta-gradient-card {
+          position: relative;
+          background: linear-gradient(135deg, #E3F2FD 0%, #FFFFFF 50%, #E3F2FD 100%);
+          border: 2px solid #90CAF9;
+          border-radius: 24px;
+          padding: 64px 32px;
+          text-align: center;
+          overflow: hidden;
+          box-shadow: 0 20px 50px rgba(13, 71, 161, 0.08);
+        }
+
+        .cta-pattern-overlay {
+          position: absolute;
+          inset: 0;
+          background-image: radial-gradient(#90CAF9 1px, transparent 1px);
+          background-size: 24px 24px;
+          opacity: 0.35;
+          pointer-events: none;
+        }
+
+        .cta-inner-content {
+          position: relative;
+          z-index: 10;
           max-width: 680px;
-
           margin: 0 auto;
         }
 
-        .cta-content h2 {
-          font-size: clamp(2rem, 4vw, 3.15rem);
+        .cta-headline {
+          font-size: 2.5rem;
+          font-weight: 850;
+          color: #0D47A1;
+          line-height: 1.2;
+          letter-spacing: -0.025em;
+          margin: 16px 0;
         }
 
-        .cta-content > p {
-          max-width: 560px;
-          margin-left: auto;
-          margin-right: auto;
+        .cta-subheadline {
+          font-size: 1.125rem;
+          color: #334155;
+          line-height: 1.65;
+          margin: 0 0 36px 0;
         }
 
-        .cta-actions {
+        .cta-button-group {
           display: flex;
+          align-items: center;
           justify-content: center;
-          flex-wrap: wrap;
+          gap: 16px;
+        }
 
-          gap: 10px;
+        .btn-cta-main {
+          background-color: #2196F3;
+          color: #FFFFFF;
+          padding: 14px 30px;
+          font-size: 1rem;
+          font-weight: 700;
+          border-radius: 12px;
+          box-shadow: 0 8px 24px rgba(33, 150, 243, 0.32);
+        }
 
-          margin-top: 28px;
+        .btn-cta-main:hover {
+          background-color: #0D47A1;
+          transform: translateY(-2px);
+          box-shadow: 0 12px 28px rgba(13, 71, 161, 0.35);
+        }
+
+        .btn-cta-secondary {
+          background-color: #FFFFFF;
+          color: #0D47A1;
+          border: 1.5px solid #90CAF9;
+          padding: 14px 28px;
+          font-size: 1rem;
+          font-weight: 700;
+          border-radius: 12px;
+        }
+
+        .btn-cta-secondary:hover {
+          background-color: #E3F2FD;
+          border-color: #2196F3;
+          transform: translateY(-2px);
         }
 
         /* ====================================================
            FOOTER
         ==================================================== */
-
-        .landing-footer {
-          border-top:
-            1px solid
-            var(--border);
-
-          background:
-            rgba(255,255,255,0.01);
+        .footer-container-wrap {
+          background-color: #FFFFFF;
+          border-top: 1.5px solid #90CAF9;
+          padding: 72px 0 36px 0;
         }
 
-        .footer-main {
-          display: flex;
-          justify-content: space-between;
-
-          gap: 60px;
-
-          padding: 55px 0;
+        .footer-top-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr 1fr 1.2fr;
+          gap: 48px;
+          margin-bottom: 48px;
         }
 
-        .footer-brand {
-          max-width: 350px;
-        }
-
-        .footer-brand-row {
+        .footer-brand-badge {
           display: flex;
           align-items: center;
-          gap: 9px;
-
-          margin-bottom: 12px;
+          gap: 10px;
+          margin-bottom: 16px;
         }
 
-        .footer-logo {
-          width: 32px;
-          height: 32px;
-
+        .footer-logo-box {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          background: #2196F3;
+          color: #FFFFFF;
           display: flex;
           align-items: center;
           justify-content: center;
-
-          color: white;
-
-          border-radius: 9px;
-
-          background:
-            linear-gradient(
-              135deg,
-              #2563eb,
-              #7c3aed
-            );
         }
 
-        .footer-brand strong {
-          font-size: 0.85rem;
+        .footer-brand-name {
+          font-size: 1.125rem;
+          font-weight: 850;
+          color: #0D47A1;
         }
 
-        .footer-brand p {
+        .footer-brand-bio {
+          font-size: 0.875rem;
+          color: #475569;
+          line-height: 1.6;
+          margin: 0 0 20px 0;
+          max-width: 340px;
+        }
+
+        .footer-copyright-note {
+          font-size: 0.8125rem;
+          color: #64748B;
+        }
+
+        .footer-col-heading {
+          font-size: 0.9375rem;
+          font-weight: 800;
+          color: #0D47A1;
+          margin: 0 0 18px 0;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .footer-nav-list {
+          list-style: none;
+          padding: 0;
           margin: 0;
-
-          color: var(--text-muted);
-
-          font-size: 0.68rem;
-          line-height: 1.7;
-        }
-
-        .footer-links {
-          display: flex;
-
-          gap: 75px;
-        }
-
-        .footer-links > div {
           display: flex;
           flex-direction: column;
-
-          gap: 9px;
+          gap: 12px;
         }
 
-        .footer-links span {
-          margin-bottom: 4px;
-
-          color: var(--text-primary);
-
-          font-size: 0.69rem;
-          font-weight: 750;
-        }
-
-        .footer-links a,
-        .footer-links button {
-          width: fit-content;
-
-          padding: 0;
-
-          color: var(--text-muted);
-
-          border: 0;
-
-          background: transparent;
-
+        .footer-nav-list a {
+          font-size: 0.875rem;
+          color: #475569;
           text-decoration: none;
+          transition: color 0.18s ease;
+        }
 
+        .footer-nav-list a:hover {
+          color: #2196F3;
+        }
+
+        .footer-link-btn {
+          background: none;
+          border: none;
+          padding: 0;
+          font-size: 0.875rem;
+          color: #475569;
           cursor: pointer;
-
           font-family: inherit;
-          font-size: 0.66rem;
-
           text-align: left;
+          transition: color 0.18s ease;
         }
 
-        .footer-links a:hover,
-        .footer-links button:hover {
-          color: var(--text-primary);
+        .footer-link-btn:hover {
+          color: #2196F3;
         }
 
-        .footer-bottom {
-          min-height: 65px;
+        .footer-connect-text {
+          font-size: 0.875rem;
+          color: #475569;
+          line-height: 1.5;
+          margin: 0 0 14px 0;
+        }
 
-          display: flex;
+        .github-profile-link {
+          display: inline-flex;
           align-items: center;
-
-          gap: 20px;
-
-          border-top:
-            1px solid
-            var(--border);
-
-          color: var(--text-disabled);
-
-          font-size: 0.62rem;
+          gap: 8px;
+          background-color: #E3F2FD;
+          color: #0D47A1;
+          border: 1px solid #90CAF9;
+          padding: 8px 14px;
+          border-radius: 8px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          text-decoration: none;
+          transition: background-color 0.18s ease, border-color 0.18s ease;
         }
 
-        .footer-bottom span:nth-child(2) {
-          margin-left: auto;
+        .github-profile-link:hover {
+          background-color: #FFFFFF;
+          border-color: #2196F3;
         }
 
-        .github-link {
-          width: 32px;
-          height: 32px;
-
+        .footer-bottom-bar {
+          border-top: 1px solid #E3F2FD;
+          padding-top: 24px;
           display: flex;
           align-items: center;
           justify-content: center;
-
-          color: var(--text-muted);
-
-          border-radius: 8px;
-
-          transition:
-            color 0.2s ease,
-            background 0.2s ease;
+          gap: 10px;
+          font-size: 0.8125rem;
+          color: #64748B;
         }
 
-        .github-link:hover {
-          color: var(--text-primary);
-          background: rgba(255,255,255,0.05);
+        .footer-dot {
+          color: #90CAF9;
         }
 
         /* ====================================================
-           TABLET
+           RESPONSIVE BREAKPOINTS
         ==================================================== */
-
-        @media (max-width: 1050px) {
-          .hero-container {
+        @media (max-width: 1080px) {
+          .hero-grid-container {
             grid-template-columns: 1fr;
+            gap: 56px;
+          }
 
+          .hero-text-block {
+            max-width: 100%;
             text-align: center;
           }
 
-          .hero-content {
-            max-width: 760px;
-            margin: 0 auto;
-          }
-
-          .hero-description {
-            margin-left: auto;
-            margin-right: auto;
-          }
-
-          .hero-actions,
-          .hero-trust {
+          .hero-cta-buttons {
             justify-content: center;
           }
 
-          .hero-preview {
-            min-height: 480px;
+          .hero-supporting-points {
+            justify-content: center;
           }
 
-          .browser-window {
-            max-width: 730px;
+          .features-grid-6 {
+            grid-template-columns: repeat(2, 1fr);
           }
 
-          .features-grid {
-            grid-template-columns:
-              repeat(2, 1fr);
+          .steps-container-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
           }
 
-          .steps-grid {
-            grid-template-columns:
-              repeat(2, 1fr);
-          }
-
-          .step-connector {
+          .step-desktop-connector {
             display: none;
           }
 
-          .capabilities-card {
+          .showcase-two-column-layout {
+            grid-template-columns: 1fr;
+            gap: 48px;
+          }
+
+          .resume-grid-two-col {
+            grid-template-columns: 1fr;
+            gap: 48px;
+          }
+
+          .workspace-card-inner {
             grid-template-columns: 1fr;
           }
 
-          .capabilities-visual {
-            min-height: 350px;
-
-            border-left: 0;
-
-            border-top:
-              1px solid
-              var(--border);
-          }
-        }
-
-        /* ====================================================
-           MOBILE
-        ==================================================== */
-
-        @media (max-width: 768px) {
-          .section {
-            padding: 78px 0;
+          .interview-types-pills-grid {
+            grid-template-columns: repeat(2, 1fr);
           }
 
-          .section-container {
-            width: calc(100% - 30px);
-          }
-
-          .header-inner {
-            width: calc(100% - 30px);
-
-            height: 64px;
-          }
-
-          .desktop-nav,
-          .header-actions {
-            display: none;
-          }
-
-          .mobile-menu-button {
-            display: flex;
-
-            margin-left: auto;
-          }
-
-          .mobile-nav {
-            display: flex;
-
-            flex-direction: column;
-
-            gap: 3px;
-
-            padding: 10px 15px 18px;
-
-            border-top:
-              1px solid
-              var(--border);
-
-            background:
-              rgba(8,11,18,0.97);
-          }
-
-          .mobile-nav > a {
-            padding: 12px;
-
-            color: var(--text-secondary);
-
-            border-radius: 8px;
-
-            text-decoration: none;
-
-            font-size: 0.82rem;
-          }
-
-          .mobile-nav > a:hover {
-            color: var(--text-primary);
-
-            background:
-              rgba(255,255,255,0.04);
-          }
-
-          .mobile-nav-actions {
-            display: grid;
-
+          .footer-top-grid {
             grid-template-columns: 1fr 1fr;
-
-            gap: 8px;
-
-            padding-top: 10px;
-          }
-
-          .hero-section {
-            min-height: auto;
-
-            padding: 70px 0 75px;
-          }
-
-          .hero-container {
-            width: calc(100% - 30px);
-
-            gap: 40px;
-          }
-
-          .hero-content h1 {
-            font-size:
-              clamp(2.55rem, 12vw, 3.65rem);
-          }
-
-          .hero-description {
-            font-size: 0.88rem;
-          }
-
-          .hero-actions {
-            flex-direction: column;
-
-            align-items: stretch;
-          }
-
-          .hero-actions .btn {
-            width: 100%;
-          }
-
-          .hero-trust {
-            display: grid;
-
-            grid-template-columns: 1fr;
-
-            gap: 8px;
-
-            width: max-content;
-            max-width: 100%;
-
-            margin-left: auto;
-            margin-right: auto;
-
-            text-align: left;
-          }
-
-          .hero-preview {
-            min-height: 350px;
-
-            margin: 0 -5px;
-          }
-
-          .browser-window {
-            border-radius: 13px;
-          }
-
-          .browser-bar {
-            height: 35px;
-          }
-
-          .browser-url {
-            font-size: 0.48rem;
-          }
-
-          .dashboard-preview {
-            grid-template-columns: 74px 1fr;
-
-            min-height: 320px;
-          }
-
-          .preview-sidebar {
-            padding: 11px 5px;
-          }
-
-          .preview-brand {
-            justify-content: center;
-
-            margin-bottom: 15px;
-          }
-
-          .preview-brand span,
-          .preview-menu span {
-            display: none;
-          }
-
-          .preview-menu {
-            justify-content: center;
-
-            padding: 8px 4px;
-          }
-
-          .preview-main {
-            padding: 11px;
-          }
-
-          .preview-top h3 {
-            font-size: 0.74rem;
-          }
-
-          .preview-top small {
-            font-size: 0.44rem;
-          }
-
-          .question-card {
-            padding: 11px;
-          }
-
-          .question-card h4 {
-            font-size: 0.66rem;
-          }
-
-          .preview-stats {
-            grid-template-columns:
-              repeat(3, 1fr);
-          }
-
-          .preview-stat {
-            padding: 6px;
-
-            gap: 4px;
-          }
-
-          .stat-icon {
-            width: 20px;
-            height: 20px;
-          }
-
-          .preview-stat small {
-            font-size: 0.39rem;
-          }
-
-          .preview-stat strong {
-            font-size: 0.54rem;
-          }
-
-          .ai-feedback {
-            padding: 7px;
-          }
-
-          .ai-feedback p {
-            font-size: 0.43rem;
-          }
-
-          .floating-card {
-            min-width: 120px;
-
-            padding: 7px;
-
-            transform: scale(0.88);
-          }
-
-          .floating-card-left {
-            left: -8px;
-            top: 40px;
-          }
-
-          .floating-card-right {
-            right: -9px;
-            bottom: 35px;
-          }
-
-          .intro-inner {
-            align-items: flex-start;
-
-            flex-direction: column;
-
-            padding: 20px 0;
-
-            gap: 14px;
-          }
-
-          .intro-items {
-            display: grid;
-
-            grid-template-columns:
-              repeat(2, 1fr);
-
-            gap: 9px 16px;
-
-            width: 100%;
-          }
-
-          .features-grid,
-          .steps-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .feature-card,
-          .step-card {
-            min-height: auto;
-          }
-
-          .capabilities-content {
-            padding: 38px 22px;
-          }
-
-          .capabilities-visual {
-            min-height: 310px;
-          }
-
-          .ai-core {
-            width: 80px;
-            height: 80px;
-          }
-
-          .ring-one {
-            width: 190px;
-            height: 190px;
-          }
-
-          .ring-two {
-            width: 255px;
-            height: 255px;
-          }
-
-          .chip-one {
-            top: 48px;
-            right: 18px;
-          }
-
-          .chip-two {
-            bottom: 48px;
-            left: 16px;
-          }
-
-          .chip-three {
-            bottom: 77px;
-            right: 15px;
-          }
-
-          .cta-section {
-            padding-bottom: 78px;
-          }
-
-          .cta-card {
-            padding: 55px 20px;
-
-            border-radius: 18px;
-          }
-
-          .cta-actions {
-            flex-direction: column;
-
-            align-items: stretch;
-          }
-
-          .cta-actions .btn {
-            width: 100%;
-          }
-
-          .footer-main {
-            flex-direction: column;
-
-            gap: 35px;
-
-            padding: 40px 0;
-          }
-
-          .footer-links {
-            gap: 55px;
-          }
-
-          .footer-bottom {
-            flex-wrap: wrap;
-
-            padding: 17px 0;
-          }
-
-          .footer-bottom span:nth-child(2) {
-            margin-left: 0;
+            gap: 36px;
           }
         }
 
-        /* ====================================================
-           SMALL MOBILE
-        ==================================================== */
-
-        @media (max-width: 430px) {
-          .brand-text strong {
-            font-size: 0.82rem;
-          }
-
-          .brand-text span {
-            font-size: 0.58rem;
-          }
-
-          .hero-badge {
-            font-size: 0.61rem;
-
-            padding: 6px 9px;
-          }
-
-          .hero-content h1 {
-            font-size: 2.5rem;
-          }
-
-          .hero-description {
-            font-size: 0.84rem;
-          }
-
-          .hero-preview {
-            min-height: 285px;
-          }
-
-          .dashboard-preview {
-            min-height: 270px;
-          }
-
-          .preview-stats {
+        @media (max-width: 820px) {
+          .navbar-desktop-nav,
+          .navbar-action-group {
             display: none;
           }
 
-          .ai-feedback {
-            display: none;
+          .mobile-menu-toggle {
+            display: block;
           }
 
-          .question-card {
-            margin-top: 5px;
+          .mobile-drawer {
+            display: block;
           }
 
-          .floating-card {
-            transform: scale(0.76);
+          .metric-strip-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
           }
 
-          .floating-card-left {
-            left: -20px;
+          .features-grid-6 {
+            grid-template-columns: 1fr;
           }
 
-          .floating-card-right {
-            right: -20px;
-          }
-
-          .section-heading h2,
-          .capabilities-content h2,
-          .cta-content h2 {
-            font-size: 1.95rem;
-          }
-
-          .section-heading p {
-            font-size: 0.82rem;
-          }
-
-          .intro-items div {
-            font-size: 0.59rem;
-          }
-
-          .faq-question {
-            font-size: 0.75rem;
-          }
-
-          .faq-answer p {
-            font-size: 0.68rem;
-          }
-
-          .footer-links {
-            gap: 40px;
+          .hero-heading {
+            font-size: 2.75rem;
           }
         }
 
-        /* ====================================================
-           REDUCED MOTION
-        ==================================================== */
+        @media (max-width: 600px) {
+          .section-padding {
+            padding-top: 60px;
+            padding-bottom: 60px;
+          }
 
+          .hero-heading {
+            font-size: 2.25rem;
+          }
+
+          .hero-cta-buttons {
+            flex-direction: column;
+            width: 100%;
+          }
+
+          .btn-hero-primary,
+          .btn-hero-secondary {
+            width: 100%;
+          }
+
+          .mockup-body {
+            grid-template-columns: 1fr;
+          }
+
+          .mockup-sidebar {
+            display: none;
+          }
+
+          .floating-widget {
+            display: none;
+          }
+
+          .metric-strip-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .steps-container-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .interview-types-pills-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .workspace-content-side {
+            padding: 32px 20px;
+          }
+
+          .cta-headline {
+            font-size: 1.875rem;
+          }
+
+          .cta-button-group {
+            flex-direction: column;
+            width: 100%;
+          }
+
+          .btn-cta-main,
+          .btn-cta-secondary {
+            width: 100%;
+          }
+
+          .footer-top-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        /* Accessibility: Prefers Reduced Motion */
         @media (prefers-reduced-motion: reduce) {
           *,
           *::before,
           *::after {
-            scroll-behavior: auto !important;
             animation-duration: 0.01ms !important;
             animation-iteration-count: 1 !important;
             transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
           }
         }
       `}</style>
