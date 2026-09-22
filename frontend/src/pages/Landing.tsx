@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   Award,
@@ -24,9 +24,9 @@ import {
   UserCheck,
   X,
   Zap,
-} from 'lucide-react'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+} from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 // ============================================================
 // DATA DEFINITIONS (PRESERVED CONTENT)
@@ -35,111 +35,111 @@ import { useNavigate } from 'react-router-dom'
 const features = [
   {
     icon: Bot,
-    title: 'AI Mock Interviews',
+    title: "AI Mock Interviews",
     description:
-      'Practice realistic interviews across technical, behavioral, HR, and AI/ML tracks with an adaptive AI interviewer.',
+      "Practice realistic interviews across technical, behavioral, HR, and AI/ML tracks with an adaptive AI interviewer.",
   },
   {
     icon: BrainCircuit,
-    title: 'Adaptive Questions',
+    title: "Adaptive Questions",
     description:
-      'Questions dynamically adjust in depth and complexity based on your responses, target role, and seniority level.',
+      "Questions dynamically adjust in depth and complexity based on your responses, target role, and seniority level.",
   },
   {
     icon: FileText,
-    title: 'Resume Intelligence',
+    title: "Resume Intelligence",
     description:
-      'Extract critical skills, detect ATS gaps, and receive targeted improvement recommendations tailored to your profile.',
+      "Extract critical skills, detect ATS gaps, and receive targeted improvement recommendations tailored to your profile.",
   },
   {
     icon: Briefcase,
-    title: 'Job Match Analysis',
+    title: "Job Match Analysis",
     description:
-      'Compare your background with target job descriptions to identify missing keywords, requirements, and prep priorities.',
+      "Compare your background with target job descriptions to identify missing keywords, requirements, and prep priorities.",
   },
   {
     icon: BarChart3,
-    title: 'Performance Analytics',
+    title: "Performance Analytics",
     description:
-      'Measure your answer clarity, relevance, technical depth, and track your readiness progression over time.',
+      "Measure your answer clarity, relevance, technical depth, and track your readiness progression over time.",
   },
   {
     icon: Target,
-    title: 'Career Preparation',
+    title: "Career Preparation",
     description:
-      'Convert interview feedback and resume analysis into a structured, step-by-step career advancement plan.',
+      "Convert interview feedback and resume analysis into a structured, step-by-step career advancement plan.",
   },
-]
+];
 
 const steps = [
   {
-    number: '01',
+    number: "01",
     icon: FileText,
-    title: 'Build your profile',
+    title: "Build your profile",
     description:
-      'Configure your target role, primary tech stack, seniority, and preferred interview domains.',
+      "Configure your target role, primary tech stack, seniority, and preferred interview domains.",
   },
   {
-    number: '02',
+    number: "02",
     icon: Briefcase,
-    title: 'Understand your target',
+    title: "Understand your target",
     description:
-      'Upload your resume or paste a job description to pinpoint key skill gaps and focus areas.',
+      "Upload your resume or paste a job description to pinpoint key skill gaps and focus areas.",
   },
   {
-    number: '03',
+    number: "03",
     icon: Bot,
-    title: 'Practice with AI',
+    title: "Practice with AI",
     description:
-      'Engage in interactive mock interviews with conversational audio or text-based question simulations.',
+      "Engage in interactive mock interviews with conversational audio or text-based question simulations.",
   },
   {
-    number: '04',
+    number: "04",
     icon: BarChart3,
-    title: 'Improve with feedback',
+    title: "Improve with feedback",
     description:
-      'Receive structured scoring on relevance, technical accuracy, clarity, and personalized recommendations.',
+      "Receive structured scoring on relevance, technical accuracy, clarity, and personalized recommendations.",
   },
-]
+];
 
 const interviewTypes = [
-  { label: 'Technical', count: '120+ Scenarios', icon: Code2 },
-  { label: 'Behavioral', count: 'STAR Method', icon: MessageSquare },
-  { label: 'HR', count: 'Culture & Fit', icon: Briefcase },
-  { label: 'AI / ML', count: 'Deep Learning & LLMs', icon: BrainCircuit },
-  { label: 'Python', count: 'Algorithms & Architecture', icon: Layers },
-  { label: 'Software Engineering', count: 'System Design', icon: Target },
-  { label: 'Coding', count: 'Live Problem Solving', icon: Zap },
-  { label: 'Role Specific', count: 'Tailored Tracks', icon: Award },
-]
+  { label: "Technical", count: "120+ Scenarios", icon: Code2 },
+  { label: "Behavioral", count: "STAR Method", icon: MessageSquare },
+  { label: "HR", count: "Culture & Fit", icon: Briefcase },
+  { label: "AI / ML", count: "Deep Learning & LLMs", icon: BrainCircuit },
+  { label: "Python", count: "Algorithms & Architecture", icon: Layers },
+  { label: "Software Engineering", count: "System Design", icon: Target },
+  { label: "Coding", count: "Live Problem Solving", icon: Zap },
+  { label: "Role Specific", count: "Tailored Tracks", icon: Award },
+];
 
 const faqs = [
   {
-    question: 'How does the AI interview work?',
+    question: "How does the AI interview work?",
     answer:
-      'You choose your target role, interview type (technical, behavioral, or HR), seniority, and format. Interviewer Buddy AI generates realistic, context-aware interview questions, listens to your answers, and dynamically adapts follow-up questions just like a human interviewer.',
+      "You choose your target role, interview type (technical, behavioral, or HR), seniority, and format. Interviewer Buddy AI generates realistic, context-aware interview questions, listens to your answers, and dynamically adapts follow-up questions just like a human interviewer.",
   },
   {
-    question: 'What types of interviews can I practice?',
+    question: "What types of interviews can I practice?",
     answer:
-      'You can practice technical engineering interviews, system design discussions, behavioral sessions (STAR framework), HR screening calls, and specialized AI/ML or Python role assessments.',
+      "You can practice technical engineering interviews, system design discussions, behavioral sessions (STAR framework), HR screening calls, and specialized AI/ML or Python role assessments.",
   },
   {
-    question: 'Can I analyze my resume?',
+    question: "Can I analyze my resume?",
     answer:
-      'Yes. Upload your PDF or doc resume to receive automated ATS readiness insights, extracted competencies, identified experience gaps, and tailored suggestions to strengthen your applications.',
+      "Yes. Upload your PDF or doc resume to receive automated ATS readiness insights, extracted competencies, identified experience gaps, and tailored suggestions to strengthen your applications.",
   },
   {
-    question: 'Can I analyze a job description?',
+    question: "Can I analyze a job description?",
     answer:
-      'Yes. Simply paste the job description text. Our AI analyzes the role requirements, compares them against your experience, and generates a personalized preparation plan highlighting missing qualifications.',
+      "Yes. Simply paste the job description text. Our AI analyzes the role requirements, compares them against your experience, and generates a personalized preparation plan highlighting missing qualifications.",
   },
   {
-    question: 'How are interview answers evaluated?',
+    question: "How are interview answers evaluated?",
     answer:
-      'Each answer is evaluated across multiple dimensions: contextual relevance, technical correctness, structural coherence, communication clarity, and problem-solving depth. You receive concrete suggestions to elevate your performance.',
+      "Each answer is evaluated across multiple dimensions: contextual relevance, technical correctness, structural coherence, communication clarity, and problem-solving depth. You receive concrete suggestions to elevate your performance.",
   },
-]
+];
 
 // ============================================================
 // HELPER COMPONENTS
@@ -156,7 +156,7 @@ function GitHubIcon({ size = 18 }: { size?: number }) {
     >
       <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.167 6.839 9.49.5.092.682-.217.682-.483 0-.237-.009-.868-.014-1.703-2.782.604-3.369-1.342-3.369-1.342-.455-1.157-1.11-1.466-1.11-1.466-.908-.621.069-.608.069-.608 1.004.071 1.532 1.032 1.532 1.032.892 1.529 2.341 1.087 2.91.831.091-.646.35-1.087.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0 1 12 6.844a9.56 9.56 0 0 1 2.504.337c1.909-1.294 2.748-1.025 2.748-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.744 0 .268.18.579.688.481A10.002 10.002 0 0 0 22 12C22 6.477 17.523 2 12 2Z" />
     </svg>
-  )
+  );
 }
 
 function FAQItem({
@@ -164,11 +164,11 @@ function FAQItem({
   answer,
   index,
 }: {
-  question: string
-  answer: string
-  index: number
+  question: string;
+  answer: string;
+  index: number;
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
 
   return (
     <motion.div
@@ -176,7 +176,7 @@ function FAQItem({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.35, delay: index * 0.05 }}
-      className={`faq-item ${open ? 'faq-item-open' : ''}`}
+      className={`faq-item ${open ? "faq-item-open" : ""}`}
     >
       <button
         type="button"
@@ -188,7 +188,7 @@ function FAQItem({
         <span className="faq-icon-wrapper">
           <ChevronDown
             size={18}
-            className={`faq-chevron ${open ? 'faq-chevron-rotated' : ''}`}
+            className={`faq-chevron ${open ? "faq-chevron-rotated" : ""}`}
           />
         </span>
       </button>
@@ -196,7 +196,7 @@ function FAQItem({
       {open && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
+          animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
           transition={{ duration: 0.25 }}
           className="faq-answer-body"
@@ -205,7 +205,7 @@ function FAQItem({
         </motion.div>
       )}
     </motion.div>
-  )
+  );
 }
 
 // ============================================================
@@ -280,7 +280,9 @@ function HeroDashboardMockup() {
             <div className="interview-top-row">
               <div className="role-meta">
                 <span className="role-sub">AI MOCK INTERVIEW</span>
-                <h4 className="role-title">Python Developer — Technical Round</h4>
+                <h4 className="role-title">
+                  Python Developer — Technical Round
+                </h4>
               </div>
 
               <div className="duration-tag">
@@ -297,7 +299,9 @@ function HeroDashboardMockup() {
               </div>
 
               <h5 className="question-text">
-                "Explain the difference between a list and a tuple in Python, and when would you choose one over the other for performance-critical systems?"
+                "Explain the difference between a list and a tuple in Python,
+                and when would you choose one over the other for
+                performance-critical systems?"
               </h5>
 
               {/* Real-time wave / answer state */}
@@ -310,10 +314,14 @@ function HeroDashboardMockup() {
                     <span className="bar" />
                     <span className="bar" />
                   </span>
-                  <span className="capture-text">Candidate responding (01:42)...</span>
+                  <span className="capture-text">
+                    Candidate responding (01:42)...
+                  </span>
                 </div>
                 <div className="answer-preview-snippet">
-                  "Lists are mutable and incur additional over-allocation overhead, whereas tuples are immutable, memory-efficient, and can be hashed..."
+                  "Lists are mutable and incur additional over-allocation
+                  overhead, whereas tuples are immutable, memory-efficient, and
+                  can be hashed..."
                 </div>
               </div>
             </div>
@@ -359,7 +367,9 @@ function HeroDashboardMockup() {
               <div className="feedback-content">
                 <span className="feedback-title">Real-time AI Feedback</span>
                 <p className="feedback-p">
-                  Precise distinction of memory allocation. Mentioning dictionary key hashing reinforced strong senior-level comprehension.
+                  Precise distinction of memory allocation. Mentioning
+                  dictionary key hashing reinforced strong senior-level
+                  comprehension.
                 </p>
               </div>
             </div>
@@ -371,7 +381,7 @@ function HeroDashboardMockup() {
       <motion.div
         className="floating-widget float-top-right"
         animate={{ y: [0, -6, 0] }}
-        transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+        transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
       >
         <div className="widget-score-pill">8.8</div>
         <div className="widget-info">
@@ -384,7 +394,7 @@ function HeroDashboardMockup() {
       <motion.div
         className="floating-widget float-bottom-left"
         animate={{ y: [0, 6, 0] }}
-        transition={{ repeat: Infinity, duration: 4.5, ease: 'easeInOut' }}
+        transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
       >
         <div className="widget-icon-pill">
           <CheckCircle2 size={16} />
@@ -395,7 +405,7 @@ function HeroDashboardMockup() {
         </div>
       </motion.div>
     </div>
-  )
+  );
 }
 
 // ============================================================
@@ -403,18 +413,18 @@ function HeroDashboardMockup() {
 // ============================================================
 
 export default function Landing() {
-  const navigate = useNavigate()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleRegister = () => {
-    setMobileMenuOpen(false)
-    navigate('/register')
-  }
+    setMobileMenuOpen(false);
+    navigate("/register");
+  };
 
   const handleLogin = () => {
-    setMobileMenuOpen(false)
-    navigate('/login')
-  }
+    setMobileMenuOpen(false);
+    navigate("/login");
+  };
 
   return (
     <div className="landing-wrapper">
@@ -427,7 +437,7 @@ export default function Landing() {
           <button
             type="button"
             className="navbar-brand-btn"
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
             aria-label="Interviewer Buddy AI Home"
           >
             <div className="brand-logo-icon">
@@ -451,10 +461,10 @@ export default function Landing() {
               Resume Intelligence
             </a>
             <a href="#feedback-metrics" className="nav-anchor">
-              Feedback & Confidence
+              Feedback
             </a>
             <a href="#interview-history" className="nav-anchor">
-              History & Progress
+              History
             </a>
             <a href="#how-it-works" className="nav-anchor">
               How It Works
@@ -499,7 +509,7 @@ export default function Landing() {
         {mobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
+            animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             className="mobile-drawer"
           >
@@ -604,7 +614,8 @@ export default function Landing() {
               </h1>
 
               <p className="hero-subtext">
-                Practice realistic interviews, analyze your resume, understand job requirements, and improve with structured AI feedback.
+                Practice realistic interviews, analyze your resume, understand
+                job requirements, and improve with structured AI feedback.
               </p>
 
               <div className="hero-cta-buttons">
@@ -672,7 +683,9 @@ export default function Landing() {
               </div>
               <div className="metric-text">
                 <span className="metric-title">Adaptive Simulations</span>
-                <span className="metric-desc">Contextual AI questions matching real engineering roles</span>
+                <span className="metric-desc">
+                  Contextual AI questions matching real engineering roles
+                </span>
               </div>
             </div>
 
@@ -682,7 +695,9 @@ export default function Landing() {
               </div>
               <div className="metric-text">
                 <span className="metric-title">Resume & ATS Screening</span>
-                <span className="metric-desc">Uncover critical gaps before hiring managers do</span>
+                <span className="metric-desc">
+                  Uncover critical gaps before hiring managers do
+                </span>
               </div>
             </div>
 
@@ -692,7 +707,9 @@ export default function Landing() {
               </div>
               <div className="metric-text">
                 <span className="metric-title">Job Match Intelligence</span>
-                <span className="metric-desc">Map competencies directly to requirements</span>
+                <span className="metric-desc">
+                  Map competencies directly to requirements
+                </span>
               </div>
             </div>
 
@@ -702,7 +719,9 @@ export default function Landing() {
               </div>
               <div className="metric-text">
                 <span className="metric-title">Deep Performance Analytics</span>
-                <span className="metric-desc">Granular scores on clarity, depth, and pacing</span>
+                <span className="metric-desc">
+                  Granular scores on clarity, depth, and pacing
+                </span>
               </div>
             </div>
           </div>
@@ -722,13 +741,14 @@ export default function Landing() {
                 Everything you need to master your interview
               </h2>
               <p className="section-subheadline">
-                Built specifically for software engineers, data scientists, and tech professionals aiming for top-tier roles.
+                Built specifically for software engineers, data scientists, and
+                tech professionals aiming for top-tier roles.
               </p>
             </div>
 
             <div className="features-grid-6">
               {features.map((item, index) => {
-                const IconComponent = item.icon
+                const IconComponent = item.icon;
                 return (
                   <motion.div
                     key={item.title}
@@ -752,7 +772,7 @@ export default function Landing() {
                       </span>
                     </div>
                   </motion.div>
-                )
+                );
               })}
             </div>
           </div>
@@ -761,7 +781,10 @@ export default function Landing() {
         {/* ====================================================
             5. TECHNICAL INTERVIEW SECTION (IMAGE: tech.png)
         ==================================================== */}
-        <section id="technical-prep" className="section-padding visual-feature-section bg-light-tint">
+        <section
+          id="technical-prep"
+          className="section-padding visual-feature-section bg-light-tint"
+        >
           <div className="section-container">
             <div className="two-column-feature-grid">
               {/* Image Side: tech.png */}
@@ -805,7 +828,10 @@ export default function Landing() {
                 </h2>
 
                 <p className="section-subheadline">
-                  Simulate high-stakes technical interviews with adaptive, role-specific questions. Whether defending data structures or architecting distributed systems, practice answering with senior-level depth.
+                  Simulate high-stakes technical interviews with adaptive,
+                  role-specific questions. Whether defending data structures or
+                  architecting distributed systems, practice answering with
+                  senior-level depth.
                 </p>
 
                 <div className="feature-bullet-stack">
@@ -816,7 +842,9 @@ export default function Landing() {
                     <div>
                       <h4 className="bullet-title">Role-Based Preparation</h4>
                       <p className="bullet-desc">
-                        Tailor practice sessions to Python developers, full-stack engineers, AI/ML specialists, and backend architects.
+                        Tailor practice sessions to Python developers,
+                        full-stack engineers, AI/ML specialists, and backend
+                        architects.
                       </p>
                     </div>
                   </div>
@@ -826,9 +854,13 @@ export default function Landing() {
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <h4 className="bullet-title">Dynamic Follow-Up Questions</h4>
+                      <h4 className="bullet-title">
+                        Dynamic Follow-Up Questions
+                      </h4>
                       <p className="bullet-desc">
-                        The AI interviewer actively listens to your explanations, challenging trade-offs, edge cases, and performance decisions.
+                        The AI interviewer actively listens to your
+                        explanations, challenging trade-offs, edge cases, and
+                        performance decisions.
                       </p>
                     </div>
                   </div>
@@ -838,9 +870,12 @@ export default function Landing() {
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <h4 className="bullet-title">Conceptual & Architectural Rigor</h4>
+                      <h4 className="bullet-title">
+                        Conceptual & Architectural Rigor
+                      </h4>
                       <p className="bullet-desc">
-                        Sharpen verbal articulation of complex technical topics so you speak with clarity and confidence.
+                        Sharpen verbal articulation of complex technical topics
+                        so you speak with clarity and confidence.
                       </p>
                     </div>
                   </div>
@@ -864,7 +899,10 @@ export default function Landing() {
         {/* ====================================================
             6. RESUME INTELLIGENCE SECTION (IMAGE: resume.png)
         ==================================================== */}
-        <section id="resume-intelligence" className="section-padding visual-feature-section">
+        <section
+          id="resume-intelligence"
+          className="section-padding visual-feature-section"
+        >
           <div className="section-container">
             <div className="two-column-feature-grid reverse-on-desktop">
               {/* Content Side */}
@@ -885,7 +923,9 @@ export default function Landing() {
                 </h2>
 
                 <p className="section-subheadline">
-                  Ensure your experience, accomplishments, and tech stack pass recruiter ATS screens and align seamlessly with target job requisitions.
+                  Ensure your experience, accomplishments, and tech stack pass
+                  recruiter ATS screens and align seamlessly with target job
+                  requisitions.
                 </p>
 
                 <div className="feature-bullet-stack">
@@ -894,9 +934,13 @@ export default function Landing() {
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <h4 className="bullet-title">Skills & Framework Extraction</h4>
+                      <h4 className="bullet-title">
+                        Skills & Framework Extraction
+                      </h4>
                       <p className="bullet-desc">
-                        Automatically extract technical proficiencies, frameworks, and architecture patterns from your PDF or doc resume.
+                        Automatically extract technical proficiencies,
+                        frameworks, and architecture patterns from your PDF or
+                        doc resume.
                       </p>
                     </div>
                   </div>
@@ -906,9 +950,13 @@ export default function Landing() {
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <h4 className="bullet-title">Experience & Project Alignment</h4>
+                      <h4 className="bullet-title">
+                        Experience & Project Alignment
+                      </h4>
                       <p className="bullet-desc">
-                        Analyze past accomplishments against industry standards to identify impactful phrasing and missing quantitative metrics.
+                        Analyze past accomplishments against industry standards
+                        to identify impactful phrasing and missing quantitative
+                        metrics.
                       </p>
                     </div>
                   </div>
@@ -918,9 +966,12 @@ export default function Landing() {
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <h4 className="bullet-title">Gaps to Preparation Priorities</h4>
+                      <h4 className="bullet-title">
+                        Gaps to Preparation Priorities
+                      </h4>
                       <p className="bullet-desc">
-                        Transform identified experience gaps into custom interview drills so you are never caught unprepared.
+                        Transform identified experience gaps into custom
+                        interview drills so you are never caught unprepared.
                       </p>
                     </div>
                   </div>
@@ -967,7 +1018,10 @@ export default function Landing() {
         {/* ====================================================
             7. CONFIDENCE & FEEDBACK SECTION (IMAGE: confi.png)
         ==================================================== */}
-        <section id="feedback-metrics" className="section-padding visual-feature-section bg-light-tint">
+        <section
+          id="feedback-metrics"
+          className="section-padding visual-feature-section bg-light-tint"
+        >
           <div className="section-container">
             <div className="two-column-feature-grid">
               {/* Image Side: confi.png */}
@@ -1011,7 +1065,9 @@ export default function Landing() {
                 </h2>
 
                 <p className="section-subheadline">
-                  Eliminate guesswork from your preparation. Every response is assessed against core hiring committee pillars, giving you clear insights on how to sharpen your delivery.
+                  Eliminate guesswork from your preparation. Every response is
+                  assessed against core hiring committee pillars, giving you
+                  clear insights on how to sharpen your delivery.
                 </p>
 
                 <div className="feature-bullet-stack">
@@ -1020,9 +1076,12 @@ export default function Landing() {
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <h4 className="bullet-title">Multi-Dimensional Evaluation</h4>
+                      <h4 className="bullet-title">
+                        Multi-Dimensional Evaluation
+                      </h4>
                       <p className="bullet-desc">
-                        Analyze contextual relevance, technical correctness, structural coherence, and communication clarity.
+                        Analyze contextual relevance, technical correctness,
+                        structural coherence, and communication clarity.
                       </p>
                     </div>
                   </div>
@@ -1032,9 +1091,13 @@ export default function Landing() {
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <h4 className="bullet-title">Personalized Improvement Insights</h4>
+                      <h4 className="bullet-title">
+                        Personalized Improvement Insights
+                      </h4>
                       <p className="bullet-desc">
-                        Receive constructive, sentence-level suggestions that highlight what worked and where you can articulate more effectively.
+                        Receive constructive, sentence-level suggestions that
+                        highlight what worked and where you can articulate more
+                        effectively.
                       </p>
                     </div>
                   </div>
@@ -1044,9 +1107,12 @@ export default function Landing() {
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <h4 className="bullet-title">Speech Articulation & Pacing</h4>
+                      <h4 className="bullet-title">
+                        Speech Articulation & Pacing
+                      </h4>
                       <p className="bullet-desc">
-                        Develop a steady, composed speaking rhythm suited for technical deep-dives and executive interviews.
+                        Develop a steady, composed speaking rhythm suited for
+                        technical deep-dives and executive interviews.
                       </p>
                     </div>
                   </div>
@@ -1070,7 +1136,10 @@ export default function Landing() {
         {/* ====================================================
             8. INTERVIEW HISTORY SECTION (IMAGE: history.png)
         ==================================================== */}
-        <section id="interview-history" className="section-padding visual-feature-section">
+        <section
+          id="interview-history"
+          className="section-padding visual-feature-section"
+        >
           <div className="section-container">
             <div className="two-column-feature-grid reverse-on-desktop">
               {/* Content Side */}
@@ -1091,7 +1160,9 @@ export default function Landing() {
                 </h2>
 
                 <p className="section-subheadline">
-                  Review complete transcripts, historical performance metrics, and progressive milestones from every interview session you complete.
+                  Review complete transcripts, historical performance metrics,
+                  and progressive milestones from every interview session you
+                  complete.
                 </p>
 
                 <div className="feature-bullet-stack">
@@ -1100,9 +1171,12 @@ export default function Landing() {
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <h4 className="bullet-title">Comprehensive Session History</h4>
+                      <h4 className="bullet-title">
+                        Comprehensive Session History
+                      </h4>
                       <p className="bullet-desc">
-                        Access past mock interview transcripts, targeted questions asked, and comprehensive evaluation summaries.
+                        Access past mock interview transcripts, targeted
+                        questions asked, and comprehensive evaluation summaries.
                       </p>
                     </div>
                   </div>
@@ -1112,9 +1186,13 @@ export default function Landing() {
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <h4 className="bullet-title">Track Readiness Over Time</h4>
+                      <h4 className="bullet-title">
+                        Track Readiness Over Time
+                      </h4>
                       <p className="bullet-desc">
-                        Observe your growth across multiple tracks and roles, seeing exactly when your answers reach benchmark caliber.
+                        Observe your growth across multiple tracks and roles,
+                        seeing exactly when your answers reach benchmark
+                        caliber.
                       </p>
                     </div>
                   </div>
@@ -1124,9 +1202,12 @@ export default function Landing() {
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <h4 className="bullet-title">Milestones & Targeted Drilldowns</h4>
+                      <h4 className="bullet-title">
+                        Milestones & Targeted Drilldowns
+                      </h4>
                       <p className="bullet-desc">
-                        Focus subsequent practice sessions on recurring weak points identified in previous interview runs.
+                        Focus subsequent practice sessions on recurring weak
+                        points identified in previous interview runs.
                       </p>
                     </div>
                   </div>
@@ -1173,7 +1254,10 @@ export default function Landing() {
         {/* ====================================================
             9. HOW IT WORKS (4-STEP PIPELINE)
         ==================================================== */}
-        <section id="how-it-works" className="section-padding workflow-section bg-light-tint">
+        <section
+          id="how-it-works"
+          className="section-padding workflow-section bg-light-tint"
+        >
           <div className="section-container">
             <div className="section-heading-box text-center">
               <div className="section-pill-tag">
@@ -1184,13 +1268,14 @@ export default function Landing() {
                 How Interviewer Buddy AI Works
               </h2>
               <p className="section-subheadline">
-                A proven 4-stage pipeline designed to take you from foundational preparation to interview mastery.
+                A proven 4-stage pipeline designed to take you from foundational
+                preparation to interview mastery.
               </p>
             </div>
 
             <div className="steps-container-grid">
               {steps.map((step, index) => {
-                const StepIcon = step.icon
+                const StepIcon = step.icon;
                 return (
                   <motion.div
                     key={step.number}
@@ -1211,10 +1296,13 @@ export default function Landing() {
                     <p className="step-item-desc">{step.description}</p>
 
                     {index < steps.length - 1 && (
-                      <div className="step-desktop-connector" aria-hidden="true" />
+                      <div
+                        className="step-desktop-connector"
+                        aria-hidden="true"
+                      />
                     )}
                   </motion.div>
-                )
+                );
               })}
             </div>
           </div>
@@ -1223,7 +1311,10 @@ export default function Landing() {
         {/* ====================================================
             10. AI CAPABILITIES SECTION
         ==================================================== */}
-        <section id="ai-capabilities" className="section-padding ai-capabilities-section">
+        <section
+          id="ai-capabilities"
+          className="section-padding ai-capabilities-section"
+        >
           <div className="section-container">
             <div className="section-heading-box text-center">
               <div className="section-pill-tag">
@@ -1234,7 +1325,8 @@ export default function Landing() {
                 Powered by state-of-the-art conversational AI
               </h2>
               <p className="section-subheadline">
-                Engineered to replicate actual engineering manager questions, technical challenges, and live follow-up dynamics.
+                Engineered to replicate actual engineering manager questions,
+                technical challenges, and live follow-up dynamics.
               </p>
             </div>
 
@@ -1251,7 +1343,9 @@ export default function Landing() {
                 </div>
                 <h3 className="ai-card-title">Role-Aware Simulations</h3>
                 <p className="ai-card-text">
-                  Questions are generated based on seniority, domain requirements, and specific frameworks rather than static generic question banks.
+                  Questions are generated based on seniority, domain
+                  requirements, and specific frameworks rather than static
+                  generic question banks.
                 </p>
               </motion.div>
 
@@ -1267,7 +1361,8 @@ export default function Landing() {
                 </div>
                 <h3 className="ai-card-title">Objective Evaluation</h3>
                 <p className="ai-card-text">
-                  Instant scoring broken down across relevance, clarity, depth of knowledge, and answer structure without human bias.
+                  Instant scoring broken down across relevance, clarity, depth
+                  of knowledge, and answer structure without human bias.
                 </p>
               </motion.div>
 
@@ -1283,7 +1378,8 @@ export default function Landing() {
                 </div>
                 <h3 className="ai-card-title">Actionable Guidance</h3>
                 <p className="ai-card-text">
-                  Clear, non-judgmental guidance pinpointing exact moments you can sharpen your narrative and clarify technical choices.
+                  Clear, non-judgmental guidance pinpointing exact moments you
+                  can sharpen your narrative and clarify technical choices.
                 </p>
               </motion.div>
             </div>
@@ -1304,13 +1400,14 @@ export default function Landing() {
                 Practice across every major interview category
               </h2>
               <p className="section-subheadline">
-                Tailored interview sessions simulating realistic hiring committee evaluations across core domains.
+                Tailored interview sessions simulating realistic hiring
+                committee evaluations across core domains.
               </p>
             </div>
 
             <div className="interview-types-pills-grid">
               {interviewTypes.map((type, index) => {
-                const TypeIcon = type.icon
+                const TypeIcon = type.icon;
                 return (
                   <motion.div
                     key={type.label}
@@ -1329,7 +1426,7 @@ export default function Landing() {
                       <span className="pill-subtitle">{type.count}</span>
                     </div>
                   </motion.div>
-                )
+                );
               })}
             </div>
           </div>
@@ -1347,7 +1444,8 @@ export default function Landing() {
               </div>
               <h2 className="section-headline">Frequently Asked Questions</h2>
               <p className="section-subheadline">
-                Everything you need to know about our AI interview platform, resume intelligence, and preparation workflows.
+                Everything you need to know about our AI interview platform,
+                resume intelligence, and preparation workflows.
               </p>
             </div>
 
@@ -1388,7 +1486,9 @@ export default function Landing() {
                 </h2>
 
                 <p className="cta-subheadline">
-                  Join candidates preparing for technical, behavioral, and role-specific interviews with structured AI simulations and targeted feedback.
+                  Join candidates preparing for technical, behavioral, and
+                  role-specific interviews with structured AI simulations and
+                  targeted feedback.
                 </p>
 
                 <div className="cta-button-group">
@@ -1430,7 +1530,9 @@ export default function Landing() {
                 <span className="footer-brand-name">Interviewer Buddy AI</span>
               </div>
               <p className="footer-brand-bio">
-                The premier AI-powered interview preparation platform. Master technical rounds, behavioral assessments, and resume alignment with actionable evaluation.
+                The premier AI-powered interview preparation platform. Master
+                technical rounds, behavioral assessments, and resume alignment
+                with actionable evaluation.
               </p>
               <div className="footer-copyright-note">
                 © 2026 Interviewer Buddy AI. All rights reserved.
@@ -1517,8 +1619,7 @@ export default function Landing() {
         </div>
       </footer>
 
-      {
-    /*====================================================== */}
+      {/*====================================================== */}
       <style>{`
         /* ----------------------------------------------------
            GLOBAL RESET & LAYOUT
@@ -3319,5 +3420,5 @@ export default function Landing() {
         }
       `}</style>
     </div>
-  )
+  );
 }
