@@ -211,6 +211,7 @@ export default function InterviewSetup() {
   const { startInterview } = useInterviewStore();
 
   const [loading, setLoading] = useState(false);
+  const [interviewer, setInterviewer] = useState<"jenny" | "samm">("jenny");
 
   const [config, setConfig] = useState<InterviewConfig>({
     role: "AIML Engineer",
@@ -276,6 +277,7 @@ export default function InterviewSetup() {
        */
       try {
         sessionStorage.setItem("active_interview_id", interviewId);
+        sessionStorage.setItem("active_interviewer", interviewer);
       } catch (storageError) {
         console.warn(
           "[InterviewSetup] sessionStorage unavailable:",
@@ -320,6 +322,7 @@ export default function InterviewSetup() {
           difficulty: config.difficulty,
           mode: config.mode,
           personality: config.personality,
+          interviewer,
         },
       });
     } catch (error) {
@@ -862,6 +865,224 @@ export default function InterviewSetup() {
         </select>
       </motion.div>
 
+      {/* AI Interviewer */}
+      <motion.div
+        initial={{
+          opacity: 0,
+          y: 10,
+        }}
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        transition={{
+          delay: 0.28,
+        }}
+        className="card"
+        style={{
+          marginBottom: "1.5rem",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: "1rem",
+            fontWeight: 700,
+            marginBottom: "0.25rem",
+          }}
+        >
+          7. Select AI Interviewer
+        </h2>
+        <p
+          style={{
+            color: "var(--text-muted)",
+            fontSize: "0.8rem",
+            marginBottom: "1rem",
+          }}
+        >
+          Choose your dedicated AI interviewer for the complete session.
+        </p>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: "1rem",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setInterviewer("jenny")}
+            style={{
+              padding: "1rem",
+              textAlign: "left",
+              borderRadius: "var(--radius-md)",
+              border:
+                interviewer === "jenny"
+                  ? "2px solid #2196F3"
+                  : "1px solid var(--border)",
+              background:
+                interviewer === "jenny"
+                  ? "rgba(33, 150, 243, 0.08)"
+                  : "var(--bg-elevated)",
+              cursor: "pointer",
+              color: "var(--text-primary)",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "0.85rem",
+            }}
+          >
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #2196F3, #0D47A1)",
+                color: "#FFFFFF",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 800,
+                fontSize: "1rem",
+                flexShrink: 0,
+              }}
+            >
+              J
+            </div>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: "1rem" }}>Jenny</div>
+                {interviewer === "jenny" && (
+                  <span
+                    style={{
+                      fontSize: "0.7rem",
+                      fontWeight: 700,
+                      background: "#2196F3",
+                      color: "#fff",
+                      padding: "2px 8px",
+                      borderRadius: 10,
+                    }}
+                  >
+                    Selected
+                  </span>
+                )}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#2196F3",
+                  fontWeight: 600,
+                  marginTop: "2px",
+                }}
+              >
+                Female AI Interviewer
+              </div>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  marginTop: "0.35rem",
+                  lineHeight: 1.4,
+                }}
+              >
+                Adaptive and clear conversational interviewer with responsive verbal articulation.
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setInterviewer("samm")}
+            style={{
+              padding: "1rem",
+              textAlign: "left",
+              borderRadius: "var(--radius-md)",
+              border:
+                interviewer === "samm"
+                  ? "2px solid #2196F3"
+                  : "1px solid var(--border)",
+              background:
+                interviewer === "samm"
+                  ? "rgba(33, 150, 243, 0.08)"
+                  : "var(--bg-elevated)",
+              cursor: "pointer",
+              color: "var(--text-primary)",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "0.85rem",
+            }}
+          >
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #0D47A1, #2196F3)",
+                color: "#FFFFFF",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 800,
+                fontSize: "1rem",
+                flexShrink: 0,
+              }}
+            >
+              S
+            </div>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: "1rem" }}>Samm</div>
+                {interviewer === "samm" && (
+                  <span
+                    style={{
+                      fontSize: "0.7rem",
+                      fontWeight: 700,
+                      background: "#2196F3",
+                      color: "#fff",
+                      padding: "2px 8px",
+                      borderRadius: 10,
+                    }}
+                  >
+                    Selected
+                  </span>
+                )}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#2196F3",
+                  fontWeight: 600,
+                  marginTop: "2px",
+                }}
+              >
+                Male AI Interviewer
+              </div>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  marginTop: "0.35rem",
+                  lineHeight: 1.4,
+                }}
+              >
+                Methodical, technical conversational interviewer specializing in in-depth evaluations.
+              </div>
+            </div>
+          </button>
+        </div>
+      </motion.div>
+
       {/* Summary */}
       <motion.div
         initial={{
@@ -977,6 +1198,27 @@ export default function InterviewSetup() {
               }}
             >
               {config.duration} minutes
+            </div>
+          </div>
+
+          <div>
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--text-muted)",
+              }}
+            >
+              Interviewer
+            </div>
+
+            <div
+              style={{
+                fontWeight: 700,
+                marginTop: "0.25rem",
+                color: "#2196F3",
+              }}
+            >
+              {interviewer === "jenny" ? "Jenny (Female)" : "Samm (Male)"}
             </div>
           </div>
 
