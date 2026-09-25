@@ -166,15 +166,15 @@ export default function InterviewRoom() {
   const interviewerConfig = useMemo(() => {
     if (interviewer === "samm") {
       return {
-        name: "Samm",
-        genderLabel: "Male AI Interviewer",
+        name: "Saamm",
+        genderLabel: "I am Your Interviewer Assistant",
         videoSrc: "/images/interviewers/samm.mp4",
         initialLetter: "S",
       };
     }
     return {
       name: "Jenny",
-      genderLabel: "Female AI Interviewer",
+      genderLabel: "I am Your Interviewer Assistant",
       videoSrc: "/images/interviewers/jenny.mp4",
       initialLetter: "J",
     };
