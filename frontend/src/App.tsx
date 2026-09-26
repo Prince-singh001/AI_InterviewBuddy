@@ -25,6 +25,13 @@ import InterviewSetup from "@/pages/InterviewSetup";
 import Interviews from "@/pages/Interviews";
 import JobAnalyzer from "@/pages/JobAnalyzer";
 import Practice from "@/pages/Practice";
+import Assessment from "@/pages/Assessment";
+import AssessmentTest from "@/pages/AssessmentTest";
+import AssessmentResult from "@/pages/AssessmentResult";
+import CompanyPractice from "@/pages/CompanyPractice";
+import CompanyPracticeDetails from "@/pages/CompanyPracticeDetails";
+import CodingPractice from "@/pages/CodingPractice";
+import CodingProblem from "@/pages/CodingProblem";
 import Profile from "@/pages/Profile";
 import Progress from "@/pages/Progress";
 import Reports from "@/pages/Reports";
@@ -208,6 +215,79 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/practice/assessment"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <Assessment />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/practice/assessment/:id"
+          element={
+            <PrivateRoute>
+              <AssessmentTest />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/practice/assessment/result"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <AssessmentResult />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/practice/company"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <CompanyPractice />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/practice/company/:company"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <CompanyPracticeDetails />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/practice/coding"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <CodingPractice />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/practice/coding/:id"
+          element={
+            <PrivateRoute>
+              <CodingProblem />
+            </PrivateRoute>
+          }
+        />
+
         {/* =========================================================
             AI & CAREER
         ========================================================= */}
@@ -315,6 +395,11 @@ export default function App() {
         {/* =========================================================
             INTERVIEW FLOW
         ========================================================= */}
+
+        <Route
+          path="/interview"
+          element={<Navigate to="/interview/setup" replace />}
+        />
 
         <Route
           path="/interview/setup"

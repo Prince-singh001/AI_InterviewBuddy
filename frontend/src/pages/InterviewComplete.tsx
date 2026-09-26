@@ -1161,10 +1161,8 @@ export default function InterviewComplete() {
             className="card"
             style={{
               marginBottom: '2rem',
-              background:
-                'rgba(139,92,246,0.06)',
-              borderColor:
-                'rgba(139,92,246,0.2)',
+              background: '#E3F2FD',
+              borderColor: '#90CAF9',
             }}
           >
             <h2
@@ -1172,7 +1170,7 @@ export default function InterviewComplete() {
                 fontWeight: 700,
                 marginBottom: '1rem',
                 fontSize: '1rem',
-                color: 'var(--purple-light)',
+                color: '#0D47A1',
               }}
             >
               🎯 AI Recommendations

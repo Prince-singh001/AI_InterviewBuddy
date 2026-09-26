@@ -28,6 +28,24 @@
   --amber: #d97706;
   --red: #dc2626;
 
+  /* ---------- practice templt---------- */
+  --practice-primary: #81A6C6;
+  --practice-primary-dark: #648cae;
+  --practice-primary-soft: rgba(129, 166, 198, 0.12);
+  --practice-primary-border: rgba(129, 166, 198, 0.35);
+
+  --practice-secondary: #AACDDC;
+  --practice-secondary-light: #e5f1f7;
+  --practice-secondary-soft: rgba(170, 205, 220, 0.2);
+  --practice-secondary-border: rgba(170, 205, 220, 0.45);
+
+  --practice-warm: #F3E3D0;
+  --practice-warm-light: #fbf7f1;
+  --practice-warm-soft: rgba(243, 227, 208, 0.35);
+  --practice-warm-border: #e6d3bd;
+  --practice-text: #1e293b;
+  --practice-text-muted: #64748b;
+
   /* ---------- Light Theme ---------- */
   --bg-base: #f8fafc;
   --bg-elevated: #ffffff;
@@ -312,6 +330,7 @@ section {
 }
 
 @keyframes float {
+
   0%,
   100% {
     transform: translateY(0);
@@ -323,6 +342,7 @@ section {
 }
 
 @keyframes floatSlow {
+
   0%,
   100% {
     transform: translateY(0) translateX(0);
@@ -334,6 +354,7 @@ section {
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
@@ -345,6 +366,7 @@ section {
 }
 
 @keyframes pulseBlue {
+
   0%,
   100% {
     box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.25);
@@ -356,6 +378,7 @@ section {
 }
 
 @keyframes pulseGreen {
+
   0%,
   100% {
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.3);
@@ -484,21 +507,15 @@ section {
   position: relative;
 
   background:
-    radial-gradient(
-      ellipse 65% 55% at 75% 5%,
+    radial-gradient(ellipse 65% 55% at 75% 5%,
       rgba(37, 99, 235, 0.12),
-      transparent 65%
-    ),
-    radial-gradient(
-      ellipse 45% 45% at 95% 45%,
+      transparent 65%),
+    radial-gradient(ellipse 45% 45% at 95% 45%,
       rgba(124, 58, 237, 0.08),
-      transparent 65%
-    ),
-    radial-gradient(
-      ellipse 50% 40% at 10% 90%,
+      transparent 65%),
+    radial-gradient(ellipse 50% 40% at 10% 90%,
       rgba(8, 145, 178, 0.06),
-      transparent 65%
-    ),
+      transparent 65%),
     var(--bg-base);
 }
 
@@ -1153,41 +1170,33 @@ tbody td {
    ========================================================= */
 
 .stat-card-blue {
-  background: linear-gradient(
-    135deg,
-    rgba(37, 99, 235, 0.08),
-    rgba(79, 70, 229, 0.03)
-  );
+  background: linear-gradient(135deg,
+      rgba(37, 99, 235, 0.08),
+      rgba(79, 70, 229, 0.03));
 
   border-color: rgba(37, 99, 235, 0.16);
 }
 
 .stat-card-purple {
-  background: linear-gradient(
-    135deg,
-    rgba(124, 58, 237, 0.08),
-    rgba(79, 70, 229, 0.03)
-  );
+  background: linear-gradient(135deg,
+      rgba(124, 58, 237, 0.08),
+      rgba(79, 70, 229, 0.03));
 
   border-color: rgba(124, 58, 237, 0.16);
 }
 
 .stat-card-green {
-  background: linear-gradient(
-    135deg,
-    rgba(5, 150, 105, 0.08),
-    rgba(16, 185, 129, 0.03)
-  );
+  background: linear-gradient(135deg,
+      rgba(5, 150, 105, 0.08),
+      rgba(16, 185, 129, 0.03));
 
   border-color: rgba(5, 150, 105, 0.16);
 }
 
 .stat-card-orange {
-  background: linear-gradient(
-    135deg,
-    rgba(217, 119, 6, 0.08),
-    rgba(245, 158, 11, 0.03)
-  );
+  background: linear-gradient(135deg,
+      rgba(217, 119, 6, 0.08),
+      rgba(245, 158, 11, 0.03));
 
   border-color: rgba(217, 119, 6, 0.16);
 }
@@ -1613,12 +1622,10 @@ tbody td {
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--bg-card) 25%,
-    var(--bg-muted) 50%,
-    var(--bg-card) 75%
-  );
+  background: linear-gradient(90deg,
+      var(--bg-card) 25%,
+      var(--bg-muted) 50%,
+      var(--bg-card) 75%);
 
   background-size: 200% 100%;
 
@@ -1740,6 +1747,7 @@ select:focus-visible {
    ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {

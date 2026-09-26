@@ -10,7 +10,6 @@ import {
   RefreshCw,
   RotateCcw,
   Search,
-  Sparkles,
   TrendingUp,
   Zap
 } from 'lucide-react'
@@ -308,7 +307,6 @@ export default function Interviews() {
               marginBottom: 10,
             }}
           >
-            <Sparkles size={12} />
             Interview Workspace
           </div>
 
@@ -392,7 +390,7 @@ export default function Interviews() {
               avg > 0
                 ? 'Across completed interviews'
                 : 'Complete an interview',
-            className: 'stat-card-purple',
+            className: 'stat-card-blue',
           },
           {
             icon: ArrowUpRight,

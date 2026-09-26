@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { MapPin, Sparkles, ArrowRight, Loader2 } from 'lucide-react'
+import { MapPin, ArrowRight, Loader2, Play } from 'lucide-react'
 import { dashboardApi, DashboardStats } from '@/services/apiService'
 
 export default function CareerRoadmap() {
@@ -70,7 +70,7 @@ export default function CareerRoadmap() {
             className="btn btn-purple"
             style={{ padding: '0.75rem 1.5rem', margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            <Sparkles size={16} /> Start Your First Interview <ArrowRight size={16} />
+            <Play size={16} /> Start Your First Interview <ArrowRight size={16} />
           </button>
         </div>
       ) : (

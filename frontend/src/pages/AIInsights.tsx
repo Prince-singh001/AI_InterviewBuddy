@@ -17,7 +17,6 @@ import {
   Lightbulb,
   RefreshCw,
   Route,
-  Sparkles,
   Target,
   TrendingDown,
   TrendingUp,
@@ -707,7 +706,6 @@ export default function AIInsights() {
       <header className="page-header">
         <div>
           <span className="eyebrow">
-            <Sparkles size={13} />
             AI PERFORMANCE CENTER
           </span>
 
@@ -742,7 +740,6 @@ export default function AIInsights() {
       <section className="hero">
         <div className="hero-copy">
           <span className="hero-badge">
-            <Sparkles size={13} />
             AI-powered analysis
           </span>
 
@@ -819,8 +816,6 @@ export default function AIInsights() {
                 <span className="status-dot" />
                 AI Analysis
               </span>
-
-              <Sparkles size={16} />
             </div>
 
             <img
@@ -1063,7 +1058,6 @@ export default function AIInsights() {
 
         <div className="coach-content">
           <span className="eyebrow">
-            <Sparkles size={13} />
             AI COACH SUMMARY
           </span>
 

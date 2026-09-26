@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Upload, FileText, CheckCircle2, AlertTriangle, Sparkles, Loader2, X, RefreshCw, Layers } from 'lucide-react'
+import { Upload, FileText, CheckCircle2, AlertTriangle, Loader2, X, RefreshCw, Layers } from 'lucide-react'
 import { resumeApi, ResumeAnalysisResponse, ResumeItem } from '@/services/apiService'
 import { toast } from 'sonner'
 
@@ -215,7 +215,7 @@ export default function Resume() {
                 className="btn btn-purple"
                 style={{ width: '100%', marginTop: '1.25rem', padding: '0.875rem', opacity: file ? 1 : 0.5 }}
               >
-                <Sparkles size={18} /> Analyze Resume with AI
+                <FileText size={18} /> Analyze Resume with AI
               </button>
             )}
           </motion.div>
@@ -277,7 +277,7 @@ export default function Resume() {
                   justifyContent: 'center',
                   margin: '0 auto 1rem',
                 }}>
-                  <Sparkles size={24} color="var(--purple-light)" />
+                  <FileText size={24} color="var(--purple-light)" />
                 </div>
                 <h3 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
                   No resume analysis yet

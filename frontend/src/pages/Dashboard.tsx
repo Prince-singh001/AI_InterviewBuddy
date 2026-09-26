@@ -15,7 +15,6 @@ import {
   FileText,
   RefreshCw,
   Rocket,
-  Sparkles,
   Target,
   UserRound,
   Video,
@@ -1962,7 +1961,6 @@ export default function Dashboard() {
                 duration: 0.4,
               }}
             >
-              <Sparkles size={13} />
               AI Interview Intelligence
             </motion.div>
 
@@ -2431,14 +2429,6 @@ export default function Dashboard() {
                 {hasCompletedInterviews ? (
                   <div>
                     <div className="ai-info-box">
-                      <Sparkles
-                        size={18}
-                        color="#8B5CF6"
-                        style={{
-                          marginBottom: 10,
-                        }}
-                      />
-
                       <div>
                         You have completed{" "}
                         <strong

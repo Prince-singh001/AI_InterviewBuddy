@@ -16,7 +16,7 @@ import {
   Menu,
   Play,
   Settings,
-  Sparkles,
+  TrendingUp,
   User as UserIcon,
   X,
 } from "lucide-react";
@@ -77,7 +77,7 @@ const profileMenuItems = [
   },
   {
     label: "AI Insights",
-    icon: Sparkles,
+    icon: TrendingUp,
     path: "/ai-insights",
   },
   {
@@ -285,6 +285,10 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
       );
     }
 
+    if (path === "/practice") {
+      return location.pathname.startsWith("/practice");
+    }
+
     return location.pathname === path;
   };
 
@@ -304,7 +308,10 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
       return "Analysis";
     }
     if (path === "/ai-insights") return "AI Insights";
-    if (path === "/practice") return "Practice Center";
+    if (path.startsWith("/practice/assessment")) return "Assessment Center";
+    if (path.startsWith("/practice/company")) return "Company Practice";
+    if (path.startsWith("/practice/coding")) return "Coding Practice";
+    if (path.startsWith("/practice")) return "Practice Center";
     if (path === "/reports") return "Reports";
     if (path === "/resume") return "Resume Intelligence";
     if (path === "/job-analyzer") return "Job Analyzer";
@@ -325,8 +332,10 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
     return "AI Interview Buddy";
   };
 
+  const isPracticeSection = location.pathname.startsWith("/practice");
+
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${isPracticeSection ? "practice-section-layout" : ""}`}>
       {/* ======================================================
           TOP NAVBAR
       ====================================================== */}
@@ -384,9 +393,8 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
             <div className="profile-anchor">
               <button
                 onClick={toggleProfileDropdown}
-                className={`navbar-user-pill profile-trigger-btn${
-                  profileOpen ? " active" : ""
-                }`}
+                className={`navbar-user-pill profile-trigger-btn${profileOpen ? " active" : ""
+                  }`}
                 title="Account & Profile"
                 aria-expanded={profileOpen}
                 aria-haspopup="menu"
@@ -694,9 +702,8 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
                         key={item.path}
                         to={item.path}
                         onClick={() => setMobileOpen(false)}
-                        className={`mobile-nav-link${
-                          isActive ? " active" : ""
-                        }`}
+                        className={`mobile-nav-link${isActive ? " active" : ""
+                          }`}
                       >
                         <div className="mobile-nav-item-icon">
                           <Icon size={18} />
@@ -734,9 +741,8 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
                         key={item.path}
                         to={item.path}
                         onClick={() => setMobileOpen(false)}
-                        className={`mobile-nav-link${
-                          isActive ? " active" : ""
-                        }`}
+                        className={`mobile-nav-link${isActive ? " active" : ""
+                          }`}
                       >
                         <div className="mobile-nav-item-icon">
                           <Icon size={18} />
@@ -819,7 +825,7 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
     background:
       linear-gradient(
         180deg,
-        #E3F2FD 0%,
+        #0b54885d 0%,
         #F7FBFF 35%,
         #FFFFFF 100%
       );
@@ -828,6 +834,128 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
 
     display: flex;
     flex-direction: column;
+  }
+
+  /* =========================================================
+     PRACTICE SECTION — BLUE / WHITE DESIGN SYSTEM
+  ========================================================= */
+  .app-layout.practice-section-layout {
+    background: #F8FCFF !important;
+    color: #0D47A1 !important;
+  }
+
+  .app-layout.practice-section-layout .global-top-navbar {
+    background: rgba(255, 255, 255, 0.96) !important;
+    border-bottom: 1px solid rgba(144, 202, 249, 0.4) !important;
+    box-shadow: 0 4px 20px rgba(13, 71, 161, 0.06) !important;
+  }
+
+  .app-layout.practice-section-layout .voxa-main-content {
+    background: #F8FCFF !important;
+  }
+
+  .app-layout.practice-section-layout .brand-title {
+    color: #0D47A1 !important;
+  }
+
+  .app-layout.practice-section-layout .brand-title-accent {
+    color: #2196F3 !important;
+  }
+
+  .app-layout.practice-section-layout .brand-ai-pill {
+    background: #E3F2FD !important;
+    color: #0D47A1 !important;
+    border-color: #90CAF9 !important;
+  }
+
+  .app-layout.practice-section-layout .voxa-top-nav-link {
+    color: #0D47A1 !important;
+  }
+
+  .app-layout.practice-section-layout .voxa-top-nav-link:hover {
+    color: #0D47A1 !important;
+    background: #E3F2FD !important;
+  }
+
+  .app-layout.practice-section-layout .voxa-top-nav-link.active {
+    background: #2196F3 !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 14px rgba(33, 150, 243, 0.35) !important;
+  }
+
+  .app-layout.practice-section-layout .navbar-user-pill {
+    background: #FFFFFF !important;
+    border-color: rgba(144, 202, 249, 0.6) !important;
+    color: #0D47A1 !important;
+  }
+
+  .app-layout.practice-section-layout .navbar-user-pill:hover,
+  .app-layout.practice-section-layout .navbar-user-pill.active {
+    border-color: #2196F3 !important;
+    background: #E3F2FD !important;
+  }
+
+  .app-layout.practice-section-layout .user-name {
+    color: #0D47A1 !important;
+  }
+
+  .app-layout.practice-section-layout .user-plan-badge {
+    color: #0D47A1 !important;
+    background: #E3F2FD !important;
+    border: 1px solid #90CAF9 !important;
+  }
+
+  .app-layout.practice-section-layout .profile-dropdown-menu {
+    background: #FFFFFF !important;
+    border-color: rgba(144, 202, 249, 0.5) !important;
+    box-shadow: 0 10px 30px rgba(13, 71, 161, 0.12) !important;
+  }
+
+  .app-layout.practice-section-layout .profile-dropdown-header {
+    border-bottom-color: rgba(144, 202, 249, 0.3) !important;
+  }
+
+  .app-layout.practice-section-layout .dropdown-user-name {
+    color: #0D47A1 !important;
+  }
+
+  .app-layout.practice-section-layout .profile-dropdown-menu-item {
+    color: #475569 !important;
+  }
+
+  .app-layout.practice-section-layout .profile-dropdown-menu-item:hover {
+    background: #E3F2FD !important;
+    color: #0D47A1 !important;
+  }
+
+  .app-layout.practice-section-layout .mobile-navbar-container {
+    background: #FFFFFF !important;
+    border-bottom-color: rgba(144, 202, 249, 0.4) !important;
+  }
+
+  .app-layout.practice-section-layout .mobile-drawer-sheet {
+    background: #FFFFFF !important;
+    border-right-color: rgba(144, 202, 249, 0.4) !important;
+  }
+
+  .app-layout.practice-section-layout .mobile-nav-link {
+    color: #0D47A1 !important;
+  }
+
+  .app-layout.practice-section-layout .mobile-nav-link:hover {
+    background: #E3F2FD !important;
+    color: #0D47A1 !important;
+  }
+
+  .app-layout.practice-section-layout .mobile-nav-link.active {
+    background: #2196F3 !important;
+    color: #FFFFFF !important;
+  }
+
+  .app-layout.practice-section-layout .mobile-practice-btn {
+    background: #E3F2FD !important;
+    border-color: #90CAF9 !important;
+    color: #0D47A1 !important;
   }
 
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Briefcase, CheckCircle2, AlertTriangle, Sparkles, Loader2, Search, XCircle, ArrowRight, RefreshCw } from 'lucide-react'
+import { Briefcase, CheckCircle2, AlertTriangle, Loader2, Search, XCircle, ArrowRight, RefreshCw } from 'lucide-react'
 import { jobsApi, JobAnalysisResponse } from '@/services/apiService'
 import { toast } from 'sonner'
 
@@ -233,7 +233,7 @@ export default function JobAnalyzer() {
               className="btn btn-purple"
               style={{ width: '100%', minHeight: '44px' }}
             >
-              <Sparkles size={16} /> Practice Role Interview <ArrowRight size={16} />
+              <Briefcase size={16} /> Practice Role Interview <ArrowRight size={16} />
             </button>
 
             <button

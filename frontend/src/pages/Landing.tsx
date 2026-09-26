@@ -18,7 +18,6 @@ import {
   MessageSquare,
   Play,
   ShieldCheck,
-  Sparkles,
   Target,
   TrendingUp,
   UserCheck,
@@ -294,7 +293,6 @@ function HeroDashboardMockup() {
             {/* Question Card */}
             <div className="mockup-question-box">
               <div className="question-badge">
-                <Sparkles size={13} />
                 <span>Question 04 of 08</span>
               </div>
 
@@ -602,8 +600,6 @@ export default function Landing() {
               transition={{ duration: 0.6 }}
             >
               <div className="hero-badge-pill">
-                <span className="badge-sparkle-dot" />
-                <Sparkles size={14} className="badge-sparkle-icon" />
                 <span>Next-Generation AI Interview Platform</span>
               </div>
 
@@ -734,7 +730,6 @@ export default function Landing() {
           <div className="section-container">
             <div className="section-heading-box text-center">
               <div className="section-pill-tag">
-                <Sparkles size={13} />
                 <span>Comprehensive Preparation</span>
               </div>
               <h2 className="section-headline">
@@ -1977,16 +1972,7 @@ export default function Landing() {
           margin-bottom: 22px;
         }
 
-        .badge-sparkle-dot {
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          background-color: #2196F3;
-        }
 
-        .badge-sparkle-icon {
-          color: #2196F3;
-        }
 
         .hero-heading {
           font-size: clamp(2.5rem, 4.5vw, 3.5rem);

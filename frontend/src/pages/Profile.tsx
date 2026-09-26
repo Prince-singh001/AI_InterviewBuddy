@@ -26,7 +26,6 @@ import {
   Plus,
   Save,
   Share2,
-  Sparkles,
   Target,
   Trash2,
   Upload,
@@ -662,7 +661,7 @@ export default function Profile() {
                   fontWeight: 700,
                 }}
               >
-                <Sparkles size={12} /> Candidate Dossier
+                Candidate Dossier
               </span>
             </div>
             <p
@@ -1299,7 +1298,7 @@ export default function Profile() {
                 label: "Professional Headline",
                 value: form.headline,
                 onChange: (v) => setForm((c) => ({ ...c, headline: v })),
-                icon: Sparkles,
+                icon: Award,
                 placeholder: "e.g. AI/ML Engineer | Python Developer",
                 required: true,
                 error: validationErrors.headline,

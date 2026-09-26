@@ -11,7 +11,6 @@ import {
   Pause,
   Play,
   ShieldCheck,
-  Sparkles,
   Video,
   VideoOff,
   Volume2,
@@ -195,7 +194,6 @@ export default function InterviewMediaCard() {
 
             <div className="ai-info">
               <div className="ai-name">
-                <Sparkles size={14} />
                 AI Interviewer
               </div>
 
@@ -385,7 +383,7 @@ export default function InterviewMediaCard() {
 
         <div className="feature">
           <div className="feature-icon">
-            <Sparkles size={16} />
+            <Brain size={16} />
           </div>
 
           <div>

@@ -1,11 +1,11 @@
 import { interviewsApi } from "@/services/apiService";
+import { useAuthStore } from "@/store/authStore";
 import {
   AlertCircle,
   ArrowLeft,
   Bot,
   Camera,
   CameraOff,
-  CheckCircle2,
   Clock3,
   Expand,
   Loader2,
@@ -14,13 +14,13 @@ import {
   Pause,
   Play,
   Send,
-  User,
+  Sparkles,
   UserRound,
   Volume2,
   Wifi,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 // ============================================================
@@ -111,7 +111,7 @@ const resolveInterviewId = (
       return stored.trim();
     }
   } catch {
-    // Storage can be unavailable in restricted browser contexts.
+    // Storage can be unavailable in restricted contexts
   }
 
   return null;
@@ -129,7 +129,7 @@ const getSpeechRecognition = () => {
 };
 
 // ============================================================
-// MAIN INTERVIEW ROOM COMPONENT
+// MAIN COMPONENT: FULL-SCREEN INTERVIEW ROOM
 // ============================================================
 
 export default function InterviewRoom() {
@@ -137,13 +137,16 @@ export default function InterviewRoom() {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
 
-  // Authoritative interview ID
+  // Authenticated candidate name for personalized greeting and PiP label
+  const { user } = useAuthStore();
+  const candidateName = user?.name?.trim() || "Candidate";
+
   const interviewId = useMemo(
     () => resolveInterviewId(id, location),
     [id, location],
   );
 
-  // Authoritative selected interviewer (fixed for the entire session)
+  // Authoritative selected interviewer (Jenny or Samm, fixed for entire session)
   const resolvedInterviewer = useMemo<"jenny" | "samm">(() => {
     const state = location.state as { interviewer?: string } | null | undefined;
     if (state?.interviewer === "samm" || state?.interviewer === "jenny") {
@@ -160,21 +163,20 @@ export default function InterviewRoom() {
     return "jenny";
   }, [location.state]);
 
-  // SINGLE FIXED INTERVIEWER FOR THE COMPLETE INTERVIEW
   const [interviewer] = useState<"jenny" | "samm">(resolvedInterviewer);
 
   const interviewerConfig = useMemo(() => {
     if (interviewer === "samm") {
       return {
-        name: "Saamm",
-        genderLabel: "I am Your Interviewer Assistant",
+        name: "Samm",
+        roleLabel: "Technical Interview Specialist",
         videoSrc: "/images/interviewers/samm.mp4",
         initialLetter: "S",
       };
     }
     return {
       name: "Jenny",
-      genderLabel: "I am Your Interviewer Assistant",
+      roleLabel: "AI Interview Specialist",
       videoSrc: "/images/interviewers/jenny.mp4",
       initialLetter: "J",
     };
@@ -193,9 +195,9 @@ export default function InterviewRoom() {
       | null
       | undefined;
     if (state?.role) {
-      return state.type ? `${state.role} • ${state.type}` : state.role;
+      return state.type ? `${state.role} · ${state.type}` : state.role;
     }
-    return "AI Mock Interview";
+    return "Live Interview Session";
   }, [location.state]);
 
   // State Management
@@ -209,12 +211,17 @@ export default function InterviewRoom() {
   const [elapsed, setElapsed] = useState(0);
   const [questionSeconds, setQuestionSeconds] = useState(0);
 
+  // Status flags
   const [isPaused, setIsPaused] = useState(false);
   const [isStarting, setIsStarting] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isGreeting, setIsGreeting] = useState(false);
+  const [, setCandidateTurn] = useState(false);
+
+  // Media flags
   const [cameraOn, setCameraOn] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(true);
@@ -232,6 +239,7 @@ export default function InterviewRoom() {
   const mountedRef = useRef(true);
   const startedRef = useRef(false);
   const completingRef = useRef(false);
+  const greetingDoneRef = useRef(false);
   const elapsedRef = useRef(0);
   const questionStartedAtRef = useRef(0);
   const interviewContainerRef = useRef<HTMLDivElement | null>(null);
@@ -258,7 +266,7 @@ export default function InterviewRoom() {
 
     if (isSpeaking && !isPaused) {
       video.play().catch(() => {
-        // Autoplay policy or video not ready
+        // Autoplay policy or video buffering
       });
     } else {
       video.pause();
@@ -282,12 +290,19 @@ export default function InterviewRoom() {
   const stopSpeaking = useCallback(() => {
     clearSpeechTimeouts();
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-    if (mountedRef.current) setIsSpeaking(false);
+    if (mountedRef.current) {
+      setIsSpeaking(false);
+      setIsGreeting(false);
+    }
   }, [clearSpeechTimeouts]);
 
-  const speakQuestion = useCallback(
-    (text = questionText) => {
-      if (!text || !("speechSynthesis" in window)) return;
+  // Core speak method with onEnd callback support
+  const speakText = useCallback(
+    (text: string, onEnd?: () => void) => {
+      if (!text || !("speechSynthesis" in window)) {
+        onEnd?.();
+        return;
+      }
 
       clearSpeechTimeouts();
       window.speechSynthesis.cancel();
@@ -301,23 +316,29 @@ export default function InterviewRoom() {
         if (mountedRef.current) setIsSpeaking(true);
       };
       utterance.onend = () => {
-        if (mountedRef.current) setIsSpeaking(false);
+        if (mountedRef.current) {
+          setIsSpeaking(false);
+          onEnd?.();
+        }
       };
       utterance.onerror = () => {
-        if (mountedRef.current) setIsSpeaking(false);
+        if (mountedRef.current) {
+          setIsSpeaking(false);
+          onEnd?.();
+        }
       };
 
       setIsSpeaking(true);
       window.speechSynthesis.speak(utterance);
     },
-    [clearSpeechTimeouts, questionText],
+    [clearSpeechTimeouts],
   );
 
   const stopListening = useCallback(() => {
     try {
       recognitionRef.current?.stop?.();
     } catch {
-      // Recognition may already be stopped.
+      // Recognition may already be stopped
     }
     recognitionRef.current = null;
     if (mountedRef.current) setIsListening(false);
@@ -424,9 +445,7 @@ export default function InterviewRoom() {
     } catch (cameraFailure) {
       console.error("Camera permission error:", cameraFailure);
       setCameraOn(false);
-      setCameraError(
-        "Camera permission was denied or the camera is unavailable.",
-      );
+      setCameraError("Camera permission was denied or camera is unavailable.");
     }
   }, []);
 
@@ -447,9 +466,7 @@ export default function InterviewRoom() {
     async (reason: "finished" | "time" | "exit") => {
       if (!interviewId || completingRef.current) {
         if (!interviewId) {
-          setError(
-            "Interview ID is missing. Please return to interview setup.",
-          );
+          setError("Interview ID is missing. Please return to interview setup.");
         }
         return;
       }
@@ -469,7 +486,7 @@ export default function InterviewRoom() {
         try {
           sessionStorage.removeItem("active_interview_id");
         } catch {
-          // Ignore storage restrictions.
+          // Storage restrictions fallback
         }
 
         if (mountedRef.current) {
@@ -483,6 +500,7 @@ export default function InterviewRoom() {
     [interviewId, interviewer, navigate, stopCamera, stopListening, stopSpeaking, stopTimer],
   );
 
+  // Starts the interview and handles candidate greeting
   const startInterview = useCallback(async () => {
     if (!interviewId || startedRef.current) return;
 
@@ -493,7 +511,6 @@ export default function InterviewRoom() {
     try {
       const rawResponse = await interviewsApi.start(interviewId);
       const response = rawResponse as unknown as InterviewStartResponse;
-
       const question = response.data ?? response.current_question ?? response;
 
       if (!question?.question_id) {
@@ -530,9 +547,32 @@ export default function InterviewRoom() {
       questionStartedAtRef.current = Date.now();
       setIsPaused(false);
 
+      // Greeting with authenticated candidate name
       const timeoutId = window.setTimeout(() => {
-        if (mountedRef.current) speakQuestion(getQuestionText(question));
-      }, 450);
+        if (!mountedRef.current) return;
+
+        if (!greetingDoneRef.current) {
+          greetingDoneRef.current = true;
+          setIsGreeting(true);
+
+          const greetingMessage = `Hello ${candidateName}, welcome to your AI interview. I'm ${interviewerConfig.name}, and I'll be your interviewer today. Let's begin with your first question.`;
+
+          speakText(greetingMessage, () => {
+            if (!mountedRef.current) return;
+            setIsGreeting(false);
+
+            // Once greeting completes, speak question 1
+            const firstQuestionText = getQuestionText(question);
+            speakText(firstQuestionText, () => {
+              if (mountedRef.current) setCandidateTurn(true);
+            });
+          });
+        } else {
+          speakText(getQuestionText(question), () => {
+            if (mountedRef.current) setCandidateTurn(true);
+          });
+        }
+      }, 500);
 
       speechTimeoutsRef.current.push(timeoutId);
     } catch (startError) {
@@ -541,7 +581,7 @@ export default function InterviewRoom() {
     } finally {
       if (mountedRef.current) setIsStarting(false);
     }
-  }, [durationMinutes, interviewId, routeDuration, speakQuestion]);
+  }, [candidateName, durationMinutes, interviewId, interviewerConfig.name, routeDuration, speakText]);
 
   const submitAnswer = useCallback(async () => {
     if (!interviewId || !currentQ) return;
@@ -550,11 +590,12 @@ export default function InterviewRoom() {
     const answer = userAnswer.trim();
 
     if (!answer) {
-      setError("Please write an answer before submitting.");
+      setError("Please type or dictate an answer before submitting.");
       return;
     }
 
     setIsSubmitting(true);
+    setCandidateTurn(false);
     setError("");
     stopListening();
     stopSpeaking();
@@ -603,9 +644,7 @@ export default function InterviewRoom() {
         nextResponse;
 
       if (!nextQuestion?.question_id) {
-        throw new Error(
-          "The server did not return the next interview question.",
-        );
+        throw new Error("The server did not return the next interview question.");
       }
 
       const nextNumber =
@@ -624,8 +663,12 @@ export default function InterviewRoom() {
 
       const nextText = getQuestionText(nextQuestion);
       const timeoutId = window.setTimeout(() => {
-        if (mountedRef.current && !isPaused) speakQuestion(nextText);
-      }, 350);
+        if (mountedRef.current && !isPaused) {
+          speakText(nextText, () => {
+            if (mountedRef.current) setCandidateTurn(true);
+          });
+        }
+      }, 400);
 
       speechTimeoutsRef.current.push(timeoutId);
     } catch (answerError) {
@@ -642,7 +685,7 @@ export default function InterviewRoom() {
     isPaused,
     isSubmitting,
     questionIdx,
-    speakQuestion,
+    speakText,
     stopListening,
     stopSpeaking,
     totalQuestions,
@@ -679,7 +722,7 @@ export default function InterviewRoom() {
     if (isCompleting) return;
 
     const confirmed = window.confirm(
-      "Exit this interview? Your current progress will be submitted as incomplete.",
+      "Exit this interview? Your progress will be saved and evaluated.",
     );
 
     if (confirmed) void completeInterview("exit");
@@ -735,6 +778,7 @@ export default function InterviewRoom() {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
+  // Main session ticker
   useEffect(() => {
     if (isStarting || !currentQ || isPaused || isCompleting) {
       stopTimer();
@@ -748,7 +792,7 @@ export default function InterviewRoom() {
       if (!mountedRef.current) return;
 
       setElapsed(nextElapsed);
-      setQuestionSeconds((previous) => previous + 1);
+      setQuestionSeconds((prev) => prev + 1);
 
       if (nextElapsed >= durationSeconds) {
         stopTimer();
@@ -756,7 +800,7 @@ export default function InterviewRoom() {
       }
     }, 1000);
 
-    return stopTimer;
+    return () => stopTimer();
   }, [
     completeInterview,
     currentQ,
@@ -770,21 +814,20 @@ export default function InterviewRoom() {
   // Loading Screen
   if (isStarting) {
     return (
-      <div className="room-loading">
-        <div className="loading-card">
-          <div className="loading-logo">
-            <Bot size={28} />
+      <div className="w-screen h-screen min-h-screen bg-[#F8FCFF] flex items-center justify-center p-4">
+        <div className="max-w-md w-full p-8 rounded-3xl bg-white border border-[#90CAF9]/40 shadow-xl text-center">
+          <div className="w-16 h-16 rounded-2xl bg-[#E3F2FD] border border-[#90CAF9] text-[#2196F3] flex items-center justify-center mx-auto mb-4 shadow-sm">
+            <Bot size={32} />
           </div>
-          <Loader2 size={24} className="spin text-blue" />
-          <h1>Preparing your AI interview</h1>
-          <p>
-            Connecting with {interviewerConfig.name} ({interviewerConfig.genderLabel}) and loading question 1.
+          <Loader2 size={24} className="animate-spin text-[#2196F3] mx-auto mb-3" />
+          <h1 className="text-xl font-black text-[#0D47A1] mb-2">Connecting to AI Interview Room</h1>
+          <p className="text-xs text-slate-600 leading-relaxed mb-6">
+            Joining session with <strong>{interviewerConfig.name}</strong> ({interviewerConfig.roleLabel}) and preparing your questions...
           </p>
-          <div className="loading-track">
-            <span />
+          <div className="w-full bg-[#E3F2FD] h-2 rounded-full overflow-hidden">
+            <div className="bg-[#2196F3] h-full w-2/3 animate-pulse rounded-full" />
           </div>
         </div>
-        <style>{styles}</style>
       </div>
     );
   }
@@ -792,1714 +835,441 @@ export default function InterviewRoom() {
   // Error Screen
   if (error && !currentQ) {
     return (
-      <div className="room-error">
-        <div className="error-card">
-          <div className="error-icon">
-            <AlertCircle size={28} />
+      <div className="w-screen h-screen min-h-screen bg-[#F8FCFF] flex items-center justify-center p-4">
+        <div className="max-w-md w-full p-8 rounded-3xl bg-white border border-rose-200 shadow-xl text-center">
+          <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle size={32} />
           </div>
-          <h1>Unable to start interview</h1>
-          <p>{error}</p>
-          <div className="error-actions">
+          <h1 className="text-xl font-black text-[#0D47A1] mb-2">Unable to Start Session</h1>
+          <p className="text-xs text-slate-600 mb-6">{error}</p>
+          <div className="flex gap-3 justify-center">
             <button
-              className="primary-button"
               onClick={() => navigate("/interview/setup")}
+              className="px-5 py-2.5 rounded-xl bg-[#2196F3] hover:bg-[#0D47A1] text-white font-bold text-xs shadow-xs cursor-pointer"
             >
               Back to Setup
             </button>
             <button
-              className="secondary-button"
               onClick={() => window.location.reload()}
+              className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
             >
               Try Again
             </button>
           </div>
         </div>
-        <style>{styles}</style>
       </div>
     );
   }
 
   return (
-    <div ref={interviewContainerRef} className="interview-room">
+    <div
+      ref={interviewContainerRef}
+      className="w-screen h-screen min-h-screen bg-[#F8FCFF] text-slate-800 flex flex-col font-sans select-none overflow-y-auto md:overflow-hidden"
+      style={{ width: "100vw", height: "100vh", minHeight: "100vh" }}
+    >
       {/* ====================================================
-          TOP HEADER
+          1. TOP INTERVIEW HEADER (Compact & Professional)
       ==================================================== */}
-      <header className="room-header">
-        <div className="header-brand">
+      <header className="shrink-0 h-14 sm:h-16 px-4 sm:px-6 bg-white/95 backdrop-blur-md border-b border-[#90CAF9]/40 flex items-center justify-between z-30 shadow-2xs">
+        {/* Left: Exit + Branding + Category */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <button
-            className="icon-button"
+            type="button"
             onClick={handleExit}
             disabled={isCompleting}
-            title="Exit interview"
-            aria-label="Exit interview"
+            title="Exit Interview"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-[#E3F2FD] text-[#0D47A1] border border-slate-200 hover:border-[#90CAF9] transition-colors text-xs font-bold cursor-pointer"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={14} />
+            <span className="hidden sm:inline">Exit</span>
           </button>
 
-          <div className="brand-icon">
-            <Bot size={20} />
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-[#2196F3] to-[#0D47A1] text-white flex items-center justify-center shadow-xs shrink-0">
+            <Bot size={17} />
           </div>
-          <div className="brand-text">
-            <div className="brand-title">InterviewerBuddy AI</div>
-            <div className="brand-subtitle">{roleTitle}</div>
+
+          <div className="flex flex-col">
+            <div className="text-xs sm:text-sm font-black text-[#0D47A1] leading-tight">
+              InterviewerBuddy AI
+            </div>
+            <div className="text-[10px] sm:text-[11px] text-[#2196F3] font-semibold line-clamp-1 max-w-[140px] sm:max-w-[280px]">
+              {roleTitle}
+            </div>
           </div>
         </div>
 
-        <div className="header-progress">
-          <div className="progress-meta">
-            <span>
-              Question {currentQuestionNumber} of {totalQuestions}
-            </span>
-            <strong>{Math.round(progress)}% Complete</strong>
+        {/* Center: Question Progress */}
+        <div className="flex flex-col items-center max-w-[140px] sm:max-w-xs w-full mx-2 sm:mx-4">
+          <div className="flex items-center justify-between w-full text-[11px] sm:text-xs font-bold text-[#0D47A1] mb-1">
+            <span>Question {currentQuestionNumber} of {totalQuestions}</span>
+            <span>{Math.round(progress)}%</span>
           </div>
-          <div className="progress-track">
-            <div className="progress-fill" style={{ width: `${progress}%` }} />
+          <div className="w-full bg-[#E3F2FD] h-1.5 sm:h-2 rounded-full overflow-hidden border border-[#90CAF9]/30">
+            <div
+              className="bg-[#2196F3] h-full rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
           </div>
         </div>
 
-        <div className="header-actions">
-          <div className="live-pill">
-            <span className="live-dot" />
-            Live Session
+        {/* Right: Live Session + Timer + Fullscreen */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E3F2FD] border border-[#90CAF9] text-[11px] font-bold text-[#0D47A1]">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Live Session</span>
           </div>
-          <div className={`timer-pill ${isTimerLow ? "timer-low" : ""}`}>
-            <Clock3 size={15} />
+
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-mono font-bold ${
+              isTimerLow
+                ? "bg-rose-50 text-rose-700 border-rose-300 animate-pulse"
+                : "bg-white text-[#0D47A1] border-[#90CAF9]"
+            }`}
+          >
+            <Clock3 size={13} className={isTimerLow ? "text-rose-600" : "text-[#2196F3]"} />
             <span>{formatTime(remainingSeconds)}</span>
           </div>
+
           <button
-            className="icon-button"
+            type="button"
             onClick={toggleFullscreen}
-            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-            aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            className="p-1.5 sm:p-2 rounded-xl bg-slate-50 hover:bg-[#E3F2FD] text-[#0D47A1] border border-slate-200 hover:border-[#90CAF9] transition-colors cursor-pointer"
           >
-            <Expand size={17} />
+            <Expand size={15} />
           </button>
         </div>
       </header>
 
-      {/* Alert banner if non-blocking error occurs */}
+      {/* Non-blocking error banner */}
       {error && (
-        <div className="room-alert" role="alert">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-          <button onClick={() => setError("")} aria-label="Dismiss alert">
+        <div className="bg-rose-50 border-b border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 flex items-center justify-between z-20 shrink-0">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={15} />
+            <span>{error}</span>
+          </div>
+          <button onClick={() => setError("")} className="cursor-pointer">
             <X size={15} />
           </button>
         </div>
       )}
 
       {/* ====================================================
-          MAIN INTERVIEW CONTENT
+          2. MAIN INTERVIEWER AREA (Dominates Screen + PiP)
       ==================================================== */}
-      <main className="room-main">
-        {/* TOP ROW: TWO-PANEL INTERVIEW STAGE (AI & CANDIDATE) */}
-        <section className="two-panel-stage">
-          {/* LEFT: AI INTERVIEWER CARD */}
-          <div className="video-card ai-interviewer-card">
-            <div className="video-card-top-bar">
-              <div className="role-pill">
-                <Bot size={13} />
-                <span>AI Interviewer</span>
+      <div className="flex-1 min-h-[300px] sm:min-h-0 relative p-3 sm:p-4 pb-2 flex flex-col">
+        <div className="flex-1 min-h-0 relative rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-950 border border-[#90CAF9]/40 shadow-md">
+          {/* AI Interviewer Video */}
+          {!avatarVideoError ? (
+            <video
+              ref={avatarVideoRef}
+              src={interviewerConfig.videoSrc}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full h-full object-cover object-center"
+              onError={() => setAvatarVideoError(true)}
+              aria-label={`${interviewerConfig.name} AI Avatar`}
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-gradient-to-b from-slate-900 to-slate-950">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#2196F3] to-[#0D47A1] text-white flex items-center justify-center text-4xl font-black mb-3 shadow-lg border-2 border-[#90CAF9]">
+                {interviewerConfig.initialLetter}
               </div>
-              <div className="avatar-name-badge">
-                <span className="avatar-circle-mini">
-                  {interviewerConfig.initialLetter}
-                </span>
-                <strong>{interviewerConfig.name}</strong>
-              </div>
+              <h3 className="text-xl font-bold text-white">{interviewerConfig.name}</h3>
+              <p className="text-xs text-[#90CAF9] mt-1">{interviewerConfig.roleLabel}</p>
             </div>
+          )}
 
-            {/* Video Container */}
-            <div className="video-display-box">
-              {!avatarVideoError ? (
-                <video
-                  ref={avatarVideoRef}
-                  src={interviewerConfig.videoSrc}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  className="interviewer-video-elem"
-                  onError={() => setAvatarVideoError(true)}
-                  aria-label={`${interviewerConfig.name} AI Interviewer Video`}
-                />
-              ) : (
-                <div className="avatar-fallback-box">
-                  <div className="fallback-avatar-circle">
-                    {interviewerConfig.initialLetter}
-                  </div>
-                  <h3>{interviewerConfig.name}</h3>
-                  <p>{interviewerConfig.genderLabel}</p>
+          {/* FLOATING STATUS PILL OVERLAY (TOP-LEFT) */}
+          <div className="absolute top-3 sm:top-4 left-3 sm:left-4 z-20">
+            {isSubmitting ? (
+              <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-slate-900/90 backdrop-blur-md text-[#90CAF9] border border-[#2196F3]/50 text-xs font-bold shadow-lg">
+                <Loader2 size={13} className="animate-spin text-[#2196F3]" />
+                <span>Processing answer...</span>
+              </div>
+            ) : isGreeting ? (
+              <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-[#0D47A1]/90 backdrop-blur-md text-white border border-[#2196F3] text-xs font-bold shadow-lg">
+                <Sparkles size={13} className="text-[#90CAF9] animate-pulse" />
+                <span>Greeting {candidateName}...</span>
+              </div>
+            ) : isSpeaking ? (
+              <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-[#0D47A1]/90 backdrop-blur-md text-white border border-[#2196F3] text-xs font-bold shadow-lg">
+                <div className="flex items-center gap-0.5">
+                  <span className="w-1 h-3 bg-[#90CAF9] rounded-full animate-bounce" />
+                  <span className="w-1 h-4 bg-[#2196F3] rounded-full animate-bounce [animation-delay:0.15s]" />
+                  <span className="w-1 h-2 bg-[#90CAF9] rounded-full animate-bounce [animation-delay:0.3s]" />
+                  <span className="w-1 h-5 bg-[#2196F3] rounded-full animate-bounce [animation-delay:0.45s]" />
                 </div>
-              )}
-            </div>
-
-            {/* Status Footer Below Avatar */}
-            <div className="video-card-footer">
-              <div className="interviewer-identity">
-                <span className="interviewer-name-large">
-                  {interviewerConfig.name}
-                </span>
-                <span className="interviewer-subtitle">
-                  {interviewerConfig.genderLabel}
-                </span>
+                <span>AI is speaking...</span>
               </div>
-
-              <div className="interviewer-status-badge">
-                {isSubmitting ? (
-                  <div className="status-indicator thinking">
-                    <Loader2 size={13} className="spin" />
-                    <span>Thinking...</span>
-                  </div>
-                ) : isSpeaking ? (
-                  <div className="status-indicator speaking">
-                    <span className="wave-bars">
-                      <span className="bar" />
-                      <span className="bar" />
-                      <span className="bar" />
-                      <span className="bar" />
-                    </span>
-                    <span>Speaking...</span>
-                  </div>
-                ) : isListening ? (
-                  <div className="status-indicator listening">
-                    <Mic size={13} className="mic-pulse" />
-                    <span>Listening...</span>
-                  </div>
-                ) : (
-                  <div className="status-indicator ready">
-                    <span className="status-ready-dot" />
-                    <span>Ready</span>
-                  </div>
-                )}
+            ) : isListening ? (
+              <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-emerald-950/90 backdrop-blur-md text-emerald-300 border border-emerald-500/50 text-xs font-bold shadow-lg">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span>Listening... Speak or type below</span>
               </div>
-            </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-slate-900/85 backdrop-blur-md text-white border border-[#90CAF9]/40 text-xs font-medium shadow-md">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span>Your turn · Speak or type below</span>
+              </div>
+            )}
           </div>
 
-          {/* RIGHT: CANDIDATE LIVE CAMERA CARD */}
-          <div className="video-card candidate-camera-card">
-            <div className="video-card-top-bar">
-              <div className="role-pill">
-                <User size={13} />
-                <span>You • Candidate</span>
-              </div>
-              <div className="camera-status-pill">
-                <span className={cameraOn ? "dot-active" : "dot-inactive"} />
-                <span>{cameraOn ? "Camera On" : "Camera Off"}</span>
-              </div>
-            </div>
-
-            {/* Video Container */}
-            <div className="video-display-box">
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                className={`candidate-video-elem ${cameraOn ? "visible" : "hidden"}`}
-              />
-
-              {!cameraOn && (
-                <div className="camera-off-fallback">
-                  <div className="fallback-camera-icon">
-                    <UserRound size={36} />
-                  </div>
-                  <h3>Camera is off</h3>
-                  <p>
-                    {cameraError ||
-                      "Enable your camera for an authentic face-to-face mock interview experience."}
-                  </p>
-                  <button
-                    type="button"
-                    className="primary-button compact"
-                    onClick={() => void startCamera()}
-                  >
-                    <Camera size={15} />
-                    <span>Enable Camera</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Footer with Candidate Controls */}
-            <div className="video-card-footer candidate-footer-controls">
-              <div className="candidate-media-badges">
-                <span className={`media-chip ${cameraOn ? "active" : ""}`}>
-                  {cameraOn ? <Camera size={13} /> : <CameraOff size={13} />}
-                  <span>{cameraOn ? "Video active" : "Video off"}</span>
-                </span>
-                <span className={`media-chip ${isListening ? "active" : ""}`}>
-                  {isListening ? <Mic size={13} /> : <MicOff size={13} />}
-                  <span>{isListening ? "Mic listening" : "Mic ready"}</span>
-                </span>
-              </div>
-
-              <div className="candidate-action-buttons">
-                <button
-                  type="button"
-                  className={`camera-toggle-btn ${cameraOn ? "on" : "off"}`}
-                  onClick={toggleCamera}
-                  title={cameraOn ? "Turn camera off" : "Turn camera on"}
-                  aria-label={cameraOn ? "Turn camera off" : "Turn camera on"}
-                >
-                  {cameraOn ? <Camera size={15} /> : <CameraOff size={15} />}
-                </button>
-                <button
-                  type="button"
-                  className={`camera-toggle-btn ${isListening ? "mic-on" : ""}`}
-                  onClick={isListening ? stopListening : startListening}
-                  disabled={!speechSupported || isSubmitting}
-                  title={isListening ? "Stop microphone" : "Start microphone"}
-                  aria-label={isListening ? "Stop microphone" : "Start microphone"}
-                >
-                  {isListening ? <Mic size={15} /> : <MicOff size={15} />}
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* BOTTOM ROW: CURRENT QUESTION & CANDIDATE ANSWER */}
-        <section className="interview-interaction-grid">
-          {/* CURRENT QUESTION CARD */}
-          <div className="question-card">
-            <div className="question-card-header">
-              <div className="question-badge-left">
-                <div className="question-number-pill">
-                  Question {currentQuestionNumber} of {totalQuestions}
-                </div>
-                <div className="question-meta-tags">
-                  {currentQ?.topic && (
-                    <span className="tag-pill">{currentQ.topic}</span>
-                  )}
-                  {currentQ?.difficulty && (
-                    <span className="tag-pill capitalize">
-                      {currentQ.difficulty}
-                    </span>
-                  )}
-                  {currentQ?.question_type && (
-                    <span className="tag-pill">{currentQ.question_type}</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="question-timer-pill">
-                <Clock3 size={13} />
-                <span>{formatTime(questionSeconds)}</span>
-              </div>
-            </div>
-
-            <div className="question-interviewer-label">
-              <Bot size={15} />
-              <span>{interviewerConfig.name} asks:</span>
-            </div>
-
-            <p className="question-prompt-text">{questionText}</p>
-
-            <div className="question-card-bottom">
-              <button
-                type="button"
-                className="audio-tts-btn"
-                onClick={() => (isSpeaking ? stopSpeaking() : speakQuestion())}
-              >
-                <Volume2 size={15} />
-                <span>{isSpeaking ? "Stop Voice" : "Listen to Question"}</span>
-              </button>
-              <div className="secure-badge">
-                <Wifi size={13} />
-                <span>Real-Time AI Evaluation</span>
-              </div>
-            </div>
+          {/* FLOATING INTERVIEWER BADGE (TOP-RIGHT) */}
+          <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-10 hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/75 backdrop-blur-md border border-[#90CAF9]/30 text-white text-xs font-semibold">
+            <Bot size={13} className="text-[#2196F3]" />
+            <span>{interviewerConfig.name}</span>
+            <span className="text-slate-400 text-[10px]">•</span>
+            <span className="text-slate-300 text-[10px]">{interviewerConfig.roleLabel}</span>
           </div>
 
-          {/* ANSWER INPUT & SUBMISSION CARD */}
-          <div className="answer-card">
-            <div className="answer-card-header">
-              <div className="answer-heading">
-                <h3>Your Response</h3>
-                <span className="answer-subtitle">
-                  {isListening
-                    ? "Dictating live speech..."
-                    : "Type or speak your answer"}
-                </span>
-              </div>
-              <div className="char-count">
-                {userAnswer.length.toLocaleString()} characters
-              </div>
-            </div>
-
-            <textarea
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              disabled={isSubmitting || isPaused}
-              placeholder="Type your structured answer here, or click 'Answer by voice' to speak naturally…"
-              className="answer-textarea"
-              aria-label="Candidate interview answer"
+          {/* ====================================================
+              3. CANDIDATE CAMERA — PICTURE IN PICTURE (PiP)
+          ==================================================== */}
+          <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-20 w-[150px] sm:w-[220px] md:w-[260px] lg:w-[280px] aspect-video rounded-xl sm:rounded-2xl overflow-hidden border-2 border-[#90CAF9] shadow-2xl bg-slate-900 group transition-all">
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className={`w-full h-full object-cover ${cameraOn ? "block" : "hidden"}`}
             />
 
-            <div className="answer-card-footer">
-              <div className="answer-footer-left">
+            {!cameraOn && (
+              <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center text-slate-300">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center mb-1">
+                  <UserRound size={16} />
+                </div>
+                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-300">Camera Off</span>
                 <button
                   type="button"
-                  className={`voice-record-btn ${isListening ? "recording" : ""}`}
-                  onClick={isListening ? stopListening : startListening}
-                  disabled={!speechSupported || isSubmitting}
+                  onClick={() => void startCamera()}
+                  className="mt-1 px-2.5 py-0.5 rounded-lg bg-[#2196F3] hover:bg-[#0D47A1] text-white text-[9px] sm:text-[10px] font-bold transition-colors cursor-pointer"
                 >
-                  {isListening ? (
-                    <>
-                      <Mic size={16} className="mic-spin" />
-                      <span>Stop Dictation</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mic size={16} />
-                      <span>Answer by Voice</span>
-                    </>
-                  )}
+                  Turn On
                 </button>
               </div>
+            )}
 
-              <div className="answer-footer-right">
-                <button
-                  type="button"
-                  className="pause-btn"
-                  onClick={togglePause}
-                  disabled={isSubmitting || isCompleting}
-                >
-                  {isPaused ? <Play size={15} /> : <Pause size={15} />}
-                  <span>{isPaused ? "Resume" : "Pause"}</span>
-                </button>
+            {/* PiP Overlay: Name Badge */}
+            <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[9px] sm:text-[10px] font-bold">
+              <span className={`w-1.5 h-1.5 rounded-full ${cameraOn ? "bg-emerald-400" : "bg-slate-400"}`} />
+              <span className="truncate max-w-[70px] sm:max-w-[120px]">{candidateName} (You)</span>
+            </div>
 
-                <button
-                  type="button"
-                  className="submit-answer-btn"
-                  onClick={() => void submitAnswer()}
-                  disabled={
-                    !userAnswer.trim() ||
-                    isSubmitting ||
-                    isPaused ||
-                    isCompleting
-                  }
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={16} className="spin" />
-                      <span>Evaluating…</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Submit Answer</span>
-                      <Send size={15} />
-                    </>
-                  )}
-                </button>
-              </div>
+            {/* PiP Overlay: Quick Controls on hover */}
+            <div className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 backdrop-blur-xs p-1 rounded-lg">
+              <button
+                type="button"
+                onClick={toggleCamera}
+                title={cameraOn ? "Turn camera off" : "Turn camera on"}
+                className="p-1 rounded text-white hover:text-[#90CAF9] transition-colors cursor-pointer"
+              >
+                {cameraOn ? <Camera size={13} /> : <CameraOff size={13} />}
+              </button>
+              <button
+                type="button"
+                onClick={isListening ? stopListening : startListening}
+                disabled={!speechSupported || isSubmitting}
+                title={isListening ? "Stop microphone" : "Start microphone"}
+                className="p-1 rounded text-white hover:text-[#90CAF9] transition-colors cursor-pointer"
+              >
+                {isListening ? <Mic size={13} className="text-rose-400 animate-pulse" /> : <MicOff size={13} />}
+              </button>
             </div>
           </div>
-        </section>
-      </main>
+        </div>
+      </div>
 
       {/* ====================================================
-          PAUSE MODAL OVERLAY
+          4. QUESTION, TRANSCRIPT & BOTTOM CONTROL BAR
       ==================================================== */}
-      {isPaused && (
-        <div className="pause-overlay-modal" role="dialog" aria-modal="true">
-          <div className="pause-modal-card">
-            <div className="pause-icon-circle">
-              <Pause size={28} />
+      <div className="shrink-0 flex flex-col gap-2.5 px-3 sm:px-4 pb-3">
+        {/* ROW 1: QUESTION (LEFT) & ANSWER / TRANSCRIPT (RIGHT) */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 sm:gap-3 items-stretch">
+          {/* QUESTION SECTION (5 cols) */}
+          <div className="md:col-span-5 bg-white rounded-2xl border border-[#90CAF9]/40 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#E3F2FD] border border-[#90CAF9] text-[10px] sm:text-[11px] font-black text-[#0D47A1]">
+                    QUESTION {String(currentQuestionNumber).padStart(2, "0")}
+                  </span>
+                  {currentQ?.topic && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 truncate max-w-[120px]">
+                      {currentQ.topic}
+                    </span>
+                  )}
+                </div>
+                {currentQ?.difficulty && (
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full border capitalize bg-[#E3F2FD] text-[#0D47A1] border-[#90CAF9]">
+                    {currentQ.difficulty}
+                  </span>
+                )}
+              </div>
+
+              <div className="text-[11px] font-bold text-[#2196F3] flex items-center gap-1 mb-1">
+                <Bot size={13} />
+                <span>{interviewerConfig.name} asks:</span>
+              </div>
+
+              <p className="text-xs sm:text-sm md:text-base font-extrabold text-[#0D47A1] leading-snug line-clamp-3 sm:line-clamp-4">
+                "{questionText}"
+              </p>
             </div>
-            <h2>Interview Paused</h2>
-            <p>
-              Take a breath. Your timer, current question, and answer draft are securely preserved.
-            </p>
+
+            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+              <span className="flex items-center gap-1">
+                <Clock3 size={12} className="text-[#2196F3]" />
+                <span>Time: {formatTime(questionSeconds)}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => (isSpeaking ? stopSpeaking() : speakText(questionText))}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2196F3] hover:text-[#0D47A1] cursor-pointer"
+              >
+                <Volume2 size={12} />
+                <span>{isSpeaking ? "Stop Voice" : "Re-read"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* CANDIDATE ANSWER / TRANSCRIPT SECTION (7 cols) */}
+          <div className="md:col-span-7 bg-white rounded-2xl border border-[#90CAF9]/40 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black text-[#0D47A1] uppercase tracking-wider">
+                    Your Answer
+                  </span>
+                  {isListening && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-bold border border-rose-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+                      Live Dictation Active
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {userAnswer.length} chars
+                </span>
+              </div>
+
+              <textarea
+                value={userAnswer}
+                onChange={(e) => setUserAnswer(e.target.value)}
+                disabled={isSubmitting || isPaused}
+                placeholder={
+                  isListening
+                    ? "Listening... Speak naturally and your words will appear here in real time."
+                    : "Click 'Voice Dictation' to speak, or type your structured answer here..."
+                }
+                className={`w-full h-18 sm:h-20 md:h-22 p-2.5 rounded-xl bg-[#F8FCFF] text-slate-800 border text-xs sm:text-sm leading-relaxed resize-none shadow-2xs focus:outline-hidden transition-all ${
+                  isListening
+                    ? "border-[#2196F3] ring-2 ring-[#90CAF9]/50"
+                    : "border-[#90CAF9] focus:border-[#2196F3] focus:ring-2 focus:ring-[#90CAF9]/30"
+                }`}
+                aria-label="Candidate interview answer"
+              />
+            </div>
+
+            <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+              <span>Press Submit when finished answering</span>
+              {isSubmitting && (
+                <span className="text-[#2196F3] font-bold flex items-center gap-1">
+                  <Loader2 size={11} className="animate-spin" /> Evaluating answer...
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ROW 2: FIXED/STICKY BOTTOM CONTROL BAR */}
+        <div className="h-13 sm:h-14 bg-white rounded-xl sm:rounded-2xl border border-[#90CAF9]/40 px-3 sm:px-5 flex items-center justify-between shadow-xs">
+          {/* Left Media Controls */}
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              className="primary-button resume-button"
-              onClick={togglePause}
+              onClick={isListening ? stopListening : startListening}
+              disabled={!speechSupported || isSubmitting}
+              title={isListening ? "Stop microphone dictation" : "Start microphone dictation"}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                isListening
+                  ? "bg-rose-50 text-rose-700 border-rose-300 ring-2 ring-rose-300/40"
+                  : "bg-[#E3F2FD] hover:bg-[#90CAF9]/40 text-[#0D47A1] border-[#90CAF9]"
+              }`}
             >
-              <Play size={16} />
-              <span>Resume Interview</span>
+              <Mic size={14} className={isListening ? "animate-pulse text-rose-600" : "text-[#2196F3]"} />
+              <span className="hidden sm:inline">{isListening ? "Stop Dictation" : "Voice Dictation"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleCamera}
+              title={cameraOn ? "Turn camera off" : "Turn camera on"}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
+                cameraOn
+                  ? "bg-[#E3F2FD] border-[#2196F3] text-[#0D47A1]"
+                  : "bg-slate-100 border-slate-300 text-slate-600"
+              }`}
+            >
+              {cameraOn ? <Camera size={14} /> : <CameraOff size={14} />}
+              <span className="hidden sm:inline">{cameraOn ? "Camera On" : "Camera Off"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => (isSpeaking ? stopSpeaking() : speakText(questionText))}
+              title="Re-read question aloud"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 hover:bg-[#E3F2FD] text-[#0D47A1] text-xs font-bold border border-slate-200 hover:border-[#90CAF9] transition-colors cursor-pointer"
+            >
+              <Volume2 size={14} className="text-[#2196F3]" />
+              <span>{isSpeaking ? "Stop Audio" : "Re-read"}</span>
+            </button>
+          </div>
+
+          {/* Center Status / Pause */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={togglePause}
+              disabled={isSubmitting || isCompleting}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 transition-colors cursor-pointer"
+            >
+              {isPaused ? <Play size={13} className="text-[#2196F3]" /> : <Pause size={13} className="text-slate-500" />}
+              <span>{isPaused ? "Resume" : "Pause"}</span>
+            </button>
+
+            <div className="hidden lg:flex items-center gap-1.5 text-xs text-emerald-600 font-semibold pl-2 border-l border-slate-200">
+              <Wifi size={13} />
+              <span>Stable</span>
+            </div>
+          </div>
+
+          {/* Right Primary Action & Submit */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void submitAnswer()}
+              disabled={!userAnswer.trim() || isSubmitting || isPaused || isCompleting}
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 rounded-xl bg-gradient-to-r from-[#2196F3] to-[#0D47A1] hover:from-[#1E88E5] hover:to-[#0B3D91] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#2196F3]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <span>Submit Answer</span>
+                  <Send size={13} />
+                </>
+              )}
             </button>
           </div>
         </div>
-      )}
-
-      {/* ====================================================
-          FOOTER BAR
-      ==================================================== */}
-      <footer className="room-footer">
-        <div className="footer-status-pills">
-          <span className="status-item">
-            <Wifi size={13} />
-            <span>Connection Stable</span>
-          </span>
-          <span className="dot-divider">•</span>
-          <span className="status-item">
-            <Bot size={13} />
-            <span>Interviewer: {interviewerConfig.name}</span>
-          </span>
-          <span className="dot-divider">•</span>
-          <span className="status-item">
-            {cameraOn ? (
-              <CheckCircle2 size={13} className="text-blue" />
-            ) : (
-              <AlertCircle size={13} />
-            )}
-            <span>{cameraOn ? "Camera Connected" : "Camera Standby"}</span>
-          </span>
-        </div>
-
-        <button
-          type="button"
-          className="exit-interview-btn"
-          onClick={handleExit}
-          disabled={isCompleting || isSubmitting}
-        >
-          <X size={14} />
-          <span>Exit Interview</span>
-        </button>
-      </footer>
-
-      {/* ======================================================
-          PRODUCTION STYLES
-          Pure Light Blue & White Palette:
-          - #E3F2FD (Very Light Blue)
-          - #90CAF9 (Soft Blue Borders / Accents)
-          - #2196F3 (Primary Vibrant Blue)
-          - #0D47A1 (Deep Blue Text / Contrast)
-          - #FFFFFF (White)
-      ====================================================== */}
-      <style>{styles}</style>
+      </div>
     </div>
   );
 }
-
-const styles = `
-  .interview-room,
-  .room-loading,
-  .room-error {
-    width: 100%;
-    min-height: 100vh;
-    background-color: #FFFFFF;
-    color: #0D47A1;
-    font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-    line-height: 1.5;
-  }
-
-  .interview-room *,
-  .interview-room *::before,
-  .interview-room *::after {
-    box-sizing: border-box;
-  }
-
-  /* ----------------------------------------------------
-     HEADER
-  ---------------------------------------------------- */
-  .room-header {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    background-color: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border-bottom: 1px solid #E3F2FD;
-    padding: 10px 24px;
-    display: grid;
-    grid-template-columns: 1fr minmax(280px, 480px) 1fr;
-    align-items: center;
-    gap: 20px;
-    box-shadow: 0 2px 12px rgba(13, 71, 161, 0.04);
-  }
-
-  .header-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .brand-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
-    color: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.25);
-    flex-shrink: 0;
-  }
-
-  .brand-text {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .brand-title {
-    font-size: 0.95rem;
-    font-weight: 800;
-    color: #0D47A1;
-    line-height: 1.2;
-  }
-
-  .brand-subtitle {
-    font-size: 0.75rem;
-    color: #2196F3;
-    font-weight: 600;
-  }
-
-  .header-progress {
-    width: 100%;
-  }
-
-  .progress-meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #475569;
-    margin-bottom: 6px;
-  }
-
-  .progress-meta strong {
-    color: #0D47A1;
-  }
-
-  .progress-track {
-    height: 7px;
-    border-radius: 999px;
-    background-color: #E3F2FD;
-    overflow: hidden;
-  }
-
-  .progress-fill {
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, #2196F3 0%, #0D47A1 100%);
-    transition: width 0.3s ease;
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-  }
-
-  .live-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background-color: #E3F2FD;
-    border: 1px solid #90CAF9;
-    color: #0D47A1;
-    padding: 5px 10px;
-    border-radius: 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
-  }
-
-  .live-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background-color: #2196F3;
-    box-shadow: 0 0 6px #2196F3;
-  }
-
-  .timer-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background-color: #FFFFFF;
-    border: 1px solid #90CAF9;
-    color: #0D47A1;
-    padding: 5px 12px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .timer-low {
-    background-color: #FFF3E0;
-    border-color: #FFA726;
-    color: #E65100;
-  }
-
-  .icon-button {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    border: 1px solid #90CAF9;
-    background-color: #FFFFFF;
-    color: #0D47A1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .icon-button:hover:not(:disabled) {
-    background-color: #E3F2FD;
-    border-color: #2196F3;
-    transform: translateY(-1px);
-  }
-
-  .icon-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  /* Alert Banner */
-  .room-alert {
-    width: min(1360px, calc(100% - 48px));
-    margin: 12px auto 0 auto;
-    background-color: #FFFFFF;
-    border: 1px solid #90CAF9;
-    border-radius: 10px;
-    padding: 10px 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #0D47A1;
-    font-size: 0.825rem;
-    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.08);
-  }
-
-  .room-alert button {
-    margin-left: auto;
-    background: none;
-    border: none;
-    color: #475569;
-    cursor: pointer;
-  }
-
-  /* ----------------------------------------------------
-     MAIN ROOM LAYOUT
-  ---------------------------------------------------- */
-  .room-main {
-    width: min(1360px, calc(100% - 48px));
-    margin: 20px auto;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  /* ----------------------------------------------------
-     TWO-PANEL STAGE (AI & CANDIDATE)
-  ---------------------------------------------------- */
-  .two-panel-stage {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    width: 100%;
-  }
-
-  .video-card {
-    background-color: #FFFFFF;
-    border: 1px solid rgba(33, 150, 243, 0.2);
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: 0 8px 24px rgba(13, 71, 161, 0.07);
-    display: flex;
-    flex-direction: column;
-    position: relative;
-  }
-
-  .video-card-top-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px;
-    background-color: #F8FBFE;
-    border-bottom: 1px solid #E3F2FD;
-  }
-
-  .role-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #0D47A1;
-  }
-
-  .avatar-name-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background-color: #E3F2FD;
-    border: 1px solid #90CAF9;
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    color: #0D47A1;
-  }
-
-  .avatar-circle-mini {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background-color: #2196F3;
-    color: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.65rem;
-    font-weight: 800;
-  }
-
-  .camera-status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #475569;
-  }
-
-  .dot-active {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background-color: #2196F3;
-    box-shadow: 0 0 6px #2196F3;
-  }
-
-  .dot-inactive {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background-color: #94A3B8;
-  }
-
-  /* Video Display Boxes */
-  .video-display-box {
-    position: relative;
-    width: 100%;
-    height: 380px;
-    background-color: #0D1B2A;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .interviewer-video-elem {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  .candidate-video-elem {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    transform: scaleX(-1);
-  }
-
-  .candidate-video-elem.hidden {
-    display: none;
-  }
-
-  .avatar-fallback-box {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #E3F2FD 0%, #FFFFFF 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #0D47A1;
-  }
-
-  .fallback-avatar-circle {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
-    color: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: 800;
-    margin-bottom: 12px;
-    box-shadow: 0 8px 20px rgba(33, 150, 243, 0.25);
-  }
-
-  .avatar-fallback-box h3 {
-    margin: 0 0 4px 0;
-    font-size: 1.25rem;
-    font-weight: 800;
-  }
-
-  .avatar-fallback-box p {
-    margin: 0;
-    color: #2196F3;
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-
-  .camera-off-fallback {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #F8FBFE 0%, #FFFFFF 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 24px;
-  }
-
-  .fallback-camera-icon {
-    width: 68px;
-    height: 68px;
-    border-radius: 18px;
-    background-color: #E3F2FD;
-    border: 1px solid #90CAF9;
-    color: #2196F3;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 14px;
-  }
-
-  .camera-off-fallback h3 {
-    margin: 0 0 6px 0;
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: #0D47A1;
-  }
-
-  .camera-off-fallback p {
-    margin: 0 0 16px 0;
-    font-size: 0.85rem;
-    color: #475569;
-    max-width: 340px;
-    line-height: 1.45;
-  }
-
-  /* Card Footers */
-  .video-card-footer {
-    padding: 12px 18px;
-    background-color: #FFFFFF;
-    border-top: 1px solid #E3F2FD;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .interviewer-identity {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .interviewer-name-large {
-    font-size: 0.95rem;
-    font-weight: 800;
-    color: #0D47A1;
-  }
-
-  .interviewer-subtitle {
-    font-size: 0.72rem;
-    color: #2196F3;
-    font-weight: 600;
-  }
-
-  .status-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 700;
-  }
-
-  .status-indicator.ready {
-    background-color: #E3F2FD;
-    color: #0D47A1;
-    border: 1px solid #90CAF9;
-  }
-
-  .status-ready-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #2196F3;
-  }
-
-  .status-indicator.speaking {
-    background-color: #E3F2FD;
-    color: #0D47A1;
-    border: 1px solid #2196F3;
-  }
-
-  .status-indicator.listening {
-    background-color: #E3F2FD;
-    color: #0D47A1;
-    border: 1px solid #2196F3;
-  }
-
-  .status-indicator.thinking {
-    background-color: #E3F2FD;
-    color: #0D47A1;
-    border: 1px solid #90CAF9;
-  }
-
-  .wave-bars {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    height: 12px;
-  }
-
-  .wave-bars .bar {
-    width: 2.5px;
-    background-color: #2196F3;
-    border-radius: 2px;
-    animation: barPulse 0.9s infinite ease-in-out;
-  }
-
-  .wave-bars .bar:nth-child(1) { height: 6px; animation-delay: 0.1s; }
-  .wave-bars .bar:nth-child(2) { height: 12px; animation-delay: 0.25s; }
-  .wave-bars .bar:nth-child(3) { height: 8px; animation-delay: 0.4s; }
-  .wave-bars .bar:nth-child(4) { height: 11px; animation-delay: 0.15s; }
-
-  @keyframes barPulse {
-    0%, 100% { transform: scaleY(0.4); }
-    50% { transform: scaleY(1); }
-  }
-
-  .candidate-footer-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .candidate-media-badges {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .media-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #64748B;
-    background-color: #F8FBFE;
-    border: 1px solid #E3F2FD;
-    padding: 3px 8px;
-    border-radius: 6px;
-  }
-
-  .media-chip.active {
-    color: #0D47A1;
-    border-color: #90CAF9;
-    background-color: #E3F2FD;
-  }
-
-  .candidate-action-buttons {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .camera-toggle-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    border: 1px solid #90CAF9;
-    background-color: #FFFFFF;
-    color: #0D47A1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .camera-toggle-btn:hover:not(:disabled) {
-    background-color: #E3F2FD;
-    border-color: #2196F3;
-  }
-
-  .camera-toggle-btn.off {
-    background-color: #F1F5F9;
-    color: #64748B;
-  }
-
-  .camera-toggle-btn.mic-on {
-    background-color: #E3F2FD;
-    border-color: #2196F3;
-    color: #2196F3;
-  }
-
-  /* ----------------------------------------------------
-     INTERVIEW INTERACTION GRID (QUESTION & ANSWER)
-  ---------------------------------------------------- */
-  .interview-interaction-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-    gap: 20px;
-    align-items: stretch;
-  }
-
-  /* Question Card */
-  .question-card {
-    background-color: #FFFFFF;
-    border: 1px solid rgba(33, 150, 243, 0.2);
-    border-radius: 18px;
-    padding: 22px;
-    box-shadow: 0 8px 24px rgba(13, 71, 161, 0.07);
-    display: flex;
-    flex-direction: column;
-  }
-
-  .question-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 14px;
-  }
-
-  .question-badge-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .question-number-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: 6px;
-    background-color: #E3F2FD;
-    border: 1px solid #90CAF9;
-    color: #0D47A1;
-    font-size: 0.75rem;
-    font-weight: 700;
-  }
-
-  .question-meta-tags {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .tag-pill {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #475569;
-    background-color: #F8FBFE;
-    border: 1px solid #E3F2FD;
-    padding: 2px 8px;
-    border-radius: 4px;
-  }
-
-  .tag-pill.capitalize {
-    text-transform: capitalize;
-  }
-
-  .question-timer-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #475569;
-    background-color: #F8FBFE;
-    border: 1px solid #E3F2FD;
-    padding: 3px 8px;
-    border-radius: 6px;
-  }
-
-  .question-interviewer-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #2196F3;
-    margin-bottom: 8px;
-  }
-
-  .question-prompt-text {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #0D47A1;
-    line-height: 1.55;
-    margin: 0 0 20px 0;
-    flex: 1;
-  }
-
-  .question-card-bottom {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top: 14px;
-    border-top: 1px solid #F1F5F9;
-  }
-
-  .audio-tts-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #0D47A1;
-    background-color: #E3F2FD;
-    border: 1px solid #90CAF9;
-    padding: 6px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .audio-tts-btn:hover {
-    background-color: #2196F3;
-    color: #FFFFFF;
-    border-color: #2196F3;
-  }
-
-  .secure-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.72rem;
-    color: #64748B;
-  }
-
-  /* Answer Card */
-  .answer-card {
-    background-color: #FFFFFF;
-    border: 1px solid rgba(33, 150, 243, 0.2);
-    border-radius: 18px;
-    padding: 22px;
-    box-shadow: 0 8px 24px rgba(13, 71, 161, 0.07);
-    display: flex;
-    flex-direction: column;
-  }
-
-  .answer-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-
-  .answer-heading h3 {
-    margin: 0;
-    font-size: 0.95rem;
-    font-weight: 800;
-    color: #0D47A1;
-  }
-
-  .answer-subtitle {
-    font-size: 0.72rem;
-    color: #2196F3;
-    font-weight: 600;
-  }
-
-  .char-count {
-    font-size: 0.72rem;
-    color: #64748B;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .answer-textarea {
-    width: 100%;
-    min-height: 140px;
-    flex: 1;
-    padding: 14px;
-    border-radius: 12px;
-    border: 1.5px solid #E3F2FD;
-    background-color: #F8FBFE;
-    font-family: inherit;
-    font-size: 0.95rem;
-    line-height: 1.6;
-    color: #0D47A1;
-    resize: vertical;
-    outline: none;
-    transition: border-color 0.2s ease, background-color 0.2s ease;
-    margin-bottom: 16px;
-  }
-
-  .answer-textarea:focus {
-    border-color: #2196F3;
-    background-color: #FFFFFF;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.12);
-  }
-
-  .answer-card-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .voice-record-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background-color: #FFFFFF;
-    color: #0D47A1;
-    border: 1.5px solid #90CAF9;
-    padding: 9px 16px;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .voice-record-btn:hover:not(:disabled) {
-    background-color: #E3F2FD;
-    border-color: #2196F3;
-  }
-
-  .voice-record-btn.recording {
-    background-color: #E3F2FD;
-    border-color: #2196F3;
-    color: #2196F3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.15);
-  }
-
-  .mic-pulse {
-    animation: pulseAnim 1.2s infinite;
-  }
-
-  @keyframes pulseAnim {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.15); opacity: 0.7; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  .answer-footer-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .pause-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background-color: #FFFFFF;
-    color: #0D47A1;
-    border: 1px solid #90CAF9;
-    padding: 9px 14px;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .pause-btn:hover:not(:disabled) {
-    background-color: #E3F2FD;
-    border-color: #2196F3;
-  }
-
-  .submit-answer-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background-color: #2196F3;
-    color: #FFFFFF;
-    border: none;
-    padding: 9px 20px;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(33, 150, 243, 0.28);
-    transition: all 0.2s ease;
-  }
-
-  .submit-answer-btn:hover:not(:disabled) {
-    background-color: #0D47A1;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(13, 71, 161, 0.3);
-  }
-
-  .submit-answer-btn:disabled,
-  .voice-record-btn:disabled,
-  .pause-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
-  }
-
-  /* ----------------------------------------------------
-     FOOTER
-  ---------------------------------------------------- */
-  .room-footer {
-    background-color: #F8FBFE;
-    border-top: 1px solid #E3F2FD;
-    padding: 12px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 0.8rem;
-    color: #64748B;
-  }
-
-  .footer-status-pills {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .status-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .dot-divider {
-    color: #90CAF9;
-  }
-
-  .exit-interview-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: none;
-    border: 1px solid #90CAF9;
-    color: #0D47A1;
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .exit-interview-btn:hover:not(:disabled) {
-    background-color: #E3F2FD;
-    border-color: #2196F3;
-  }
-
-  /* ----------------------------------------------------
-     PAUSE MODAL OVERLAY
-  ---------------------------------------------------- */
-  .pause-overlay-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    background-color: rgba(13, 71, 161, 0.4);
-    backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-  }
-
-  .pause-modal-card {
-    background-color: #FFFFFF;
-    border: 1.5px solid #90CAF9;
-    border-radius: 22px;
-    padding: 36px 32px;
-    max-width: 440px;
-    width: 100%;
-    text-align: center;
-    box-shadow: 0 20px 48px rgba(13, 71, 161, 0.2);
-  }
-
-  .pause-icon-circle {
-    width: 68px;
-    height: 68px;
-    border-radius: 50%;
-    background-color: #E3F2FD;
-    color: #2196F3;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px auto;
-  }
-
-  .pause-modal-card h2 {
-    margin: 0 0 10px 0;
-    font-size: 1.4rem;
-    font-weight: 850;
-    color: #0D47A1;
-  }
-
-  .pause-modal-card p {
-    margin: 0 0 24px 0;
-    font-size: 0.9rem;
-    color: #475569;
-    line-height: 1.5;
-  }
-
-  .resume-button {
-    width: 100%;
-    padding: 12px 24px;
-    font-size: 0.95rem;
-    font-weight: 700;
-    background-color: #2196F3;
-    color: #FFFFFF;
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 6px 18px rgba(33, 150, 243, 0.3);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all 0.2s ease;
-  }
-
-  .resume-button:hover {
-    background-color: #0D47A1;
-    transform: translateY(-2px);
-  }
-
-  /* ----------------------------------------------------
-     LOADING & ERROR PAGES
-  ---------------------------------------------------- */
-  .room-loading,
-  .room-error {
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-  }
-
-  .loading-card,
-  .error-card {
-    background-color: #FFFFFF;
-    border: 1.5px solid #90CAF9;
-    border-radius: 20px;
-    padding: 40px 32px;
-    max-width: 460px;
-    width: 100%;
-    text-align: center;
-    box-shadow: 0 16px 40px rgba(13, 71, 161, 0.1);
-  }
-
-  .loading-logo,
-  .error-icon {
-    width: 58px;
-    height: 58px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
-    color: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px auto;
-  }
-
-  .error-icon {
-    background: #FFF3E0;
-    color: #E65100;
-    border: 1px solid #FFA726;
-  }
-
-  .loading-card h1,
-  .error-card h1 {
-    font-size: 1.35rem;
-    font-weight: 800;
-    color: #0D47A1;
-    margin: 12px 0 8px 0;
-  }
-
-  .loading-card p,
-  .error-card p {
-    font-size: 0.875rem;
-    color: #475569;
-    margin: 0 0 24px 0;
-    line-height: 1.5;
-  }
-
-  .loading-track {
-    width: 100%;
-    height: 6px;
-    background-color: #E3F2FD;
-    border-radius: 999px;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .loading-track span {
-    display: block;
-    width: 40%;
-    height: 100%;
-    background: linear-gradient(90deg, #2196F3, #0D47A1);
-    border-radius: inherit;
-    animation: trackIndeterminate 1.4s infinite ease-in-out;
-  }
-
-  @keyframes trackIndeterminate {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(280%); }
-  }
-
-  .error-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-  }
-
-  .primary-button {
-    background-color: #2196F3;
-    color: #FFFFFF;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-size: 0.875rem;
-    font-weight: 700;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 4px 14px rgba(33, 150, 243, 0.28);
-    transition: all 0.2s ease;
-  }
-
-  .primary-button:hover {
-    background-color: #0D47A1;
-  }
-
-  .primary-button.compact {
-    padding: 8px 16px;
-    font-size: 0.8rem;
-  }
-
-  .secondary-button {
-    background-color: #FFFFFF;
-    color: #0D47A1;
-    border: 1px solid #90CAF9;
-    padding: 10px 18px;
-    border-radius: 10px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .secondary-button:hover {
-    background-color: #E3F2FD;
-    border-color: #2196F3;
-  }
-
-  .spin {
-    animation: spinAnim 1s linear infinite;
-  }
-
-  @keyframes spinAnim {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  .text-blue {
-    color: #2196F3;
-  }
-
-  /* ----------------------------------------------------
-     RESPONSIVE BREAKPOINTS
-  ---------------------------------------------------- */
-  @media (max-width: 1080px) {
-    .two-panel-stage {
-      grid-template-columns: 1fr;
-    }
-
-    .video-display-box {
-      height: 320px;
-    }
-
-    .interview-interaction-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 820px) {
-    .room-header {
-      grid-template-columns: auto 1fr auto;
-      padding: 10px 16px;
-    }
-
-    .brand-title {
-      display: none;
-    }
-
-    .brand-subtitle {
-      display: none;
-    }
-
-    .room-main {
-      width: calc(100% - 24px);
-      margin: 14px auto;
-    }
-  }
-
-  @media (max-width: 600px) {
-    .room-header {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
-      padding: 12px 14px;
-    }
-
-    .header-brand {
-      justify-content: space-between;
-    }
-
-    .brand-title {
-      display: block;
-    }
-
-    .brand-subtitle {
-      display: block;
-    }
-
-    .header-actions {
-      justify-content: space-between;
-      width: 100%;
-    }
-
-    .video-display-box {
-      height: 240px;
-    }
-
-    .answer-card-footer {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .voice-record-btn,
-    .answer-footer-right {
-      width: 100%;
-    }
-
-    .submit-answer-btn,
-    .pause-btn {
-      flex: 1;
-      justify-content: center;
-    }
-
-    .room-footer {
-      flex-direction: column;
-      gap: 10px;
-      text-align: center;
-    }
-  }
-`;
-
