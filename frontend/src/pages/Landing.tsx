@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useScroll, useSpring } from "framer-motion";
 import {
   ArrowRight,
   Award,
@@ -24,7 +24,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 // ============================================================
@@ -112,6 +112,29 @@ const interviewTypes = [
   { label: "Role Specific", count: "Tailored Tracks", icon: Award },
 ];
 
+const metricStripItems = [
+  {
+    icon: Bot,
+    title: "Adaptive Simulations",
+    desc: "Contextual AI questions matching real engineering roles",
+  },
+  {
+    icon: FileCheck,
+    title: "Resume & ATS Screening",
+    desc: "Uncover critical gaps before hiring managers do",
+  },
+  {
+    icon: Briefcase,
+    title: "Job Match Intelligence",
+    desc: "Map competencies directly to requirements",
+  },
+  {
+    icon: BarChart3,
+    title: "Deep Performance Analytics",
+    desc: "Granular scores on clarity, depth, and pacing",
+  },
+];
+
 const faqs = [
   {
     question: "How does the AI interview work?",
@@ -171,10 +194,10 @@ function FAQItem({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.35, delay: index * 0.05 }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.45, delay: index * 0.07, ease: "easeOut" }}
       className={`faq-item ${open ? "faq-item-open" : ""}`}
     >
       <button
@@ -197,7 +220,7 @@ function FAQItem({
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.25 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
           className="faq-answer-body"
         >
           <p>{answer}</p>
@@ -213,7 +236,15 @@ function FAQItem({
 
 function HeroDashboardMockup() {
   return (
-    <div className="hero-mockup-wrapper">
+    <motion.div
+      className="hero-mockup-wrapper"
+      animate={{ y: [0, -5, 0] }}
+      transition={{
+        duration: 6,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+    >
       <div className="mockup-subtle-glow" />
 
       {/* Main Mockup Window */}
@@ -379,7 +410,7 @@ function HeroDashboardMockup() {
       <motion.div
         className="floating-widget float-top-right"
         animate={{ y: [0, -6, 0] }}
-        transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+        transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
       >
         <div className="widget-score-pill">8.8</div>
         <div className="widget-info">
@@ -392,7 +423,7 @@ function HeroDashboardMockup() {
       <motion.div
         className="floating-widget float-bottom-left"
         animate={{ y: [0, 6, 0] }}
-        transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+        transition={{ repeat: Infinity, duration: 5.2, delay: 0.5, ease: "easeInOut" }}
       >
         <div className="widget-icon-pill">
           <CheckCircle2 size={16} />
@@ -402,7 +433,7 @@ function HeroDashboardMockup() {
           <strong className="widget-highlight">High relevance & depth</strong>
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -413,6 +444,22 @@ function HeroDashboardMockup() {
 export default function Landing() {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001,
+  });
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleRegister = () => {
     setMobileMenuOpen(false);
@@ -426,10 +473,13 @@ export default function Landing() {
 
   return (
     <div className="landing-wrapper">
+      {/* Scroll Progress Bar */}
+      <motion.div className="scroll-progress-bar" style={{ scaleX }} />
+
       {/* ======================================================
           1. NAVBAR
       ====================================================== */}
-      <header className="sticky-navbar">
+      <header className={`sticky-navbar ${isScrolled ? "navbar-scrolled" : ""}`}>
         <div className="navbar-container">
           {/* Logo & Product Name */}
           <button
@@ -509,6 +559,7 @@ export default function Landing() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
             className="mobile-drawer"
           >
             <div className="mobile-nav-links">
@@ -590,31 +641,48 @@ export default function Landing() {
         <section className="hero-section">
           <div className="hero-bg-visual" />
           <div className="hero-radial-backdrop" />
+          <div className="hero-radial-backdrop-secondary" />
 
           <div className="section-container hero-grid-container">
             {/* Left Column: Copy & Actions */}
-            <motion.div
-              className="hero-text-block"
-              initial={{ opacity: 0, y: 22 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="hero-badge-pill">
+            <div className="hero-text-block">
+              <motion.div
+                className="hero-badge-pill"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.05, ease: "easeOut" }}
+              >
+                <span className="hero-badge-dot" />
                 <span>Next-Generation AI Interview Platform</span>
-              </div>
+              </motion.div>
 
-              <h1 className="hero-heading">
+              <motion.h1
+                className="hero-heading"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.15, ease: "easeOut" }}
+              >
                 Prepare smarter.
                 <br />
                 <span className="hero-heading-gradient">Interview better.</span>
-              </h1>
+              </motion.h1>
 
-              <p className="hero-subtext">
+              <motion.p
+                className="hero-subtext"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.25, ease: "easeOut" }}
+              >
                 Practice realistic interviews, analyze your resume, understand
                 job requirements, and improve with structured AI feedback.
-              </p>
+              </motion.p>
 
-              <div className="hero-cta-buttons">
+              <motion.div
+                className="hero-cta-buttons"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.35, ease: "easeOut" }}
+              >
                 <button
                   type="button"
                   className="btn btn-hero-primary"
@@ -629,10 +697,15 @@ export default function Landing() {
                   <Play size={16} />
                   <span>See How It Works</span>
                 </a>
-              </div>
+              </motion.div>
 
               {/* Supporting Points */}
-              <div className="hero-supporting-points">
+              <motion.div
+                className="hero-supporting-points"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.45, ease: "easeOut" }}
+              >
                 <div className="support-item">
                   <div className="support-check">
                     <CheckCircle2 size={16} />
@@ -653,15 +726,15 @@ export default function Landing() {
                   </div>
                   <span>AI/ML preparation</span>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
 
             {/* Right Column: Hero Dashboard Mockup */}
             <motion.div
               className="hero-visual-block"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.7, delay: 0.15 }}
+              initial={{ opacity: 0, scale: 0.96, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
             >
               <HeroDashboardMockup />
             </motion.div>
@@ -673,53 +746,31 @@ export default function Landing() {
         ==================================================== */}
         <section className="metric-strip-section">
           <div className="section-container metric-strip-grid">
-            <div className="metric-col">
-              <div className="metric-icon-box">
-                <Bot size={20} className="metric-icon" />
-              </div>
-              <div className="metric-text">
-                <span className="metric-title">Adaptive Simulations</span>
-                <span className="metric-desc">
-                  Contextual AI questions matching real engineering roles
-                </span>
-              </div>
-            </div>
-
-            <div className="metric-col">
-              <div className="metric-icon-box">
-                <FileCheck size={20} className="metric-icon" />
-              </div>
-              <div className="metric-text">
-                <span className="metric-title">Resume & ATS Screening</span>
-                <span className="metric-desc">
-                  Uncover critical gaps before hiring managers do
-                </span>
-              </div>
-            </div>
-
-            <div className="metric-col">
-              <div className="metric-icon-box">
-                <Briefcase size={20} className="metric-icon" />
-              </div>
-              <div className="metric-text">
-                <span className="metric-title">Job Match Intelligence</span>
-                <span className="metric-desc">
-                  Map competencies directly to requirements
-                </span>
-              </div>
-            </div>
-
-            <div className="metric-col">
-              <div className="metric-icon-box">
-                <BarChart3 size={20} className="metric-icon" />
-              </div>
-              <div className="metric-text">
-                <span className="metric-title">Deep Performance Analytics</span>
-                <span className="metric-desc">
-                  Granular scores on clarity, depth, and pacing
-                </span>
-              </div>
-            </div>
+            {metricStripItems.map((item, index) => {
+              const IconComponent = item.icon;
+              return (
+                <motion.div
+                  key={item.title}
+                  className="metric-col"
+                  initial={{ opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.15 }}
+                  transition={{
+                    duration: 0.45,
+                    delay: index * 0.08,
+                    ease: "easeOut",
+                  }}
+                >
+                  <div className="metric-icon-box">
+                    <IconComponent size={20} className="metric-icon" />
+                  </div>
+                  <div className="metric-text">
+                    <span className="metric-title">{item.title}</span>
+                    <span className="metric-desc">{item.desc}</span>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </section>
 
@@ -728,7 +779,13 @@ export default function Landing() {
         ==================================================== */}
         <section id="features" className="section-padding features-section">
           <div className="section-container">
-            <div className="section-heading-box text-center">
+            <motion.div
+              className="section-heading-box text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
               <div className="section-pill-tag">
                 <span>Comprehensive Preparation</span>
               </div>
@@ -739,7 +796,7 @@ export default function Landing() {
                 Built specifically for software engineers, data scientists, and
                 tech professionals aiming for top-tier roles.
               </p>
-            </div>
+            </motion.div>
 
             <div className="features-grid-6">
               {features.map((item, index) => {
@@ -748,10 +805,14 @@ export default function Landing() {
                   <motion.div
                     key={item.title}
                     className="feature-card-white"
-                    initial={{ opacity: 0, y: 18 }}
+                    initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: index * 0.07 }}
+                    viewport={{ once: true, amount: 0.15 }}
+                    transition={{
+                      duration: 0.45,
+                      delay: index * 0.08,
+                      ease: "easeOut",
+                    }}
                   >
                     <div className="feature-icon-bubble">
                       <IconComponent size={22} />
@@ -785,10 +846,10 @@ export default function Landing() {
               {/* Image Side: tech.png */}
               <motion.div
                 className="feature-image-col"
-                initial={{ opacity: 0, x: -22 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.55 }}
+                initial={{ opacity: 0, scale: 0.96, y: 20 }}
+                whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.55, ease: "easeOut" }}
               >
                 <div className="visual-image-card">
                   <div className="image-badge-floating">
@@ -808,10 +869,10 @@ export default function Landing() {
               {/* Content Side */}
               <motion.div
                 className="feature-content-col"
-                initial={{ opacity: 0, x: 22 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.55 }}
+                initial={{ opacity: 0, x: 24, y: 10 }}
+                whileInView={{ opacity: 1, x: 0, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.55, ease: "easeOut" }}
               >
                 <div className="section-pill-tag">
                   <Code2 size={13} />
@@ -903,10 +964,10 @@ export default function Landing() {
               {/* Content Side */}
               <motion.div
                 className="feature-content-col"
-                initial={{ opacity: 0, x: -22 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.55 }}
+                initial={{ opacity: 0, x: -24, y: 10 }}
+                whileInView={{ opacity: 1, x: 0, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.55, ease: "easeOut" }}
               >
                 <div className="section-pill-tag">
                   <FileText size={13} />
@@ -987,10 +1048,10 @@ export default function Landing() {
               {/* Image Side: resume.png */}
               <motion.div
                 className="feature-image-col"
-                initial={{ opacity: 0, x: 22 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.55 }}
+                initial={{ opacity: 0, scale: 0.96, y: 20 }}
+                whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.55, ease: "easeOut" }}
               >
                 <div className="visual-image-card">
                   <div className="image-badge-floating">
@@ -1022,10 +1083,10 @@ export default function Landing() {
               {/* Image Side: confi.png */}
               <motion.div
                 className="feature-image-col"
-                initial={{ opacity: 0, x: -22 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.55 }}
+                initial={{ opacity: 0, scale: 0.96, y: 20 }}
+                whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.55, ease: "easeOut" }}
               >
                 <div className="visual-image-card">
                   <div className="image-badge-floating">
@@ -1045,10 +1106,10 @@ export default function Landing() {
               {/* Content Side */}
               <motion.div
                 className="feature-content-col"
-                initial={{ opacity: 0, x: 22 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.55 }}
+                initial={{ opacity: 0, x: 24, y: 10 }}
+                whileInView={{ opacity: 1, x: 0, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.55, ease: "easeOut" }}
               >
                 <div className="section-pill-tag">
                   <Award size={13} />
@@ -1140,10 +1201,10 @@ export default function Landing() {
               {/* Content Side */}
               <motion.div
                 className="feature-content-col"
-                initial={{ opacity: 0, x: -22 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.55 }}
+                initial={{ opacity: 0, x: -24, y: 10 }}
+                whileInView={{ opacity: 1, x: 0, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.55, ease: "easeOut" }}
               >
                 <div className="section-pill-tag">
                   <History size={13} />
@@ -1223,10 +1284,10 @@ export default function Landing() {
               {/* Image Side: history.png */}
               <motion.div
                 className="feature-image-col"
-                initial={{ opacity: 0, x: 22 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.55 }}
+                initial={{ opacity: 0, scale: 0.96, y: 20 }}
+                whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.55, ease: "easeOut" }}
               >
                 <div className="visual-image-card">
                   <div className="image-badge-floating">
@@ -1254,7 +1315,13 @@ export default function Landing() {
           className="section-padding workflow-section bg-light-tint"
         >
           <div className="section-container">
-            <div className="section-heading-box text-center">
+            <motion.div
+              className="section-heading-box text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
               <div className="section-pill-tag">
                 <Target size={13} />
                 <span>Step-by-Step Workflow</span>
@@ -1266,7 +1333,7 @@ export default function Landing() {
                 A proven 4-stage pipeline designed to take you from foundational
                 preparation to interview mastery.
               </p>
-            </div>
+            </motion.div>
 
             <div className="steps-container-grid">
               {steps.map((step, index) => {
@@ -1277,8 +1344,12 @@ export default function Landing() {
                     className="step-card-item"
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.45, delay: index * 0.09 }}
+                    viewport={{ once: true, amount: 0.15 }}
+                    transition={{
+                      duration: 0.45,
+                      delay: index * 0.08,
+                      ease: "easeOut",
+                    }}
                   >
                     <div className="step-top-badge-row">
                       <span className="step-number-pill">{step.number}</span>
@@ -1311,7 +1382,13 @@ export default function Landing() {
           className="section-padding ai-capabilities-section"
         >
           <div className="section-container">
-            <div className="section-heading-box text-center">
+            <motion.div
+              className="section-heading-box text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
               <div className="section-pill-tag">
                 <BrainCircuit size={13} />
                 <span>Intelligent Technology</span>
@@ -1323,15 +1400,15 @@ export default function Landing() {
                 Engineered to replicate actual engineering manager questions,
                 technical challenges, and live follow-up dynamics.
               </p>
-            </div>
+            </motion.div>
 
             <div className="ai-capabilities-grid">
               <motion.div
                 className="ai-card"
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.45, delay: 0, ease: "easeOut" }}
               >
                 <div className="ai-card-icon-box">
                   <BrainCircuit size={24} />
@@ -1346,10 +1423,10 @@ export default function Landing() {
 
               <motion.div
                 className="ai-card"
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: 0.1 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.45, delay: 0.08, ease: "easeOut" }}
               >
                 <div className="ai-card-icon-box">
                   <BarChart3 size={24} />
@@ -1363,10 +1440,10 @@ export default function Landing() {
 
               <motion.div
                 className="ai-card"
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: 0.2 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.45, delay: 0.16, ease: "easeOut" }}
               >
                 <div className="ai-card-icon-box">
                   <TrendingUp size={24} />
@@ -1386,7 +1463,13 @@ export default function Landing() {
         ==================================================== */}
         <section className="section-padding interview-types-section bg-light-tint">
           <div className="section-container">
-            <div className="section-heading-box text-center">
+            <motion.div
+              className="section-heading-box text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
               <div className="section-pill-tag">
                 <Layers size={13} />
                 <span>Diverse Disciplines</span>
@@ -1398,7 +1481,7 @@ export default function Landing() {
                 Tailored interview sessions simulating realistic hiring
                 committee evaluations across core domains.
               </p>
-            </div>
+            </motion.div>
 
             <div className="interview-types-pills-grid">
               {interviewTypes.map((type, index) => {
@@ -1407,11 +1490,15 @@ export default function Landing() {
                   <motion.div
                     key={type.label}
                     className="interview-type-pill"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.35, delay: index * 0.05 }}
-                    whileHover={{ y: -3 }}
+                    initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                    whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                    viewport={{ once: true, amount: 0.15 }}
+                    transition={{
+                      duration: 0.4,
+                      delay: index * 0.06,
+                      ease: "easeOut",
+                    }}
+                    whileHover={{ y: -4 }}
                   >
                     <div className="pill-icon-box">
                       <TypeIcon size={18} />
@@ -1432,7 +1519,13 @@ export default function Landing() {
         ==================================================== */}
         <section id="faq" className="section-padding faq-section">
           <div className="section-container faq-constrained-container">
-            <div className="section-heading-box text-center">
+            <motion.div
+              className="section-heading-box text-center"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
               <div className="section-pill-tag">
                 <MessageSquare size={13} />
                 <span>Got Questions?</span>
@@ -1442,7 +1535,7 @@ export default function Landing() {
                 Everything you need to know about our AI interview platform,
                 resume intelligence, and preparation workflows.
               </p>
-            </div>
+            </motion.div>
 
             <div className="faq-accordion-list">
               {faqs.map((faq, index) => (
@@ -1464,10 +1557,10 @@ export default function Landing() {
           <div className="section-container">
             <motion.div
               className="cta-gradient-card"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
+              initial={{ opacity: 0, scale: 0.97, y: 20 }}
+              whileInView={{ opacity: 1, scale: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.55, ease: "easeOut" }}
             >
               <div className="cta-pattern-overlay" />
               <div className="cta-inner-content">
@@ -1511,7 +1604,7 @@ export default function Landing() {
       </main>
 
       {/* ======================================================
-          14.FOOTER
+          14. FOOTER
       ====================================================== */}
       <footer className="footer-container-wrap">
         <div className="section-container">
@@ -1614,7 +1707,9 @@ export default function Landing() {
         </div>
       </footer>
 
-      {/*====================================================== */}
+      {/* ======================================================
+          STYLES (PREMIUM AI SAAS POLISH)
+      ====================================================== */}
       <style>{`
         /* ----------------------------------------------------
            GLOBAL RESET & LAYOUT
@@ -1625,7 +1720,7 @@ export default function Landing() {
           background-color: #FFFFFF;
           color: #0D47A1;
           font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif);
-          overflow-x: hidden;
+          overflow-x: clip;
           line-height: 1.5;
         }
 
@@ -1633,6 +1728,21 @@ export default function Landing() {
         .landing-wrapper *::before,
         .landing-wrapper *::after {
           box-sizing: border-box;
+        }
+
+        /* ----------------------------------------------------
+           SCROLL PROGRESS INDICATOR (FIXED TOP)
+        ---------------------------------------------------- */
+        .scroll-progress-bar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 2.5px;
+          background: linear-gradient(90deg, #00A9FF 0%, #2196F3 50%, #0D47A1 100%);
+          transform-origin: 0%;
+          z-index: 1100;
+          pointer-events: none;
         }
 
         .section-container {
@@ -1645,12 +1755,13 @@ export default function Landing() {
         }
 
         .section-padding {
-          padding-top: 88px;
-          padding-bottom: 88px;
+          padding-top: 84px;
+          padding-bottom: 84px;
+          position: relative;
         }
 
         .bg-light-tint {
-          background-color: #F8FBFE;
+          background: linear-gradient(180deg, #F8FBFE 0%, #F1F8FD 100%);
           border-top: 1px solid #E3F2FD;
           border-bottom: 1px solid #E3F2FD;
         }
@@ -1673,7 +1784,7 @@ export default function Landing() {
           max-width: 760px;
           margin-left: auto;
           margin-right: auto;
-          margin-bottom: 56px;
+          margin-bottom: 52px;
         }
 
         .section-pill-tag {
@@ -1689,27 +1800,34 @@ export default function Landing() {
           font-weight: 600;
           letter-spacing: 0.02em;
           margin-bottom: 16px;
+          box-shadow: 0 2px 6px rgba(33, 150, 243, 0.08);
+          transition: border-color 0.25s ease, background-color 0.25s ease;
+        }
+
+        .section-pill-tag:hover {
+          border-color: #00A9FF;
+          background-color: #CDF5FD;
         }
 
         .section-headline {
-          font-size: clamp(2rem, 3.5vw, 2.5rem);
+          font-size: clamp(2rem, 3.4vw, 2.5rem);
           font-weight: 800;
           color: #0D47A1;
           line-height: 1.22;
           letter-spacing: -0.025em;
           margin-top: 0;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
         }
 
         .section-subheadline {
-          font-size: clamp(0.95rem, 1.5vw, 1.0625rem);
+          font-size: clamp(0.95rem, 1.4vw, 1.0625rem);
           color: #334155;
-          line-height: 1.6;
+          line-height: 1.62;
           margin: 0;
         }
 
         /* ----------------------------------------------------
-           BUTTONS
+           BUTTONS & MICRO-INTERACTIONS
         ---------------------------------------------------- */
         .btn {
           display: inline-flex;
@@ -1719,10 +1837,30 @@ export default function Landing() {
           font-weight: 600;
           border-radius: 10px;
           cursor: pointer;
-          transition: all 0.2s ease-in-out;
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                      box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                      background-color 0.2s ease,
+                      border-color 0.2s ease;
           text-decoration: none;
           border: none;
           font-family: inherit;
+        }
+
+        .btn svg {
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .btn:hover svg {
+          transform: translateX(3px);
+        }
+
+        .btn:active {
+          transform: translateY(0px) scale(0.985);
+        }
+
+        .btn:focus-visible {
+          outline: 2px solid #00A9FF;
+          outline-offset: 2px;
         }
 
         .btn-outline-clean {
@@ -1731,15 +1869,18 @@ export default function Landing() {
           border: 1px solid #90CAF9;
           padding: 8px 18px;
           font-size: 0.875rem;
+          box-shadow: 0 2px 6px rgba(33, 150, 243, 0.06);
         }
 
         .btn-outline-clean:hover {
           background-color: #E3F2FD;
-          border-color: #2196F3;
+          border-color: #00A9FF;
+          transform: translateY(-1.5px);
+          box-shadow: 0 4px 12px rgba(33, 150, 243, 0.12);
         }
 
         .btn-primary-blue {
-          background-color: #2196F3;
+          background: linear-gradient(135deg, #00A9FF 0%, #2196F3 100%);
           color: #FFFFFF;
           padding: 10px 22px;
           font-size: 0.875rem;
@@ -1747,24 +1888,24 @@ export default function Landing() {
         }
 
         .btn-primary-blue:hover {
-          background-color: #0D47A1;
+          background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
           box-shadow: 0 6px 18px rgba(13, 71, 161, 0.32);
-          transform: translateY(-1px);
+          transform: translateY(-1.5px);
         }
 
         .btn-hero-primary {
-          background-color: #2196F3;
+          background: linear-gradient(135deg, #00A9FF 0%, #2196F3 60%, #0D47A1 100%);
           color: #FFFFFF;
           padding: 14px 28px;
           font-size: 1rem;
           border-radius: 12px;
-          box-shadow: 0 6px 20px rgba(33, 150, 243, 0.35);
+          box-shadow: 0 8px 24px rgba(33, 150, 243, 0.32);
         }
 
         .btn-hero-primary:hover {
-          background-color: #0D47A1;
+          background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
           transform: translateY(-2px);
-          box-shadow: 0 10px 24px rgba(13, 71, 161, 0.35);
+          box-shadow: 0 12px 28px rgba(13, 71, 161, 0.36);
         }
 
         .btn-hero-secondary {
@@ -1774,34 +1915,43 @@ export default function Landing() {
           padding: 14px 26px;
           font-size: 1rem;
           border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
+          box-shadow: 0 3px 10px rgba(33, 150, 243, 0.08);
         }
 
         .btn-hero-secondary:hover {
           background-color: #E3F2FD;
-          border-color: #2196F3;
+          border-color: #00A9FF;
           transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(33, 150, 243, 0.16);
         }
 
         /* ----------------------------------------------------
-           1. NAVBAR
+           1. STICKY NAVBAR
         ---------------------------------------------------- */
         .sticky-navbar {
           position: sticky;
           top: 0;
           z-index: 1000;
+          background-color: rgba(255, 255, 255, 0.88);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-bottom: 1px solid rgba(227, 242, 253, 0.85);
+          transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .sticky-navbar.navbar-scrolled {
           background-color: rgba(255, 255, 255, 0.96);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
-          border-bottom: 1px solid #E3F2FD;
-          box-shadow: 0 2px 12px rgba(13, 71, 161, 0.04);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-bottom-color: #90CAF9;
+          box-shadow: 0 4px 20px rgba(13, 71, 161, 0.06);
         }
 
         .navbar-container {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          height: 72px;
+          height: 70px;
           max-width: 1240px;
           margin: 0 auto;
           padding: 0 24px;
@@ -1822,12 +1972,17 @@ export default function Landing() {
           width: 42px;
           height: 42px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
+          background: linear-gradient(135deg, #00A9FF 0%, #2196F3 50%, #0D47A1 100%);
           color: #FFFFFF;
           display: flex;
           align-items: center;
           justify-content: center;
           box-shadow: 0 4px 14px rgba(33, 150, 243, 0.3);
+          transition: transform 0.2s ease;
+        }
+
+        .navbar-brand-btn:hover .brand-logo-icon {
+          transform: scale(1.04);
         }
 
         .brand-text-col {
@@ -1845,7 +2000,7 @@ export default function Landing() {
 
         .brand-subtitle {
           font-size: 0.75rem;
-          font-weight: 500;
+          font-weight: 600;
           color: #2196F3;
         }
 
@@ -1855,17 +2010,35 @@ export default function Landing() {
           gap: 24px;
         }
 
+        /* Nav links with active/hover underline */
         .nav-anchor {
+          position: relative;
           font-size: 0.875rem;
           font-weight: 600;
           color: #334155;
           text-decoration: none;
-          transition: color 0.18s ease;
-          position: relative;
+          transition: color 0.2s ease;
+          padding: 4px 0;
+        }
+
+        .nav-anchor::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          bottom: -4px;
+          width: 0;
+          height: 2px;
+          background: #00A9FF;
+          border-radius: 2px;
+          transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .nav-anchor:hover {
-          color: #2196F3;
+          color: #00A9FF;
+        }
+
+        .nav-anchor:hover::after {
+          width: 100%;
         }
 
         .navbar-action-group {
@@ -1882,6 +2055,11 @@ export default function Landing() {
           padding: 7px;
           color: #0D47A1;
           cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+
+        .mobile-menu-toggle:hover {
+          background-color: #E3F2FD;
         }
 
         .mobile-drawer {
@@ -1889,6 +2067,7 @@ export default function Landing() {
           padding: 20px 24px;
           background-color: #FFFFFF;
           border-bottom: 1px solid #90CAF9;
+          box-shadow: 0 8px 24px rgba(13, 71, 161, 0.08);
         }
 
         .mobile-nav-links {
@@ -1905,6 +2084,11 @@ export default function Landing() {
           text-decoration: none;
           padding: 8px 0;
           border-bottom: 1px solid #F1F5F9;
+          transition: color 0.2s ease;
+        }
+
+        .mobile-link:hover {
+          color: #00A9FF;
         }
 
         .mobile-actions-row {
@@ -1918,36 +2102,59 @@ export default function Landing() {
         ---------------------------------------------------- */
         .hero-section {
           position: relative;
-          padding-top: 64px;
-          padding-bottom: 84px;
-          background: linear-gradient(180deg, #FFFFFF 0%, #F5F9FD 100%);
+          padding-top: 68px;
+          padding-bottom: 88px;
+          background: linear-gradient(180deg, #FFFFFF 0%, #F5F9FD 60%, #FFFFFF 100%);
           overflow: hidden;
         }
 
         .hero-bg-visual {
           position: absolute;
           inset: 0;
-          background-image: radial-gradient(rgba(33, 150, 243, 0.08) 1.5px, transparent 1.5px);
-          background-size: 28px 28px;
+          background-image: radial-gradient(rgba(0, 169, 255, 0.09) 1.5px, transparent 1.5px);
+          background-size: 26px 26px;
           pointer-events: none;
-          opacity: 0.7;
+          opacity: 0.85;
         }
 
         .hero-radial-backdrop {
           position: absolute;
-          top: -150px;
-          right: 5%;
-          width: 550px;
-          height: 550px;
+          top: -140px;
+          right: 3%;
+          width: 580px;
+          height: 580px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(144, 202, 249, 0.28) 0%, rgba(227, 242, 253, 0) 70%);
+          background: radial-gradient(circle, rgba(160, 233, 255, 0.32) 0%, rgba(205, 245, 253, 0.15) 45%, rgba(255, 255, 255, 0) 70%);
+          filter: blur(55px);
+          pointer-events: none;
+          animation: heroBlobShift 12s ease-in-out infinite alternate;
+        }
+
+        .hero-radial-backdrop-secondary {
+          position: absolute;
+          top: 20%;
+          left: -100px;
+          width: 450px;
+          height: 450px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(137, 207, 243, 0.22) 0%, rgba(227, 242, 253, 0) 70%);
           filter: blur(50px);
           pointer-events: none;
+          animation: heroBlobShift 10s ease-in-out infinite alternate-reverse;
+        }
+
+        @keyframes heroBlobShift {
+          0% {
+            transform: translate(0, 0) scale(1);
+          }
+          100% {
+            transform: translate(30px, -20px) scale(1.08);
+          }
         }
 
         .hero-grid-container {
           display: grid;
-          grid-template-columns: 1fr 1.05fr;
+          grid-template-columns: 1fr 1.06fr;
           gap: 52px;
           align-items: center;
           position: relative;
@@ -1964,34 +2171,41 @@ export default function Landing() {
           gap: 8px;
           padding: 6px 14px;
           border-radius: 9999px;
-          background-color: #E3F2FD;
+          background: linear-gradient(135deg, #E3F2FD 0%, #CDF5FD 100%);
           border: 1px solid #90CAF9;
           color: #0D47A1;
           font-size: 0.8125rem;
           font-weight: 600;
           margin-bottom: 22px;
+          box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
         }
 
-
+        .hero-badge-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background-color: #00A9FF;
+          box-shadow: 0 0 6px #00A9FF;
+        }
 
         .hero-heading {
-          font-size: clamp(2.5rem, 4.5vw, 3.5rem);
+          font-size: clamp(2.5rem, 4.4vw, 3.5rem);
           font-weight: 850;
           line-height: 1.14;
-          letter-spacing: -0.03em;
+          letter-spacing: -0.035em;
           color: #0D47A1;
           margin-top: 0;
           margin-bottom: 20px;
         }
 
         .hero-heading-gradient {
-          background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
+          background: linear-gradient(135deg, #00A9FF 0%, #2196F3 45%, #0D47A1 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
         }
 
         .hero-subtext {
-          font-size: clamp(1rem, 1.6vw, 1.15rem);
+          font-size: clamp(1rem, 1.5vw, 1.15rem);
           color: #334155;
           line-height: 1.62;
           margin-top: 0;
@@ -2011,7 +2225,7 @@ export default function Landing() {
           align-items: center;
           gap: 20px;
           flex-wrap: wrap;
-          padding-top: 18px;
+          padding-top: 20px;
           border-top: 1px solid #E3F2FD;
         }
 
@@ -2025,7 +2239,7 @@ export default function Landing() {
         }
 
         .support-check {
-          color: #2196F3;
+          color: #00A9FF;
           display: flex;
         }
 
@@ -2039,21 +2253,32 @@ export default function Landing() {
 
         .mockup-subtle-glow {
           position: absolute;
-          inset: -15px;
+          inset: -18px;
           border-radius: 28px;
-          background: radial-gradient(circle, rgba(33, 150, 243, 0.18) 0%, rgba(227, 242, 253, 0) 70%);
+          background: radial-gradient(circle, rgba(0, 169, 255, 0.2) 0%, rgba(137, 207, 243, 0.12) 40%, rgba(227, 242, 253, 0) 70%);
           filter: blur(24px);
           z-index: 0;
+          pointer-events: none;
         }
 
         .mockup-window {
           position: relative;
           z-index: 1;
-          background-color: #FFFFFF;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
           border-radius: 18px;
-          border: 1.5px solid #90CAF9;
-          box-shadow: 0 20px 48px rgba(13, 71, 161, 0.12);
+          border: 1.5px solid rgba(144, 202, 249, 0.7);
+          box-shadow: 0 24px 60px -12px rgba(13, 71, 161, 0.14),
+                      0 4px 16px rgba(33, 150, 243, 0.08);
           overflow: hidden;
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .mockup-window:hover {
+          border-color: #00A9FF;
+          box-shadow: 0 28px 68px -12px rgba(13, 71, 161, 0.18),
+                      0 6px 20px rgba(0, 169, 255, 0.12);
         }
 
         .mockup-header-bar {
@@ -2103,7 +2328,7 @@ export default function Landing() {
         }
 
         .url-shield {
-          color: #2196F3;
+          color: #00A9FF;
         }
 
         .window-status-pill {
@@ -2120,11 +2345,32 @@ export default function Landing() {
         }
 
         .pulse-indicator {
-          width: 6px;
-          height: 6px;
+          position: relative;
+          width: 7px;
+          height: 7px;
           border-radius: 50%;
-          background-color: #2196F3;
-          box-shadow: 0 0 6px #2196F3;
+          background-color: #00A9FF;
+          box-shadow: 0 0 6px #00A9FF;
+        }
+
+        .pulse-indicator::after {
+          content: "";
+          position: absolute;
+          inset: -3px;
+          border-radius: 50%;
+          border: 1.5px solid #00A9FF;
+          animation: radarPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes radarPing {
+          0% {
+            transform: scale(0.8);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(2.4);
+            opacity: 0;
+          }
         }
 
         .mockup-body {
@@ -2153,7 +2399,7 @@ export default function Landing() {
           width: 26px;
           height: 26px;
           border-radius: 6px;
-          background-color: #2196F3;
+          background: linear-gradient(135deg, #00A9FF 0%, #2196F3 100%);
           color: #FFFFFF;
           display: flex;
           align-items: center;
@@ -2181,11 +2427,13 @@ export default function Landing() {
           font-size: 0.75rem;
           font-weight: 600;
           color: #475569;
+          transition: background-color 0.2s ease, color 0.2s ease;
         }
 
         .sidebar-item.active {
           background-color: #E3F2FD;
           color: #0D47A1;
+          border-left: 2.5px solid #00A9FF;
         }
 
         .sidebar-session-box {
@@ -2200,7 +2448,7 @@ export default function Landing() {
           display: block;
           font-size: 0.625rem;
           font-weight: 700;
-          color: #2196F3;
+          color: #00A9FF;
           letter-spacing: 0.05em;
         }
 
@@ -2228,7 +2476,7 @@ export default function Landing() {
         .role-sub {
           font-size: 0.65rem;
           font-weight: 700;
-          color: #2196F3;
+          color: #00A9FF;
           letter-spacing: 0.04em;
         }
 
@@ -2245,17 +2493,32 @@ export default function Landing() {
           gap: 6px;
           font-size: 0.7rem;
           font-weight: 600;
-          color: #2196F3;
-          background-color: #E3F2FD;
-          padding: 3px 8px;
+          color: #0D47A1;
+          background: linear-gradient(135deg, #E3F2FD 0%, #CDF5FD 100%);
+          border: 1px solid #90CAF9;
+          padding: 4px 9px;
           border-radius: 6px;
         }
 
         .recording-dot {
-          width: 6px;
-          height: 6px;
+          width: 7px;
+          height: 7px;
           border-radius: 50%;
-          background-color: #2196F3;
+          background-color: #00A9FF;
+          box-shadow: 0 0 8px rgba(0, 169, 255, 0.7);
+          animation: recordingPulse 1.8s ease-in-out infinite alternate;
+        }
+
+        @keyframes recordingPulse {
+          0% {
+            opacity: 0.4;
+            transform: scale(0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(0, 169, 255, 0.95);
+          }
         }
 
         .mockup-question-box {
@@ -2263,6 +2526,11 @@ export default function Landing() {
           border: 1px solid #E3F2FD;
           border-radius: 10px;
           padding: 14px;
+          transition: border-color 0.2s ease;
+        }
+
+        .mockup-question-box:hover {
+          border-color: #90CAF9;
         }
 
         .question-badge {
@@ -2271,7 +2539,7 @@ export default function Landing() {
           gap: 5px;
           font-size: 0.68rem;
           font-weight: 700;
-          color: #2196F3;
+          color: #00A9FF;
           margin-bottom: 6px;
         }
 
@@ -2300,25 +2568,25 @@ export default function Landing() {
         .wave-bars {
           display: flex;
           align-items: center;
-          gap: 2px;
-          height: 12px;
+          gap: 2.5px;
+          height: 14px;
         }
 
         .bar {
           width: 2.5px;
-          background-color: #2196F3;
+          background: linear-gradient(180deg, #00A9FF 0%, #2196F3 100%);
           border-radius: 2px;
-          animation: wavePulse 1s infinite ease-in-out;
+          animation: wavePulse 1.2s infinite ease-in-out;
         }
 
         .bar:nth-child(1) { height: 6px; animation-delay: 0.1s; }
-        .bar:nth-child(2) { height: 12px; animation-delay: 0.2s; }
-        .bar:nth-child(3) { height: 8px; animation-delay: 0.3s; }
-        .bar:nth-child(4) { height: 11px; animation-delay: 0.4s; }
-        .bar:nth-child(5) { height: 5px; animation-delay: 0.5s; }
+        .bar:nth-child(2) { height: 14px; animation-delay: 0.25s; }
+        .bar:nth-child(3) { height: 8px; animation-delay: 0.15s; }
+        .bar:nth-child(4) { height: 12px; animation-delay: 0.35s; }
+        .bar:nth-child(5) { height: 5px; animation-delay: 0.2s; }
 
         @keyframes wavePulse {
-          0%, 100% { transform: scaleY(0.5); }
+          0%, 100% { transform: scaleY(0.4); }
           50% { transform: scaleY(1); }
         }
 
@@ -2349,10 +2617,16 @@ export default function Landing() {
           border: 1px solid #E3F2FD;
           border-radius: 8px;
           padding: 8px;
+          transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .score-tile:hover {
+          border-color: #90CAF9;
+          transform: translateY(-1.5px);
         }
 
         .score-icon-box {
-          color: #2196F3;
+          color: #00A9FF;
           background-color: #E3F2FD;
           padding: 6px;
           border-radius: 6px;
@@ -2389,7 +2663,7 @@ export default function Landing() {
           width: 28px;
           height: 28px;
           border-radius: 50%;
-          background-color: #2196F3;
+          background: linear-gradient(135deg, #00A9FF 0%, #2196F3 100%);
           color: #FFFFFF;
           display: flex;
           align-items: center;
@@ -2418,14 +2692,23 @@ export default function Landing() {
         .floating-widget {
           position: absolute;
           z-index: 2;
-          background-color: #FFFFFF;
+          background: rgba(255, 255, 255, 0.96);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
           border: 1px solid #90CAF9;
           border-radius: 12px;
           padding: 10px 14px;
-          box-shadow: 0 12px 28px rgba(13, 71, 161, 0.14);
+          box-shadow: 0 14px 32px rgba(13, 71, 161, 0.12),
+                      0 0 0 1px rgba(144, 202, 249, 0.3);
           display: flex;
           align-items: center;
           gap: 10px;
+          transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .floating-widget:hover {
+          border-color: #00A9FF;
+          box-shadow: 0 18px 38px rgba(33, 150, 243, 0.18);
         }
 
         .float-top-right {
@@ -2439,16 +2722,17 @@ export default function Landing() {
         }
 
         .widget-score-pill {
-          background-color: #2196F3;
+          background: linear-gradient(135deg, #00A9FF 0%, #2196F3 100%);
           color: #FFFFFF;
           font-weight: 800;
           font-size: 0.88rem;
           padding: 4px 8px;
           border-radius: 6px;
+          box-shadow: 0 2px 6px rgba(33, 150, 243, 0.3);
         }
 
         .widget-icon-pill {
-          color: #2196F3;
+          color: #00A9FF;
           background-color: #E3F2FD;
           padding: 6px;
           border-radius: 6px;
@@ -2477,7 +2761,8 @@ export default function Landing() {
         .metric-strip-section {
           background-color: #FFFFFF;
           border-bottom: 1px solid #E3F2FD;
-          padding: 24px 0;
+          padding: 28px 0;
+          position: relative;
         }
 
         .metric-strip-grid {
@@ -2494,14 +2779,17 @@ export default function Landing() {
           border-radius: 12px;
           background-color: #F8FBFE;
           border: 1px solid #E3F2FD;
-          transition: transform 0.2s ease, border-color 0.2s ease;
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                      border-color 0.25s ease,
+                      box-shadow 0.25s ease,
+                      background-color 0.25s ease;
         }
 
         .metric-col:hover {
-          transform: translateY(-2px);
-          border-color: #90CAF9;
+          transform: translateY(-4px);
+          border-color: #00A9FF;
           background-color: #FFFFFF;
-          box-shadow: 0 4px 14px rgba(33, 150, 243, 0.08);
+          box-shadow: 0 18px 40px rgba(33, 150, 243, 0.12);
         }
 
         .metric-icon-box {
@@ -2509,11 +2797,17 @@ export default function Landing() {
           height: 38px;
           border-radius: 8px;
           background-color: #E3F2FD;
-          color: #2196F3;
+          color: #00A9FF;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          transition: transform 0.25s ease, background-color 0.25s ease;
+        }
+
+        .metric-col:hover .metric-icon-box {
+          transform: scale(1.05);
+          background-color: #CDF5FD;
         }
 
         .metric-text {
@@ -2539,6 +2833,7 @@ export default function Landing() {
         ---------------------------------------------------- */
         .features-section {
           background-color: #FFFFFF;
+          position: relative;
         }
 
         .features-grid-6 {
@@ -2549,33 +2844,43 @@ export default function Landing() {
 
         .feature-card-white {
           background-color: #FFFFFF;
-          border: 1px solid rgba(33, 150, 243, 0.18);
+          border: 1px solid rgba(144, 202, 249, 0.45);
           border-radius: 16px;
           padding: 32px 26px;
-          box-shadow: 0 4px 18px rgba(33, 150, 243, 0.06);
+          box-shadow: 0 4px 18px rgba(33, 150, 243, 0.05);
           display: flex;
           flex-direction: column;
-          transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                      box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                      border-color 0.25s ease,
+                      background-color 0.25s ease;
           position: relative;
         }
 
         .feature-card-white:hover {
-          transform: translateY(-5px);
-          border-color: #2196F3;
-          box-shadow: 0 14px 32px rgba(33, 150, 243, 0.16);
+          transform: translateY(-4px);
+          border-color: #00A9FF;
+          box-shadow: 0 18px 40px rgba(33, 150, 243, 0.12);
         }
 
         .feature-icon-bubble {
           width: 50px;
           height: 50px;
           border-radius: 12px;
-          background: linear-gradient(135deg, #E3F2FD 0%, #FFFFFF 100%);
+          background: linear-gradient(135deg, #E3F2FD 0%, #CDF5FD 100%);
           border: 1px solid #90CAF9;
-          color: #2196F3;
+          color: #00A9FF;
           display: flex;
           align-items: center;
           justify-content: center;
           margin-bottom: 20px;
+          transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .feature-card-white:hover .feature-icon-bubble {
+          transform: scale(1.05);
+          border-color: #00A9FF;
+          box-shadow: 0 4px 12px rgba(0, 169, 255, 0.2);
         }
 
         .feature-card-title {
@@ -2605,8 +2910,8 @@ export default function Landing() {
           gap: 6px;
           font-size: 0.8125rem;
           font-weight: 700;
-          color: #2196F3;
-          transition: gap 0.2s ease;
+          color: #00A9FF;
+          transition: gap 0.2s ease, color 0.2s ease;
         }
 
         .feature-card-white:hover .explore-arrow {
@@ -2618,7 +2923,7 @@ export default function Landing() {
         }
 
         /* ----------------------------------------------------
-           TWO-COLUMN SECTIONS (SECTIONS 5, 6, 7, 8)
+           TWO-COLUMN FEATURE SECTIONS (SECTIONS 5, 6, 7, 8)
         ---------------------------------------------------- */
         .two-column-feature-grid {
           display: grid;
@@ -2641,16 +2946,18 @@ export default function Landing() {
           border-radius: 20px;
           background-color: #FFFFFF;
           border: 1.5px solid #90CAF9;
-          box-shadow: 0 16px 40px rgba(13, 71, 161, 0.1);
+          box-shadow: 0 16px 40px rgba(13, 71, 161, 0.08);
           padding: 16px;
           overflow: hidden;
-          transition: transform 0.25s ease, box-shadow 0.25s ease;
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                      box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                      border-color 0.3s ease;
         }
 
         .visual-image-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 20px 48px rgba(33, 150, 243, 0.16);
-          border-color: #2196F3;
+          box-shadow: 0 22px 48px rgba(33, 150, 243, 0.16);
+          border-color: #00A9FF;
         }
 
         .image-badge-floating {
@@ -2679,13 +2986,18 @@ export default function Landing() {
           object-fit: contain;
           border-radius: 12px;
           display: block;
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .visual-image-card:hover .feature-png-image {
+          transform: scale(1.015);
         }
 
         .image-card-accent-bar {
           margin-top: 12px;
           height: 3px;
           width: 100%;
-          background: linear-gradient(90deg, #2196F3 0%, #90CAF9 100%);
+          background: linear-gradient(90deg, #00A9FF 0%, #89CFF3 50%, #CDF5FD 100%);
           border-radius: 3px;
         }
 
@@ -2708,7 +3020,7 @@ export default function Landing() {
         }
 
         .bullet-icon-wrap {
-          color: #2196F3;
+          color: #00A9FF;
           flex-shrink: 0;
           margin-top: 2px;
         }
@@ -2750,17 +3062,19 @@ export default function Landing() {
           border: 1px solid #E3F2FD;
           border-radius: 16px;
           padding: 28px 22px;
-          box-shadow: 0 4px 16px rgba(33, 150, 243, 0.06);
+          box-shadow: 0 4px 16px rgba(33, 150, 243, 0.05);
           position: relative;
           display: flex;
           flex-direction: column;
-          transition: transform 0.2s ease, border-color 0.2s ease;
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                      border-color 0.25s ease,
+                      box-shadow 0.25s ease;
         }
 
         .step-card-item:hover {
           transform: translateY(-4px);
-          border-color: #90CAF9;
-          box-shadow: 0 10px 24px rgba(33, 150, 243, 0.12);
+          border-color: #00A9FF;
+          box-shadow: 0 18px 40px rgba(33, 150, 243, 0.12);
         }
 
         .step-top-badge-row {
@@ -2773,7 +3087,7 @@ export default function Landing() {
         .step-number-pill {
           font-size: 0.8125rem;
           font-weight: 800;
-          color: #2196F3;
+          color: #00A9FF;
           background-color: #E3F2FD;
           border: 1px solid #90CAF9;
           padding: 4px 10px;
@@ -2784,11 +3098,16 @@ export default function Landing() {
           width: 40px;
           height: 40px;
           border-radius: 10px;
-          background-color: #2196F3;
+          background: linear-gradient(135deg, #00A9FF 0%, #2196F3 100%);
           color: #FFFFFF;
           display: flex;
           align-items: center;
           justify-content: center;
+          transition: transform 0.25s ease;
+        }
+
+        .step-card-item:hover .step-icon-circle {
+          transform: scale(1.05);
         }
 
         .step-item-title {
@@ -2811,7 +3130,7 @@ export default function Landing() {
           right: -14px;
           width: 28px;
           height: 2px;
-          background-color: #90CAF9;
+          background: linear-gradient(90deg, #90CAF9 0%, #CDF5FD 100%);
           z-index: 1;
         }
 
@@ -2820,6 +3139,7 @@ export default function Landing() {
         ---------------------------------------------------- */
         .ai-capabilities-section {
           background-color: #FFFFFF;
+          position: relative;
         }
 
         .ai-capabilities-grid {
@@ -2830,30 +3150,38 @@ export default function Landing() {
 
         .ai-card {
           background-color: #FFFFFF;
-          border: 1px solid rgba(33, 150, 243, 0.2);
+          border: 1px solid rgba(144, 202, 249, 0.45);
           border-radius: 16px;
           padding: 32px 26px;
-          box-shadow: 0 4px 20px rgba(33, 150, 243, 0.07);
-          transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+          box-shadow: 0 4px 20px rgba(33, 150, 243, 0.05);
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                      box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                      border-color 0.25s ease;
         }
 
         .ai-card:hover {
           transform: translateY(-4px);
-          border-color: #2196F3;
-          box-shadow: 0 12px 30px rgba(33, 150, 243, 0.15);
+          border-color: #00A9FF;
+          box-shadow: 0 18px 40px rgba(33, 150, 243, 0.12);
         }
 
         .ai-card-icon-box {
           width: 48px;
           height: 48px;
           border-radius: 12px;
-          background-color: #E3F2FD;
-          color: #2196F3;
+          background: linear-gradient(135deg, #E3F2FD 0%, #CDF5FD 100%);
+          color: #00A9FF;
           border: 1px solid #90CAF9;
           display: flex;
           align-items: center;
           justify-content: center;
           margin-bottom: 20px;
+          transition: transform 0.25s ease, border-color 0.25s ease;
+        }
+
+        .ai-card:hover .ai-card-icon-box {
+          transform: scale(1.05);
+          border-color: #00A9FF;
         }
 
         .ai-card-title {
@@ -2888,13 +3216,16 @@ export default function Landing() {
           border: 1px solid #E3F2FD;
           border-radius: 12px;
           box-shadow: 0 2px 8px rgba(33, 150, 243, 0.05);
-          transition: all 0.2s ease;
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                      border-color 0.2s ease,
+                      box-shadow 0.2s ease,
+                      background-color 0.2s ease;
           cursor: pointer;
         }
 
         .interview-type-pill:hover {
-          border-color: #90CAF9;
-          box-shadow: 0 6px 18px rgba(33, 150, 243, 0.12);
+          border-color: #00A9FF;
+          box-shadow: 0 18px 40px rgba(33, 150, 243, 0.12);
           background-color: #F8FBFE;
         }
 
@@ -2903,11 +3234,17 @@ export default function Landing() {
           height: 36px;
           border-radius: 8px;
           background-color: #E3F2FD;
-          color: #2196F3;
+          color: #00A9FF;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+
+        .interview-type-pill:hover .pill-icon-box {
+          transform: scale(1.05);
+          background-color: #CDF5FD;
         }
 
         .pill-text-block {
@@ -2948,13 +3285,13 @@ export default function Landing() {
           border: 1px solid #E3F2FD;
           border-radius: 12px;
           overflow: hidden;
-          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+          transition: border-color 0.25s ease, box-shadow 0.25s ease;
         }
 
         .faq-item:hover,
         .faq-item-open {
-          border-color: #90CAF9;
-          box-shadow: 0 4px 16px rgba(33, 150, 243, 0.08);
+          border-color: #00A9FF;
+          box-shadow: 0 18px 40px rgba(33, 150, 243, 0.12);
         }
 
         .faq-question-btn {
@@ -2978,7 +3315,7 @@ export default function Landing() {
         }
 
         .faq-icon-wrapper {
-          color: #2196F3;
+          color: #00A9FF;
           display: flex;
           align-items: center;
           flex-shrink: 0;
@@ -3012,7 +3349,7 @@ export default function Landing() {
 
         .cta-gradient-card {
           position: relative;
-          background: linear-gradient(135deg, #0D47A1 0%, #1565C0 50%, #2196F3 100%);
+          background: linear-gradient(135deg, #0D47A1 0%, #1565C0 40%, #00A9FF 100%);
           border-radius: 24px;
           padding: 68px 36px;
           color: #FFFFFF;
@@ -3024,7 +3361,7 @@ export default function Landing() {
         .cta-pattern-overlay {
           position: absolute;
           inset: 0;
-          background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, transparent 1.5px);
+          background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1.5px, transparent 1.5px);
           background-size: 24px 24px;
           pointer-events: none;
         }
@@ -3037,8 +3374,8 @@ export default function Landing() {
         }
 
         .cta-pill {
-          background-color: rgba(255, 255, 255, 0.16);
-          border-color: rgba(255, 255, 255, 0.3);
+          background-color: rgba(255, 255, 255, 0.18);
+          border-color: rgba(255, 255, 255, 0.35);
           color: #FFFFFF;
           margin-bottom: 20px;
         }
@@ -3089,7 +3426,7 @@ export default function Landing() {
         .btn-cta-secondary {
           background-color: transparent;
           color: #FFFFFF;
-          border: 1.5px solid rgba(255, 255, 255, 0.6);
+          border: 1.5px solid rgba(255, 255, 255, 0.65);
           padding: 14px 28px;
           font-size: 1rem;
           border-radius: 12px;
@@ -3130,7 +3467,7 @@ export default function Landing() {
           width: 36px;
           height: 36px;
           border-radius: 8px;
-          background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
+          background: linear-gradient(135deg, #00A9FF 0%, #2196F3 50%, #0D47A1 100%);
           color: #FFFFFF;
           display: flex;
           align-items: center;
@@ -3190,7 +3527,7 @@ export default function Landing() {
 
         .footer-nav-list a:hover,
         .footer-link-btn:hover {
-          color: #2196F3;
+          color: #00A9FF;
         }
 
         .footer-connect-text {
@@ -3212,13 +3549,13 @@ export default function Landing() {
           font-size: 0.85rem;
           font-weight: 600;
           text-decoration: none;
-          transition: all 0.2s ease;
+          transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
         }
 
         .github-profile-link:hover {
           background-color: #E3F2FD;
-          border-color: #2196F3;
-          transform: translateY(-1px);
+          border-color: #00A9FF;
+          transform: translateY(-1.5px);
         }
 
         .footer-bottom-bar {
@@ -3324,13 +3661,13 @@ export default function Landing() {
 
         @media (max-width: 640px) {
           .section-padding {
-            padding-top: 60px;
-            padding-bottom: 60px;
+            padding-top: 56px;
+            padding-bottom: 56px;
           }
 
           .hero-section {
-            padding-top: 40px;
-            padding-bottom: 60px;
+            padding-top: 36px;
+            padding-bottom: 56px;
           }
 
           .hero-cta-buttons {
@@ -3402,6 +3739,13 @@ export default function Landing() {
             animation-iteration-count: 1 !important;
             transition-duration: 0.01ms !important;
             scroll-behavior: auto !important;
+          }
+          .floating-widget,
+          .hero-mockup-wrapper,
+          .hero-radial-backdrop,
+          .hero-radial-backdrop-secondary {
+            animation: none !important;
+            transform: none !important;
           }
         }
       `}</style>

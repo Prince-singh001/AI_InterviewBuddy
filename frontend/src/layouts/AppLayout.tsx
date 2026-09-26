@@ -966,7 +966,7 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
   .global-top-navbar {
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: 100;
 
     width: 100%;
 
@@ -1363,7 +1363,7 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
       0 24px 60px
       rgba(13, 71, 161, 0.16);
 
-    z-index: 100;
+    z-index: 1050;
 
     transform-origin:
       top right;
@@ -1854,7 +1854,7 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
     -webkit-backdrop-filter:
       blur(5px);
 
-    z-index: 90;
+    z-index: 1100;
   }
 
   .mobile-drawer-panel {
@@ -1870,7 +1870,7 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
     background:
       var(--white);
 
-    z-index: 95;
+    z-index: 1110;
 
     padding:
       1.15rem 1rem;
