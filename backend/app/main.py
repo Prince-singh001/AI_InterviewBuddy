@@ -57,21 +57,40 @@ async def lifespan(app: FastAPI):
 
     try:
         upload_path = Path(settings.UPLOAD_DIR)
-        upload_path.mkdir(parents=True, exist_ok=True)
 
-        print(f"Upload directory: {upload_path.resolve()}")
+        upload_path.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        print(
+            f"Upload directory: {upload_path.resolve()}"
+        )
 
     except Exception as e:
-        print(f"Upload directory warning: {e}")
+        print(
+            f"Upload directory warning: {e}"
+        )
 
     # ------------------------------------------------------------------------
     # Startup information
     # ------------------------------------------------------------------------
 
-    print(f"Demo Mode: {settings.DEMO_MODE}")
-    print("AI Provider: Gemini")
-    print("Backend started successfully.")
-    print("=" * 60 + "\n")
+    print(
+        f"Demo Mode: {settings.DEMO_MODE}"
+    )
+
+    print(
+        "AI Provider: Gemini"
+    )
+
+    print(
+        "Backend started successfully."
+    )
+
+    print(
+        "=" * 60 + "\n"
+    )
 
     yield
 
@@ -79,16 +98,27 @@ async def lifespan(app: FastAPI):
     # Shutdown
     # ------------------------------------------------------------------------
 
-    print("\nShutting down Interviewer Buddy AI backend...")
+    print(
+        "\nShutting down Interviewer Buddy AI backend..."
+    )
 
     try:
+
         await close_db()
-        print("Database connection closed.")
+
+        print(
+            "Database connection closed."
+        )
 
     except Exception as e:
-        print(f"Database shutdown warning: {e}")
 
-    print("Backend stopped.")
+        print(
+            f"Database shutdown warning: {e}"
+        )
+
+    print(
+        "Backend stopped."
+    )
 
 
 # ============================================================================
@@ -97,10 +127,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Interviewer Buddy AI API",
+
     description=(
         "AI-powered interview preparation platform with "
         "Agentic AI, RAG, adaptive interviewing and analytics."
     ),
+
     version="1.0.0",
 
     # Swagger
@@ -117,8 +149,22 @@ app = FastAPI(
 # ============================================================================
 # CORS
 # ============================================================================
+#
+# Local development:
+#
+#   http://localhost:5173
+#   http://127.0.0.1:5173
+#   http://localhost:3000
+#   http://127.0.0.1:3000
+#
+# The regex additionally allows any localhost / 127.0.0.1 port.
+#
+# This prevents errors such as:
+#
+#   OPTIONS /api/dashboard HTTP/1.1" 400 Bad Request
+#
+# ============================================================================
 
-# Local development origins
 allowed_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -126,29 +172,79 @@ allowed_origins = [
     "http://127.0.0.1:3000",
 ]
 
+
+# ---------------------------------------------------------------------------
 # Production frontend
-# FRONTEND_URL will be set in Render environment variables.
+# ---------------------------------------------------------------------------
+
 if settings.FRONTEND_URL:
-    frontend_url = settings.FRONTEND_URL.rstrip("/")
 
-    if frontend_url not in allowed_origins:
-        allowed_origins.append(frontend_url)
+    frontend_url = (
+        settings.FRONTEND_URL
+        .strip()
+        .rstrip("/")
+    )
+
+    if (
+        frontend_url
+        and frontend_url not in allowed_origins
+    ):
+
+        allowed_origins.append(
+            frontend_url
+        )
 
 
-print("Allowed CORS origins:")
+# ---------------------------------------------------------------------------
+# Display allowed origins
+# ---------------------------------------------------------------------------
+
+print(
+    "Allowed CORS origins:"
+)
+
 for origin in allowed_origins:
-    print(f"  - {origin}")
 
+    print(
+        f"  - {origin}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# CORS Middleware
+# ---------------------------------------------------------------------------
 
 app.add_middleware(
     CORSMiddleware,
 
+    # Explicitly allowed origins
     allow_origins=allowed_origins,
 
+    # Allow local development on any port.
+    #
+    # Examples:
+    #
+    # http://localhost:5173
+    # http://localhost:5174
+    # http://localhost:5175
+    # http://localhost:3000
+    #
+    # http://127.0.0.1:5173
+    # http://127.0.0.1:5174
+    #
+    allow_origin_regex=(
+        r"^https?://"
+        r"(localhost|127\.0\.0\.1)"
+        r"(:\d+)?$"
+    ),
+
+    # Required for authenticated requests.
     allow_credentials=True,
 
+    # Allow all HTTP methods.
     allow_methods=["*"],
 
+    # Allow Authorization, Content-Type, etc.
     allow_headers=["*"],
 )
 
@@ -157,7 +253,9 @@ app.add_middleware(
 # STATIC FILES
 # ============================================================================
 
-upload_directory = Path(settings.UPLOAD_DIR)
+upload_directory = Path(
+    settings.UPLOAD_DIR
+)
 
 upload_directory.mkdir(
     parents=True,
@@ -166,9 +264,13 @@ upload_directory.mkdir(
 
 app.mount(
     "/uploads",
+
     StaticFiles(
-        directory=str(upload_directory)
+        directory=str(
+            upload_directory
+        )
     ),
+
     name="uploads",
 )
 
@@ -177,7 +279,6 @@ app.mount(
 # API ROUTERS
 # ============================================================================
 #
-# IMPORTANT:
 # Route files already contain their /api/... prefixes.
 #
 # Therefore DO NOT add another prefix here.
@@ -195,19 +296,33 @@ app.mount(
 #
 # ============================================================================
 
-app.include_router(auth_router)
+app.include_router(
+    auth_router
+)
 
-app.include_router(interview_router)
+app.include_router(
+    interview_router
+)
 
-app.include_router(resume_router)
+app.include_router(
+    resume_router
+)
 
-app.include_router(jobs_router)
+app.include_router(
+    jobs_router
+)
 
-app.include_router(dashboard_router)
+app.include_router(
+    dashboard_router
+)
 
-app.include_router(practice_router)
+app.include_router(
+    practice_router
+)
 
-app.include_router(rag_router)
+app.include_router(
+    rag_router
+)
 
 
 # ============================================================================
@@ -263,7 +378,11 @@ class ConnectionManager:
     """
 
     def __init__(self):
-        self.active_connections: dict[str, WebSocket] = {}
+
+        self.active_connections: dict[
+            str,
+            WebSocket
+        ] = {}
 
     async def connect(
         self,
@@ -276,7 +395,9 @@ class ConnectionManager:
 
         await websocket.accept()
 
-        self.active_connections[interview_id] = websocket
+        self.active_connections[
+            interview_id
+        ] = websocket
 
     def disconnect(
         self,
@@ -300,12 +421,17 @@ class ConnectionManager:
         Send JSON data to a connected interview.
         """
 
-        websocket = self.active_connections.get(
-            interview_id
+        websocket = (
+            self.active_connections.get(
+                interview_id
+            )
         )
 
         if websocket:
-            await websocket.send_json(data)
+
+            await websocket.send_json(
+                data
+            )
 
 
 manager = ConnectionManager()
@@ -356,7 +482,9 @@ async def interview_websocket(
             EvaluationAgent,
         )
 
-        interview_manager = InterviewManagerAgent()
+        interview_manager = (
+            InterviewManagerAgent()
+        )
 
         evaluator = EvaluationAgent()
 
@@ -371,10 +499,12 @@ async def interview_websocket(
         await websocket.send_json(
             {
                 "type": "connected",
+
                 "message": (
                     "Interview session started. "
                     "Ready for your first question."
                 ),
+
                 "interview_id": interview_id,
             }
         )
@@ -385,9 +515,13 @@ async def interview_websocket(
 
         while True:
 
-            data = await websocket.receive_json()
+            data = (
+                await websocket.receive_json()
+            )
 
-            msg_type = data.get("type")
+            msg_type = data.get(
+                "type"
+            )
 
             # =================================================================
             # PING
@@ -410,12 +544,18 @@ async def interview_websocket(
             if msg_type == "answer":
 
                 answer_text = (
-                    data.get("answer", "")
+                    data.get(
+                        "answer",
+                        ""
+                    )
                     .strip()
                 )
 
                 question_text = (
-                    data.get("question", "")
+                    data.get(
+                        "question",
+                        ""
+                    )
                     .strip()
                 )
 
@@ -428,6 +568,7 @@ async def interview_websocket(
                     await websocket.send_json(
                         {
                             "type": "error",
+
                             "message": (
                                 "Answer cannot be empty."
                             ),
@@ -453,9 +594,11 @@ async def interview_websocket(
 
                 try:
 
-                    eval_result = evaluator.evaluate_answer(
-                        question_text,
-                        answer_text,
+                    eval_result = (
+                        evaluator.evaluate_answer(
+                            question_text,
+                            answer_text,
+                        )
                     )
 
                     # Support async implementations
@@ -463,7 +606,10 @@ async def interview_websocket(
                         eval_result,
                         "__await__",
                     ):
-                        eval_result = await eval_result
+
+                        eval_result = (
+                            await eval_result
+                        )
 
                 except Exception as e:
 
@@ -473,8 +619,10 @@ async def interview_websocket(
 
                     eval_result = {
                         "score": 0,
+
                         "feedback": (
-                            f"Evaluation failed: {str(e)}"
+                            "Evaluation failed: "
+                            f"{str(e)}"
                         ),
                     }
 
@@ -489,6 +637,7 @@ async def interview_websocket(
 
                     eval_result = {
                         "score": 0,
+
                         "feedback": str(
                             eval_result
                         ),
@@ -521,14 +670,21 @@ async def interview_websocket(
                 # INTERVIEW COMPLETE
                 # =============================================================
 
-                if question_count >= max_questions:
+                if (
+                    question_count
+                    >= max_questions
+                ):
 
                     await websocket.send_json(
                         {
-                            "type": "interview_complete",
+                            "type": (
+                                "interview_complete"
+                            ),
+
                             "message": (
                                 "Interview complete!"
                             ),
+
                             "total_questions": (
                                 question_count
                             ),
@@ -544,23 +700,29 @@ async def interview_websocket(
                 try:
 
                     next_question = (
-                        interview_manager.get_next_question(
+                        interview_manager
+                        .get_next_question(
                             data.get(
                                 "interview_type",
                                 "Technical",
                             ),
+
                             data.get(
                                 "role",
                                 "Software Engineer",
                             ),
+
                             data.get(
                                 "difficulty",
                                 "Intermediate",
                             ),
+
                             asked_topics,
+
                             eval_result.get(
                                 "score"
                             ),
+
                             question_count + 1,
                         )
                     )
@@ -578,15 +740,18 @@ async def interview_websocket(
                 except Exception as e:
 
                     print(
-                        f"Next question generation error: {e}"
+                        "Next question generation "
+                        f"error: {e}"
                     )
 
                     await websocket.send_json(
                         {
                             "type": "error",
+
                             "message": (
                                 "Unable to generate "
-                                f"next question: {str(e)}"
+                                "next question: "
+                                f"{str(e)}"
                             ),
                         }
                     )
@@ -612,8 +777,10 @@ async def interview_websocket(
                 # Track topic
                 # -------------------------------------------------------------
 
-                topic = next_question.get(
-                    "topic"
+                topic = (
+                    next_question.get(
+                        "topic"
+                    )
                 )
 
                 if (
@@ -621,7 +788,9 @@ async def interview_websocket(
                     and topic not in asked_topics
                 ):
 
-                    asked_topics.append(topic)
+                    asked_topics.append(
+                        topic
+                    )
 
                 # -------------------------------------------------------------
                 # AI speaking state
@@ -654,8 +823,10 @@ async def interview_websocket(
             await websocket.send_json(
                 {
                     "type": "error",
+
                     "message": (
-                        f"Unknown message type: {msg_type}"
+                        f"Unknown message type: "
+                        f"{msg_type}"
                     ),
                 }
             )
@@ -671,7 +842,8 @@ async def interview_websocket(
         )
 
         print(
-            f"WebSocket disconnected: {interview_id}"
+            "WebSocket disconnected: "
+            f"{interview_id}"
         )
 
     # =========================================================================
@@ -685,7 +857,8 @@ async def interview_websocket(
         )
 
         print(
-            f"WebSocket error [{interview_id}]: {e}"
+            f"WebSocket error "
+            f"[{interview_id}]: {e}"
         )
 
         try:
