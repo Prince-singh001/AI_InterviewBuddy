@@ -11,6 +11,7 @@ import AuthLayout from "@/layouts/AuthLayout";
 // Public pages
 import Landing from "@/pages/Landing";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
+import ResetPassword from "@/pages/auth/ResetPassword";
 import Login from "@/pages/auth/Login";
 import ProfileSetup from "@/pages/auth/ProfileSetup";
 import Register from "@/pages/auth/Register";
@@ -146,6 +147,15 @@ export default function App() {
           element={
             <AuthLayout>
               <ForgotPassword />
+            </AuthLayout>
+          }
+        />
+
+        <Route
+          path="/reset-password"
+          element={
+            <AuthLayout>
+              <ResetPassword />
             </AuthLayout>
           }
         />

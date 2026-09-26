@@ -4,7 +4,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "backend/.env"),
         extra="ignore",
         case_sensitive=True,
     )

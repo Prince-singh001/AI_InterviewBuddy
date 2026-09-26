@@ -403,6 +403,13 @@ async def create_interview(
         duration
     )
 
+    interviewer = (req.interviewer or "jenny").strip().lower()
+    voice_gender = (
+        "male" if interviewer == "samm"
+        else (req.voice_gender.strip().lower() if req.voice_gender else "female")
+    )
+    language = (req.language or "en").strip().lower()
+
     # --------------------------------------------------------
     # Create interview
     # --------------------------------------------------------
@@ -419,6 +426,9 @@ async def create_interview(
             duration_minutes=duration,
             mode=req.mode,
             personality=req.personality,
+            interviewer=interviewer,
+            voice_gender=voice_gender,
+            language=language,
             status="created",
             questions=[],
             answers=[],
@@ -448,6 +458,9 @@ async def create_interview(
         "duration_minutes": interview.duration_minutes,
         "mode": interview.mode,
         "personality": interview.personality,
+        "interviewer": interview.interviewer,
+        "voice_gender": interview.voice_gender,
+        "language": interview.language,
         "total_questions": question_count,
         "status": interview.status,
         "created_at": interview.created_at,
@@ -606,6 +619,9 @@ async def start_interview(
             "is_last": (
                 total_questions == 1
             ),
+            "interviewer": getattr(interview, "interviewer", "jenny") or "jenny",
+            "voice_gender": getattr(interview, "voice_gender", "female") or "female",
+            "language": getattr(interview, "language", "en") or "en",
             "status": interview.status,
         }
 
@@ -725,6 +741,9 @@ async def start_interview(
         "is_last": (
             total_questions == 1
         ),
+        "interviewer": getattr(interview, "interviewer", "jenny") or "jenny",
+        "voice_gender": getattr(interview, "voice_gender", "female") or "female",
+        "language": getattr(interview, "language", "en") or "en",
         "status": interview.status,
     }
 
@@ -1015,10 +1034,17 @@ async def submit_answer(
             answers
         )
 
-    is_last = (
-        question_number
-        >= total_questions
-    )
+    if score >= 80:
+        acknowledgement = "Excellent explanation. Let's move on to the next question."
+    elif score >= 60:
+        acknowledgement = "Good answer. Let's proceed to the next question."
+    elif score >= 40:
+        acknowledgement = "Okay, understood. Let's continue to the next question."
+    else:
+        acknowledgement = "Not quite. Let's continue with the next question."
+
+    if is_last:
+        acknowledgement = "Thank you. That completes all questions for this interview session."
 
     return {
         "question_id": str(
@@ -1030,6 +1056,7 @@ async def submit_answer(
         "total_questions": total_questions,
         "is_last": is_last,
         "answer_saved": True,
+        "acknowledgement": acknowledgement,
     }
 
 

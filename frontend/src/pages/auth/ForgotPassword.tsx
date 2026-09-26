@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Loader2, ArrowLeft, Check } from 'lucide-react'
-import { sleep } from '@/lib/utils'
 import { toast } from 'sonner'
+import { authApi } from '@/services/apiService'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -12,12 +12,22 @@ export default function ForgotPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) { toast.error('Enter your email'); return }
-    setLoading(true)
-    await sleep(1200)
-    setSent(true)
-    toast.success('Reset link sent!')
-    setLoading(false)
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) {
+      toast.error('Enter your email')
+      return
+    }
+
+    try {
+      setLoading(true)
+      const res = await authApi.forgotPassword(trimmedEmail)
+      setSent(true)
+      toast.success(res?.message || 'Reset link sent!')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to send reset link. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

@@ -655,6 +655,44 @@ export const authApi = {
       "/auth/profile",
       data,
     ),
+
+
+  /* ----------------------------------------------------------
+   * FORGOT PASSWORD
+   * ----------------------------------------------------------
+   */
+
+  forgotPassword: (
+    email: string,
+  ) =>
+    request<{ message: string; email: string }>(
+      "POST",
+      "/auth/forgot-password",
+      {
+        email,
+      },
+    ),
+
+
+  /* ----------------------------------------------------------
+   * RESET PASSWORD
+   * ----------------------------------------------------------
+   */
+
+  resetPassword: (
+    email: string,
+    token: string,
+    new_password: string,
+  ) =>
+    request<{ message: string }>(
+      "POST",
+      "/auth/reset-password",
+      {
+        email,
+        token,
+        new_password,
+      },
+    ),
 };
 
 
@@ -753,6 +791,10 @@ export interface InterviewQuestionResponse {
   total_questions: number;
 
   is_last: boolean;
+
+  interviewer?: string;
+  voice_gender?: string;
+  language?: string;
 }
 
 
@@ -780,6 +822,8 @@ export interface SubmitAnswerResponse {
   total_questions: number;
 
   is_last: boolean;
+
+  acknowledgement?: string;
 }
 
 
@@ -862,6 +906,9 @@ export const interviewsApi = {
     duration_minutes: number;
     mode: string;
     personality: string;
+    interviewer?: string;
+    voice_gender?: string;
+    language?: string;
   }) =>
     request<CreateInterviewResponse>(
       "POST",
@@ -1249,6 +1296,58 @@ export interface PracticeQuestion {
   category: string;
 
   difficulty: string;
+
+  subject?: string;
+
+  topic?: string;
+
+  type?: string;
+
+  code?: string | null;
+
+  options?: string[];
+
+  time_limit?: number;
+}
+
+
+/* ------------------------------------------------------------
+ * PRACTICE SUBMIT RESULT
+ * ------------------------------------------------------------
+ */
+
+export interface PracticeSubmitResult {
+  question_id: string;
+
+  is_correct: boolean;
+
+  selected_option: any;
+
+  correct_answer: string;
+
+  correct_index?: number;
+
+  explanation: string;
+
+  topic?: string;
+
+  difficulty?: string;
+
+  evaluation?: EvalResult;
+}
+
+
+/* ------------------------------------------------------------
+ * PRACTICE TOPICS RESPONSE
+ * ------------------------------------------------------------
+ */
+
+export interface PracticeTopicsResponse {
+  subjects: Array<{
+    subject: string;
+    total_questions: number;
+    topics: Array<{ name: string; count: number }>;
+  }>;
 }
 
 
@@ -1284,6 +1383,8 @@ export const practiceApi = {
   getQuestion: (
     category: string,
     difficulty: string,
+    topic?: string,
+    excludeIds?: string[],
   ) =>
     request<PracticeQuestion>(
       "POST",
@@ -1291,6 +1392,59 @@ export const practiceApi = {
       {
         category: category.trim(),
         difficulty: difficulty.trim(),
+        topic: topic?.trim(),
+        exclude_ids: excludeIds,
+      },
+    ),
+
+
+  // Submit answer for practice question
+  submitAnswer: (
+    questionId: string,
+    selectedOption: number | string,
+    answer?: string,
+  ) =>
+    request<PracticeSubmitResult>(
+      "POST",
+      "/practice/submit",
+      {
+        question_id: questionId,
+        selected_option: selectedOption,
+        answer: answer?.trim(),
+      },
+    ),
+
+
+  // Get topics and question counts per subject
+  getTopics: (subject?: string) =>
+    request<PracticeTopicsResponse>(
+      "GET",
+      `/practice/topics${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`,
+    ),
+
+
+  // Start a structured practice session
+  startSession: (
+    subject: string,
+    difficulty?: string,
+    topic?: string,
+    limit: number = 10,
+  ) =>
+    request<{
+      session_id: string;
+      total_questions: number;
+      subject: string;
+      difficulty: string;
+      topic?: string;
+      questions: PracticeQuestion[];
+    }>(
+      "POST",
+      "/practice/session",
+      {
+        subject,
+        difficulty,
+        topic,
+        limit,
       },
     ),
 

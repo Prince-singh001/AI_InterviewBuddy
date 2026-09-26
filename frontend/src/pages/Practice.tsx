@@ -1,5 +1,5 @@
 import PracticeNavigation from "@/components/practice/PracticeNavigation";
-import { practiceApi } from "@/services/apiService";
+import { practiceApi, PracticeSubmitResult } from "@/services/apiService";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
@@ -65,6 +65,11 @@ interface PracticeQuestion {
   question: string;
   category: string;
   difficulty: string;
+  subject?: string;
+  topic?: string;
+  type?: string;
+  code?: string | null;
+  options?: string[];
 }
 
 /* =========================================================
@@ -73,11 +78,18 @@ interface PracticeQuestion {
 
 const PRACTICE_CATEGORIES: PracticeCategory[] = [
   {
-    id: "dsa",
-    name: "Data Structures & Algorithms",
-    shortName: "DSA",
-    icon: GitBranch,
-    description: "Arrays, strings, trees, graphs & algorithms",
+    id: "c",
+    name: "C Programming",
+    shortName: "C",
+    icon: Terminal,
+    description: "Pointers, memory management, structs, arrays & core syntax",
+  },
+  {
+    id: "cpp",
+    name: "C++",
+    shortName: "C++",
+    icon: Code2,
+    description: "OOP, STL, templates, smart pointers & memory",
   },
   {
     id: "python",
@@ -85,6 +97,27 @@ const PRACTICE_CATEGORIES: PracticeCategory[] = [
     shortName: "Python",
     icon: Terminal,
     description: "Core Python, OOP, functions & advanced concepts",
+  },
+  {
+    id: "java",
+    name: "Java",
+    shortName: "Java",
+    icon: Code2,
+    description: "OOP, collections, multithreading, JVM & memory",
+  },
+  {
+    id: "aptitude",
+    name: "Aptitude & Reasoning",
+    shortName: "Aptitude",
+    icon: Calculator,
+    description: "Speed math, logical reasoning, P&C, probability & series",
+  },
+  {
+    id: "dsa",
+    name: "Data Structures & Algorithms",
+    shortName: "DSA",
+    icon: GitBranch,
+    description: "Arrays, strings, trees, graphs & algorithms",
   },
   {
     id: "ml",
@@ -174,7 +207,7 @@ const PRACTICE_CATEGORIES: PracticeCategory[] = [
 
 const DIFFICULTIES = [
   {
-    id: "Beginner",
+    id: "Basic",
     description: "Fundamentals",
   },
   {
@@ -183,7 +216,7 @@ const DIFFICULTIES = [
   },
   {
     id: "Advanced",
-    description: "Deep technical",
+    description: "Expert / Tricky",
   },
 ];
 
@@ -222,6 +255,10 @@ export default function Practice() {
 
   const [difficulty, setDifficulty] = useState("Intermediate");
 
+  const [selectedTopic, setSelectedTopic] = useState<string>("All");
+
+  const [availableTopics, setAvailableTopics] = useState<string[]>([]);
+
   const [mode, setMode] = useState<"text" | "voice">("text");
 
   const [answer, setAnswer] = useState("");
@@ -229,6 +266,21 @@ export default function Practice() {
   const [evaluating, setEvaluating] = useState(false);
 
   const [evalResult, setEvalResult] = useState<EvalResult | null>(null);
+
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+
+  const [submittingOption, setSubmittingOption] = useState(false);
+
+  const [mcqResult, setMcqResult] = useState<PracticeSubmitResult | null>(null);
+
+  const [answeredIds, setAnsweredIds] = useState<string[]>([]);
+
+  const [sessionStats, setSessionStats] = useState({
+    attempted: 0,
+    correct: 0,
+    incorrect: 0,
+    score: 0,
+  });
 
   const [showModel, setShowModel] = useState(false);
 
@@ -249,6 +301,42 @@ export default function Practice() {
     () => getCategoryById(selectedCategoryId),
     [selectedCategoryId],
   );
+
+  /* =========================================================
+     FETCH TOPICS ON CATEGORY CHANGE
+  ========================================================= */
+
+  useEffect(() => {
+    if (!selectedCategoryId) {
+      setAvailableTopics([]);
+      setSelectedTopic("All");
+      return;
+    }
+
+    const cat = getCategoryById(selectedCategoryId);
+    if (!cat) return;
+
+    setSelectedTopic("All");
+
+    practiceApi
+      .getTopics(cat.shortName)
+      .then((res) => {
+        const found = res?.subjects?.find(
+          (s) =>
+            s.subject.toLowerCase() === cat.shortName.toLowerCase() ||
+            s.subject.toLowerCase() === cat.id.toLowerCase() ||
+            (cat.id === "cpp" && s.subject.toLowerCase() === "c++"),
+        );
+        if (found?.topics?.length) {
+          setAvailableTopics(found.topics.map((t) => t.name));
+        } else {
+          setAvailableTopics([]);
+        }
+      })
+      .catch(() => {
+        setAvailableTopics([]);
+      });
+  }, [selectedCategoryId]);
 
   /* =========================================================
      TIMER
@@ -295,31 +383,32 @@ export default function Practice() {
     setAnswer("");
     setEvalResult(null);
     setShowModel(false);
+    setSelectedOption(null);
+    setMcqResult(null);
 
     // Reset timer for every new question
     setTimer(120);
     setTimerStarted(false);
 
     try {
-      /*Example:
-       * DSA -> "dsa"
-       * Java -> "java"
-       * C++ -> "cpp"
-       * C -> "c"
-       * JavaScript -> "javascript"
-       * ML  -> "ml"
-       * Python -> "python"
-       * 
-      
-       */
-
-      const response = await practiceApi.getQuestion(category.id, difficulty);
+      const topicParam = selectedTopic !== "All" ? selectedTopic : undefined;
+      const response = await practiceApi.getQuestion(
+        category.id,
+        difficulty,
+        topicParam,
+        answeredIds,
+      );
 
       const question: PracticeQuestion = {
         id: response.id,
         question: response.question,
         category: category.shortName,
         difficulty: response.difficulty || difficulty,
+        subject: response.subject,
+        topic: response.topic,
+        type: response.type,
+        code: response.code,
+        options: response.options,
       };
 
       setCurrentQuestion(question);
@@ -337,7 +426,56 @@ export default function Practice() {
   };
 
   /* =========================================================
-     EVALUATE
+     SUBMIT MCQ ANSWER
+  ========================================================= */
+
+  const handleOptionSubmit = async () => {
+    if (selectedOption === null || !currentQuestion) {
+      toast.error("Please select an option first.");
+      return;
+    }
+
+    setSubmittingOption(true);
+
+    try {
+      const result = await practiceApi.submitAnswer(
+        currentQuestion.id,
+        selectedOption,
+      );
+
+      setMcqResult(result);
+      setTimerStarted(false);
+
+      setSessionStats((prev) => {
+        const attempted = prev.attempted + 1;
+        const correct = result.is_correct ? prev.correct + 1 : prev.correct;
+        const incorrect = result.is_correct ? prev.incorrect : prev.incorrect + 1;
+        const score = correct * 10;
+        return { attempted, correct, incorrect, score };
+      });
+
+      // Avoid repeating question within this session
+      setAnsweredIds((prev) =>
+        prev.includes(currentQuestion.id)
+          ? prev
+          : [...prev, currentQuestion.id],
+      );
+
+      if (result.is_correct) {
+        toast.success("Correct answer! +10 points");
+      } else {
+        toast.error("Incorrect. Check the explanation below.");
+      }
+    } catch (error) {
+      console.error("Option submit error:", error);
+      toast.error("Failed to submit answer. Please try again.");
+    } finally {
+      setSubmittingOption(false);
+    }
+  };
+
+  /* =========================================================
+     EVALUATE OPEN-ENDED
   ========================================================= */
 
   const handleEvaluate = async () => {
@@ -382,8 +520,25 @@ export default function Practice() {
     setAnswer("");
     setEvalResult(null);
     setShowModel(false);
+    setSelectedOption(null);
+    setMcqResult(null);
     setTimer(120);
     setTimerStarted(false);
+  };
+
+  /* =========================================================
+     RESET SESSION STATS
+  ========================================================= */
+
+  const handleResetSession = () => {
+    setSessionStats({
+      attempted: 0,
+      correct: 0,
+      incorrect: 0,
+      score: 0,
+    });
+    setAnsweredIds([]);
+    toast.info("Session stats reset");
   };
 
   /* =========================================================
@@ -392,12 +547,15 @@ export default function Practice() {
 
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
+    setSelectedTopic("All");
 
     // Clear previous question when changing category
     setCurrentQuestion(null);
     setAnswer("");
     setEvalResult(null);
     setShowModel(false);
+    setSelectedOption(null);
+    setMcqResult(null);
     setTimer(120);
     setTimerStarted(false);
   };
@@ -597,10 +755,14 @@ export default function Practice() {
 
           <button
             type="button"
-            onClick={() => navigate("/practice/assessment")}
+            onClick={() => {
+              handleCategorySelect("aptitude");
+              setShowCategories(true);
+              toast.info("Selected Aptitude & Reasoning topic");
+            }}
             className="track-action-btn"
           >
-            <span>Take Assessment</span>
+            <span>Start Practice</span>
             <ArrowRight size={14} />
           </button>
         </div>
@@ -753,6 +915,25 @@ export default function Practice() {
             </div>
           </div>
 
+          {/* Topic */}
+          {availableTopics.length > 0 && (
+            <div className="control-group topic-control">
+              <label>Topic Filter</label>
+              <select
+                value={selectedTopic}
+                onChange={(event) => setSelectedTopic(event.target.value)}
+                className="topic-select-dropdown"
+              >
+                <option value="All">All Topics ({availableTopics.length})</option>
+                {availableTopics.map((top) => (
+                  <option key={top} value={top}>
+                    {top}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Mode */}
 
           <div className="control-group mode-control">
@@ -885,9 +1066,25 @@ export default function Practice() {
                 </div>
               ) : currentQuestion ? (
                 <>
-                  <div className="question-number">QUESTION</div>
+                  <div className="question-number">
+                    QUESTION {currentQuestion.topic ? `• ${currentQuestion.topic}` : ""}
+                  </div>
 
                   <h2>{currentQuestion.question}</h2>
+
+                  {currentQuestion.code && (
+                    <div className="practice-code-box">
+                      <div className="code-box-header">
+                        <span className="code-lang-label">
+                          {currentQuestion.subject || currentQuestion.category || "Code"}
+                        </span>
+                        <span className="code-type-label">Snippet</span>
+                      </div>
+                      <pre>
+                        <code>{currentQuestion.code}</code>
+                      </pre>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="question-empty">
@@ -918,14 +1115,16 @@ export default function Practice() {
           >
             <div className="answer-header">
               <div>
-                <h2>Your Answer</h2>
+                <h2>{currentQuestion?.options?.length ? "Select Answer" : "Your Answer"}</h2>
 
                 <p>
-                  Explain your answer clearly and use examples where possible.
+                  {currentQuestion?.options?.length
+                    ? "Choose the single best option and submit to verify."
+                    : "Explain your answer clearly and use examples where possible."}
                 </p>
               </div>
 
-              {mode === "voice" && (
+              {!currentQuestion?.options?.length && mode === "voice" && (
                 <button
                   type="button"
                   className="voice-button"
@@ -941,59 +1140,180 @@ export default function Practice() {
               )}
             </div>
 
-            <div className="textarea-wrapper">
-              <textarea
-                value={answer}
-                onChange={(event) => setAnswer(event.target.value)}
-                disabled={!!evalResult || !currentQuestion || evaluating}
-                placeholder={
-                  currentQuestion
-                    ? "Write your answer here... Explain your approach, reasoning, examples, and trade-offs."
-                    : "Load a question first to start answering."
-                }
-              />
+            {currentQuestion?.options && currentQuestion.options.length > 0 ? (
+              <div className="mcq-options-container">
+                <div className="options-grid">
+                  {currentQuestion.options.map((optionText, index) => {
+                    const isSelected = selectedOption === index;
+                    const isSubmitted = !!mcqResult;
+                    const isCorrect = isSubmitted && mcqResult.correct_index === index;
+                    const isIncorrectSelection =
+                      isSubmitted && isSelected && !mcqResult.is_correct;
 
-              <div className="textarea-footer">
-                <span>{answer.length} characters</span>
+                    let statusClass = "";
+                    if (isCorrect) statusClass = "option-correct";
+                    else if (isIncorrectSelection) statusClass = "option-incorrect";
+                    else if (isSelected) statusClass = "option-selected";
 
-                <span>AI will evaluate your response</span>
-              </div>
-            </div>
+                    const optionLetters = ["A", "B", "C", "D"];
 
-            <div className="answer-actions">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="secondary-button"
-              >
-                <RotateCcw size={15} />
-                Reset
-              </button>
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        disabled={isSubmitted || submittingOption}
+                        onClick={() => setSelectedOption(index)}
+                        className={`option-card ${statusClass}`}
+                      >
+                        <div className="option-letter">
+                          {optionLetters[index] || index + 1}
+                        </div>
+                        <div className="option-text">{optionText}</div>
+                        <div className="option-indicator">
+                          {isCorrect ? (
+                            <CheckCircle2 size={18} className="text-emerald-500" />
+                          ) : isIncorrectSelection ? (
+                            <X size={18} className="text-red-500" />
+                          ) : (
+                            <div className={`radio-dot ${isSelected ? "active" : ""}`} />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
 
-              <button
-                type="button"
-                onClick={handleEvaluate}
-                disabled={
-                  evaluating ||
-                  !!evalResult ||
-                  !answer.trim() ||
-                  !currentQuestion
-                }
-                className="submit-button"
-              >
-                {evaluating ? (
-                  <>
-                    <Loader2 size={16} className="spin" />
-                    Evaluating...
-                  </>
+                {!mcqResult ? (
+                  <div className="answer-actions">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOption(null)}
+                      disabled={selectedOption === null || submittingOption}
+                      className="secondary-button"
+                    >
+                      <RotateCcw size={15} />
+                      Clear
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleOptionSubmit}
+                      disabled={selectedOption === null || submittingOption}
+                      className="submit-button"
+                    >
+                      {submittingOption ? (
+                        <>
+                          <Loader2 size={16} className="spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <Send size={16} />
+                          Submit Answer
+                        </>
+                      )}
+                    </button>
+                  </div>
                 ) : (
-                  <>
-                    <Send size={16} />
-                    Evaluate with AI
-                  </>
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`mcq-explanation-box ${mcqResult.is_correct ? "correct" : "incorrect"}`}
+                  >
+                    <div className="explanation-header">
+                      <div className="explanation-badge">
+                        {mcqResult.is_correct ? (
+                          <>
+                            <CheckCircle2 size={18} />
+                            <span>Correct Answer!</span>
+                          </>
+                        ) : (
+                          <>
+                            <X size={18} />
+                            <span>Incorrect Answer</span>
+                          </>
+                        )}
+                      </div>
+                      <span className="correct-answer-pill">
+                        Correct: {mcqResult.correct_answer}
+                      </span>
+                    </div>
+
+                    <div className="explanation-content">
+                      <strong>Explanation:</strong>
+                      <p>{mcqResult.explanation}</p>
+                    </div>
+
+                    <div className="explanation-footer">
+                      <button
+                        type="button"
+                        onClick={handleLoadQuestion}
+                        disabled={loadingQuestion}
+                        className="next-q-inline-btn"
+                      >
+                        <span>Next Question</span>
+                        <ArrowRight size={15} />
+                      </button>
+                    </div>
+                  </motion.div>
                 )}
-              </button>
-            </div>
+              </div>
+            ) : (
+              <>
+                <div className="textarea-wrapper">
+                  <textarea
+                    value={answer}
+                    onChange={(event) => setAnswer(event.target.value)}
+                    disabled={!!evalResult || !currentQuestion || evaluating}
+                    placeholder={
+                      currentQuestion
+                        ? "Write your answer here... Explain your approach, reasoning, examples, and trade-offs."
+                        : "Load a question first to start answering."
+                    }
+                  />
+
+                  <div className="textarea-footer">
+                    <span>{answer.length} characters</span>
+                    <span>AI will evaluate your response</span>
+                  </div>
+                </div>
+
+                <div className="answer-actions">
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="secondary-button"
+                  >
+                    <RotateCcw size={15} />
+                    Reset
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleEvaluate}
+                    disabled={
+                      evaluating ||
+                      !!evalResult ||
+                      !answer.trim() ||
+                      !currentQuestion
+                    }
+                    className="submit-button"
+                  >
+                    {evaluating ? (
+                      <>
+                        <Loader2 size={16} className="spin" />
+                        Evaluating...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        Evaluate with AI
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </motion.section>
 
           {/* =================================================
@@ -1178,6 +1498,64 @@ export default function Practice() {
         =================================================== */}
 
         <aside className="practice-sidebar">
+          {/* Session Performance */}
+          <motion.div
+            initial={{ opacity: 0, x: 15 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="sidebar-card session-stats-card"
+          >
+            <div className="sidebar-card-heading">
+              <span>Session Scorecard</span>
+              <Trophy size={16} />
+            </div>
+
+            <div className="session-metrics-grid">
+              <div className="session-metric">
+                <span className="metric-label">Attempted</span>
+                <strong className="metric-val">{sessionStats.attempted}</strong>
+              </div>
+              <div className="session-metric">
+                <span className="metric-label">Correct</span>
+                <strong className="metric-val text-emerald">
+                  {sessionStats.correct}
+                </strong>
+              </div>
+              <div className="session-metric">
+                <span className="metric-label">Incorrect</span>
+                <strong className="metric-val text-rose">
+                  {sessionStats.incorrect}
+                </strong>
+              </div>
+              <div className="session-metric">
+                <span className="metric-label">Accuracy</span>
+                <strong className="metric-val">
+                  {sessionStats.attempted > 0
+                    ? `${Math.round((sessionStats.correct / sessionStats.attempted) * 100)}%`
+                    : "0%"}
+                </strong>
+              </div>
+            </div>
+
+            <div className="session-score-banner">
+              <div className="score-badge">
+                <span>Score:</span>
+                <strong>{sessionStats.score} pts</strong>
+              </div>
+              {sessionStats.attempted > 0 && (
+                <button
+                  type="button"
+                  onClick={handleResetSession}
+                  className="reset-stats-btn"
+                  title="Reset session score"
+                >
+                  <RotateCcw size={12} />
+                  Reset
+                </button>
+              )}
+            </div>
+          </motion.div>
+
           {/* Current selection */}
 
           <motion.div
@@ -3677,6 +4055,404 @@ export default function Practice() {
     .score-circle span {
       font-size: 1.2rem;
     }
+  }
+
+  /* =========================================================
+     TOPIC SELECTOR
+  ========================================================= */
+
+  .topic-control {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .topic-select-dropdown {
+    height: 38px;
+    padding: 0 0.85rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--blue-900);
+    background: var(--surface);
+    border: 1.5px solid var(--border-strong);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  .topic-select-dropdown:hover {
+    border-color: var(--blue-500);
+    background: var(--blue-50);
+  }
+
+  .topic-select-dropdown:focus {
+    border-color: var(--blue-500);
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.15);
+  }
+
+  /* =========================================================
+     CODE SNIPPET BOX
+  ========================================================= */
+
+  .practice-code-box {
+    margin-top: 1rem;
+    border-radius: 12px;
+    background: #0B192C;
+    border: 1px solid rgba(144, 202, 249, 0.22);
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(11, 25, 44, 0.18);
+  }
+
+  .code-box-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 1rem;
+    background: #071322;
+    border-bottom: 1px solid rgba(144, 202, 249, 0.12);
+  }
+
+  .code-lang-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #90CAF9;
+  }
+
+  .code-type-label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: #94A3B8;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+  }
+
+  .practice-code-box pre {
+    margin: 0;
+    padding: 1rem;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: #E2E8F0;
+  }
+
+  .practice-code-box code {
+    font-family: inherit;
+  }
+
+  /* =========================================================
+     MCQ OPTIONS GRID
+  ========================================================= */
+
+  .mcq-options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .option-card {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    width: 100%;
+    padding: 0.9rem 1.15rem;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .option-card:hover:not(:disabled) {
+    border-color: var(--blue-500);
+    background: var(--surface-blue);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .option-card.option-selected {
+    border-color: var(--blue-500);
+    background: var(--blue-50);
+    box-shadow: 0 4px 14px rgba(33, 150, 243, 0.16);
+  }
+
+  .option-card.option-correct {
+    border-color: #10B981 !important;
+    background: #ECFDF5 !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.18) !important;
+  }
+
+  .option-card.option-incorrect {
+    border-color: #EF4444 !important;
+    background: #FEF2F2 !important;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.16) !important;
+  }
+
+  .option-letter {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--surface-blue);
+    border: 1px solid var(--blue-200);
+    color: var(--blue-900);
+    font-weight: 700;
+    font-size: 0.78rem;
+    transition: all 0.2s ease;
+  }
+
+  .option-card.option-selected .option-letter {
+    background: var(--blue-500);
+    border-color: var(--blue-500);
+    color: #FFFFFF;
+  }
+
+  .option-card.option-correct .option-letter {
+    background: #10B981;
+    border-color: #10B981;
+    color: #FFFFFF;
+  }
+
+  .option-card.option-incorrect .option-letter {
+    background: #EF4444;
+    border-color: #EF4444;
+    color: #FFFFFF;
+  }
+
+  .option-text {
+    flex: 1;
+    font-size: 0.84rem;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+
+  .option-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .radio-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--border-strong);
+    transition: all 0.2s ease;
+  }
+
+  .radio-dot.active {
+    border-color: var(--blue-500);
+    background: var(--blue-500);
+    box-shadow: inset 0 0 0 3px #FFFFFF;
+  }
+
+  /* =========================================================
+     EXPLANATION BANNER
+  ========================================================= */
+
+  .mcq-explanation-box {
+    padding: 1.25rem;
+    border-radius: 14px;
+    border: 1px solid;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .mcq-explanation-box.correct {
+    background: #F0FDF4;
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+
+  .mcq-explanation-box.incorrect {
+    background: #FEF2F2;
+    border-color: rgba(239, 68, 68, 0.25);
+  }
+
+  .explanation-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .explanation-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+
+  .mcq-explanation-box.correct .explanation-badge {
+    color: #047857;
+  }
+
+  .mcq-explanation-box.incorrect .explanation-badge {
+    color: #B91C1C;
+  }
+
+  .correct-answer-pill {
+    padding: 0.3rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(13, 71, 161, 0.15);
+    color: var(--blue-900);
+  }
+
+  .explanation-content strong {
+    display: block;
+    font-size: 0.74rem;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .explanation-content p {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+  }
+
+  .explanation-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .next-q-inline-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.15rem;
+    border-radius: 10px;
+    background: var(--blue-500);
+    color: #FFFFFF;
+    font-size: 0.76rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(33, 150, 243, 0.25);
+    transition: all 0.2s ease;
+  }
+
+  .next-q-inline-btn:hover {
+    background: var(--blue-900);
+    transform: translateY(-1px);
+  }
+
+  /* =========================================================
+     SESSION STATS CARD
+  ========================================================= */
+
+  .session-stats-card {
+    background: linear-gradient(180deg, #FFFFFF 0%, var(--surface-blue) 100%);
+    border: 1.5px solid var(--border-strong);
+  }
+
+  .session-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.55rem;
+    margin-top: 0.5rem;
+  }
+
+  .session-metric {
+    display: flex;
+    flex-direction: column;
+    padding: 0.55rem 0.65rem;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .metric-label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+  }
+
+  .metric-val {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--blue-900);
+    margin-top: 0.15rem;
+  }
+
+  .metric-val.text-emerald {
+    color: #10B981;
+  }
+
+  .metric-val.text-rose {
+    color: #EF4444;
+  }
+
+  .session-score-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.7rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 10px;
+    background: var(--blue-50);
+    border: 1px solid var(--blue-200);
+  }
+
+  .score-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.74rem;
+    color: var(--blue-900);
+  }
+
+  .score-badge strong {
+    font-size: 0.88rem;
+    font-weight: 800;
+  }
+
+  .reset-stats-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 6px;
+    border: 1px solid var(--blue-200);
+    background: #FFFFFF;
+    color: var(--blue-900);
+    font-size: 0.66rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .reset-stats-btn:hover {
+    background: #FEE2E2;
+    border-color: #FCA5A5;
+    color: #DC2626;
   }
 
   /* =========================================================

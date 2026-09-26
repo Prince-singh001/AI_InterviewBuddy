@@ -5,6 +5,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Request,
 )
 
 from fastapi.security import (
@@ -26,6 +27,10 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
     ProfileSetupRequest,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
 )
 
 from app.services.auth_service import (
@@ -35,6 +40,8 @@ from app.services.auth_service import (
     resend_signup_otp,
     user_to_response,
     get_current_user,
+    request_password_reset,
+    reset_password,
 )
 
 from app.auth.jwt_handler import (
@@ -247,6 +254,57 @@ async def login(
         refresh_token=refresh,
         token_type="bearer",
         user=user_to_response(user),
+    )
+
+
+# ============================================================
+# FORGOT PASSWORD
+# ============================================================
+
+@router.post(
+    "/forgot-password",
+    response_model=ForgotPasswordResponse,
+)
+async def forgot_password(
+    req: ForgotPasswordRequest,
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    frontend_origin = request.headers.get("origin") or "http://localhost:5173"
+
+    message = await request_password_reset(
+        db=db,
+        email=req.email,
+        frontend_origin=frontend_origin,
+    )
+
+    return ForgotPasswordResponse(
+        message=message,
+        email=req.email,
+    )
+
+
+# ============================================================
+# RESET PASSWORD
+# ============================================================
+
+@router.post(
+    "/reset-password",
+    response_model=ResetPasswordResponse,
+)
+async def reset_password_route(
+    req: ResetPasswordRequest,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    message = await reset_password(
+        db=db,
+        email=req.email,
+        token=req.token,
+        new_password=req.new_password,
+    )
+
+    return ResetPasswordResponse(
+        message=message,
     )
 
 

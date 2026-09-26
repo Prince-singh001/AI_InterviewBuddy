@@ -35,6 +35,12 @@ class User:
     # Used to identify whether OTP verification is pending
     otp_verified: bool = False
 
+    # ========================================================
+    # PASSWORD RESET FIELDS
+    # ========================================================
+    reset_token_hash: Optional[str] = None
+    reset_token_expires_at: Optional[datetime] = None
+
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
@@ -96,6 +102,12 @@ class User:
                 "otp_verified",
                 False
             ),
+
+            # =================================================
+            # PASSWORD RESET
+            # =================================================
+            reset_token_hash=doc.get("reset_token_hash"),
+            reset_token_expires_at=doc.get("reset_token_expires_at"),
 
             created_at=doc.get(
                 "created_at"

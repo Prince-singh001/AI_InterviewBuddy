@@ -36,6 +36,12 @@ class Interview(Document):
     mode: str = "text"
 
     personality: str = "Professional"
+ 
+    interviewer: Optional[str] = "jenny"
+
+    voice_gender: Optional[str] = "female"
+
+    language: Optional[str] = "en"
 
     status: str = "pending"
 

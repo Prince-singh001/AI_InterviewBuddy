@@ -1,5 +1,6 @@
 import { interviewsApi } from "@/services/apiService";
 import { useAuthStore } from "@/store/authStore";
+import { resolveVoiceProfile, VoiceProfile } from "@/utils/voiceUtils";
 import {
   AlertCircle,
   ArrowLeft,
@@ -13,6 +14,7 @@ import {
   MicOff,
   Pause,
   Play,
+  RotateCcw,
   Send,
   Sparkles,
   UserRound,
@@ -54,7 +56,17 @@ interface InterviewAnswerResponse {
   total_questions?: number;
   is_last?: boolean;
   completed?: boolean;
+  acknowledgement?: string;
 }
+
+type VoiceInteractionState =
+  | "idle"
+  | "ai_speaking"
+  | "listening"
+  | "user_speaking"
+  | "evaluating"
+  | "ai_feedback"
+  | "next_question";
 
 const QUESTION_COUNTS: Record<number, number> = {
   10: 6,
@@ -137,7 +149,7 @@ export default function InterviewRoom() {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
 
-  // Authenticated candidate name for personalized greeting and PiP label
+  // Authenticated candidate name for personalized PiP label
   const { user } = useAuthStore();
   const candidateName = user?.name?.trim() || "Candidate";
 
@@ -165,10 +177,31 @@ export default function InterviewRoom() {
 
   const [interviewer] = useState<"jenny" | "samm">(resolvedInterviewer);
 
+  // Consistent voice gender: Jenny = female, Samm = male
+  const resolvedVoiceGender = useMemo<"male" | "female">(() => {
+    const state = location.state as
+      | { voice_gender?: "male" | "female"; interviewer?: string }
+      | null
+      | undefined;
+    if (state?.voice_gender === "male" || state?.voice_gender === "female") {
+      return state.voice_gender;
+    }
+    try {
+      const stored = sessionStorage.getItem("active_voice_gender");
+      if (stored === "male" || stored === "female") {
+        return stored as "male" | "female";
+      }
+    } catch {
+      // Storage unavailable fallback
+    }
+    return resolvedInterviewer === "samm" ? "male" : "female";
+  }, [location.state, resolvedInterviewer]);
+
   const interviewerConfig = useMemo(() => {
     if (interviewer === "samm") {
       return {
-        name: "Samm",
+        name: "Sam",
+        genderLabel: "Male Voice",
         roleLabel: "Technical Interview Specialist",
         videoSrc: "/images/interviewers/samm.mp4",
         initialLetter: "S",
@@ -176,6 +209,7 @@ export default function InterviewRoom() {
     }
     return {
       name: "Jenny",
+      genderLabel: "Female Voice",
       roleLabel: "AI Interview Specialist",
       videoSrc: "/images/interviewers/jenny.mp4",
       initialLetter: "J",
@@ -197,7 +231,7 @@ export default function InterviewRoom() {
     if (state?.role) {
       return state.type ? `${state.role} · ${state.type}` : state.role;
     }
-    return "Live Interview Session";
+    return "Live Voice Interview Session";
   }, [location.state]);
 
   // State Management
@@ -208,8 +242,12 @@ export default function InterviewRoom() {
     routeDuration ? (QUESTION_COUNTS[routeDuration] ?? 6) : 15,
   );
   const [userAnswer, setUserAnswer] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [elapsed, setElapsed] = useState(0);
   const [questionSeconds, setQuestionSeconds] = useState(0);
+
+  // Voice Interaction State Machine
+  const [voiceState, setVoiceState] = useState<VoiceInteractionState>("idle");
 
   // Status flags
   const [isPaused, setIsPaused] = useState(false);
@@ -219,7 +257,6 @@ export default function InterviewRoom() {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isGreeting, setIsGreeting] = useState(false);
-  const [, setCandidateTurn] = useState(false);
 
   // Media flags
   const [cameraOn, setCameraOn] = useState(false);
@@ -236,10 +273,13 @@ export default function InterviewRoom() {
   const recognitionRef = useRef<any>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const speechTimeoutsRef = useRef<number[]>([]);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceProfileRef = useRef<VoiceProfile | null>(null);
+  const latestAnswerRef = useRef("");
   const mountedRef = useRef(true);
   const startedRef = useRef(false);
+  const introPlayedRef = useRef(false);
   const completingRef = useRef(false);
-  const greetingDoneRef = useRef(false);
   const elapsedRef = useRef(0);
   const questionStartedAtRef = useRef(0);
   const interviewContainerRef = useRef<HTMLDivElement | null>(null);
@@ -256,6 +296,26 @@ export default function InterviewRoom() {
       : 0;
   const questionText = getQuestionText(currentQ);
   const isTimerLow = remainingSeconds <= 60;
+
+  // ----------------------------------------------------------
+  // DETERMINISTIC VOICE PROFILE INITIALIZATION
+  // ----------------------------------------------------------
+  useEffect(() => {
+    let active = true;
+    void resolveVoiceProfile(resolvedVoiceGender, "en-US").then((profile) => {
+      if (active) {
+        voiceProfileRef.current = profile;
+        console.log(
+          `[InterviewRoom] Locked deterministic voice profile for ${resolvedVoiceGender}:`,
+          profile.voiceName,
+        );
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [resolvedVoiceGender]);
 
   // ----------------------------------------------------------
   // AVATAR VIDEO SYNCHRONIZATION
@@ -280,12 +340,33 @@ export default function InterviewRoom() {
     speechTimeoutsRef.current = [];
   }, []);
 
+  const clearSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current !== null) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }, []);
+
   const stopTimer = useCallback(() => {
     if (timerRef.current !== null) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
   }, []);
+
+  const stopListening = useCallback(() => {
+    clearSilenceTimer();
+    try {
+      recognitionRef.current?.stop?.();
+    } catch {
+      // Recognition may already be stopped
+    }
+    recognitionRef.current = null;
+    if (mountedRef.current) {
+      setIsListening(false);
+      setInterimTranscript("");
+    }
+  }, [clearSilenceTimer]);
 
   const stopSpeaking = useCallback(() => {
     clearSpeechTimeouts();
@@ -296,7 +377,9 @@ export default function InterviewRoom() {
     }
   }, [clearSpeechTimeouts]);
 
-  // Core speak method with onEnd callback support
+  // ----------------------------------------------------------
+  // CORE DETERMINISTIC SPEECH SYNTHESIS
+  // ----------------------------------------------------------
   const speakText = useCallback(
     (text: string, onEnd?: () => void) => {
       if (!text || !("speechSynthesis" in window)) {
@@ -304,111 +387,61 @@ export default function InterviewRoom() {
         return;
       }
 
+      // CRITICAL: Stop microphone immediately before TTS to prevent acoustic feedback loop
+      stopListening();
       clearSpeechTimeouts();
       window.speechSynthesis.cancel();
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
-      utterance.pitch = 1;
+      const profile = voiceProfileRef.current;
+
+      if (profile?.voice) {
+        utterance.voice = profile.voice;
+        utterance.pitch = profile.pitch;
+        utterance.rate = profile.rate;
+      } else {
+        utterance.rate = resolvedVoiceGender === "female" ? 0.96 : 0.94;
+        utterance.pitch = resolvedVoiceGender === "female" ? 1.08 : 0.90;
+      }
       utterance.volume = 1;
 
+      let hasCompleted = false;
+      const handleComplete = () => {
+        if (hasCompleted) return;
+        hasCompleted = true;
+        if (mountedRef.current) {
+          setIsSpeaking(false);
+          onEnd?.();
+        }
+      };
+
       utterance.onstart = () => {
-        if (mountedRef.current) setIsSpeaking(true);
-      };
-      utterance.onend = () => {
         if (mountedRef.current) {
-          setIsSpeaking(false);
-          onEnd?.();
+          setIsSpeaking(true);
         }
       };
-      utterance.onerror = () => {
-        if (mountedRef.current) {
-          setIsSpeaking(false);
-          onEnd?.();
-        }
+
+      utterance.onend = handleComplete;
+
+      utterance.onerror = (event) => {
+        console.warn("[TTS] Utterance event:", event);
+        handleComplete();
       };
+
+      // Safety fallback in case browser speech synthesis hangs or fails to fire onend
+      const maxDuration = Math.max(7000, text.length * 85);
+      const safetyTimer = window.setTimeout(handleComplete, maxDuration);
+      speechTimeoutsRef.current.push(safetyTimer);
 
       setIsSpeaking(true);
       window.speechSynthesis.speak(utterance);
     },
-    [clearSpeechTimeouts],
+    [clearSpeechTimeouts, resolvedVoiceGender, stopListening],
   );
 
-  const stopListening = useCallback(() => {
-    try {
-      recognitionRef.current?.stop?.();
-    } catch {
-      // Recognition may already be stopped
-    }
-    recognitionRef.current = null;
-    if (mountedRef.current) setIsListening(false);
-  }, []);
-
-  const startListening = useCallback(() => {
-    const SpeechRecognition = getSpeechRecognition();
-
-    if (!SpeechRecognition) {
-      setSpeechSupported(false);
-      setError(
-        "Speech recognition is not supported in this browser. You can type your answer instead.",
-      );
-      return;
-    }
-
-    stopListening();
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    recognition.onstart = () => {
-      if (mountedRef.current) {
-        setIsListening(true);
-        setError("");
-      }
-    };
-
-    recognition.onresult = (event: any) => {
-      let finalTranscript = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0]?.transcript ?? "";
-        }
-      }
-
-      if (finalTranscript.trim() && mountedRef.current) {
-        setUserAnswer((previous) => {
-          const trimmed = previous.trim();
-          return `${trimmed}${trimmed ? " " : ""}${finalTranscript.trim()}`.trim();
-        });
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      if (!mountedRef.current) return;
-      setIsListening(false);
-      if (event?.error === "not-allowed") {
-        setError("Microphone permission was denied.");
-      } else {
-        setError("Voice recognition stopped. You can continue typing.");
-      }
-    };
-
-    recognition.onend = () => {
-      if (mountedRef.current) setIsListening(false);
-    };
-
-    recognitionRef.current = recognition;
-
-    try {
-      recognition.start();
-    } catch {
-      setIsListening(false);
-    }
-  }, [stopListening]);
-
+  // ----------------------------------------------------------
+  // CAMERA CONTROLS
+  // ----------------------------------------------------------
   const startCamera = useCallback(async () => {
     try {
       setCameraError("");
@@ -462,6 +495,9 @@ export default function InterviewRoom() {
     else void startCamera();
   }, [cameraOn, startCamera, stopCamera]);
 
+  // ----------------------------------------------------------
+  // SESSION COMPLETION
+  // ----------------------------------------------------------
   const completeInterview = useCallback(
     async (reason: "finished" | "time" | "exit") => {
       if (!interviewId || completingRef.current) {
@@ -485,6 +521,7 @@ export default function InterviewRoom() {
       } finally {
         try {
           sessionStorage.removeItem("active_interview_id");
+          sessionStorage.removeItem(`interview_intro_done_${interviewId}`);
         } catch {
           // Storage restrictions fallback
         }
@@ -492,111 +529,151 @@ export default function InterviewRoom() {
         if (mountedRef.current) {
           navigate(`/interview/complete/${interviewId}`, {
             replace: true,
-            state: { reason, interviewer },
+            state: { reason, interviewer, voice_gender: resolvedVoiceGender },
           });
         }
       }
     },
-    [interviewId, interviewer, navigate, stopCamera, stopListening, stopSpeaking, stopTimer],
+    [interviewId, interviewer, navigate, resolvedVoiceGender, stopCamera, stopListening, stopSpeaking, stopTimer],
   );
 
-  // Starts the interview and handles candidate greeting
-  const startInterview = useCallback(async () => {
-    if (!interviewId || startedRef.current) return;
+  // ----------------------------------------------------------
+  // SPEECH RECOGNITION & DICTATION WITH SILENCE AUTO-SUBMIT
+  // ----------------------------------------------------------
+  const startListening = useCallback(() => {
+    const SpeechRecognition = getSpeechRecognition();
 
-    startedRef.current = true;
-    setIsStarting(true);
-    setError("");
+    if (!SpeechRecognition) {
+      setSpeechSupported(false);
+      setError(
+        "Speech recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge for the best voice experience.",
+      );
+      return;
+    }
 
-    try {
-      const rawResponse = await interviewsApi.start(interviewId);
-      const response = rawResponse as unknown as InterviewStartResponse;
-      const question = response.data ?? response.current_question ?? response;
+    stopListening();
+    clearSilenceTimer();
 
-      if (!question?.question_id) {
-        throw new Error("The server did not return a valid first question.");
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => {
+      if (mountedRef.current) {
+        setIsListening(true);
+        setVoiceState("listening");
+        setError("");
+      }
+    };
+
+    recognition.onresult = (event: any) => {
+      let finalTranscript = "";
+      let interim = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const text = event.results[i][0]?.transcript ?? "";
+        if (event.results[i].isFinal) {
+          finalTranscript += text;
+        } else {
+          interim += text;
+        }
       }
 
-      const backendTotal = Number(question.total_questions) || 0;
-      const backendDuration =
-        Number(response.duration_minutes ?? response.duration) || 0;
-
-      const finalDuration =
-        backendDuration > 0
-          ? backendDuration
-          : (routeDuration ?? durationMinutes);
-      const finalTotal =
-        backendTotal ||
-        QUESTION_COUNTS[finalDuration] ||
-        QUESTION_COUNTS[routeDuration ?? 30] ||
-        6;
-      const questionNumber = Number(question.question_number) || 1;
-
-      setDurationMinutes(finalDuration);
-      setTotalQuestions(finalTotal);
-      setQuestionIdx(Math.max(questionNumber - 1, 0));
-      setCurrentQ({
-        ...question,
-        question_number: questionNumber,
-        total_questions: finalTotal,
-      });
-      setUserAnswer("");
-      setElapsed(0);
-      setQuestionSeconds(0);
-      elapsedRef.current = 0;
-      questionStartedAtRef.current = Date.now();
-      setIsPaused(false);
-
-      // Greeting with authenticated candidate name
-      const timeoutId = window.setTimeout(() => {
-        if (!mountedRef.current) return;
-
-        if (!greetingDoneRef.current) {
-          greetingDoneRef.current = true;
-          setIsGreeting(true);
-
-          const greetingMessage = `Hello ${candidateName}, welcome to your AI interview. I'm ${interviewerConfig.name}, and I'll be your interviewer today. Let's begin with your first question.`;
-
-          speakText(greetingMessage, () => {
-            if (!mountedRef.current) return;
-            setIsGreeting(false);
-
-            // Once greeting completes, speak question 1
-            const firstQuestionText = getQuestionText(question);
-            speakText(firstQuestionText, () => {
-              if (mountedRef.current) setCandidateTurn(true);
-            });
-          });
-        } else {
-          speakText(getQuestionText(question), () => {
-            if (mountedRef.current) setCandidateTurn(true);
+      if (mountedRef.current) {
+        if (finalTranscript.trim()) {
+          setUserAnswer((prev) => {
+            const trimmed = prev.trim();
+            const updated = `${trimmed}${trimmed ? " " : ""}${finalTranscript.trim()}`.trim();
+            latestAnswerRef.current = updated;
+            return updated;
           });
         }
-      }, 500);
+        setInterimTranscript(interim);
+        setVoiceState("user_speaking");
 
-      speechTimeoutsRef.current.push(timeoutId);
-    } catch (startError) {
-      startedRef.current = false;
-      setError(getErrorMessage(startError));
-    } finally {
-      if (mountedRef.current) setIsStarting(false);
+        // Dynamic Silence Detection:
+        // When candidate pauses for > 3.2s with a valid answer, auto-submit
+        clearSilenceTimer();
+        silenceTimerRef.current = setTimeout(() => {
+          if (!mountedRef.current) return;
+          const currentAnswer = latestAnswerRef.current.trim();
+          const wordCount = currentAnswer.split(/\s+/).filter(Boolean).length;
+          if (wordCount >= 3) {
+            void submitAnswer();
+          }
+        }, 3200);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      if (!mountedRef.current) return;
+      if (event?.error === "not-allowed" || event?.error === "service-not-allowed") {
+        setIsListening(false);
+        setError("Microphone permission is required for voice interviews. Please allow microphone access in your browser.");
+      } else if (event?.error !== "no-speech") {
+        console.warn("[SpeechRecognition] event warning:", event.error);
+      }
+    };
+
+    recognition.onend = () => {
+      if (
+        mountedRef.current &&
+        isListening &&
+        !isSpeaking &&
+        !isSubmitting &&
+        !isPaused &&
+        !isCompleting
+      ) {
+        // Continuous listening safety auto-reconnect
+        try {
+          recognition.start();
+        } catch {
+          setIsListening(false);
+        }
+      } else if (mountedRef.current) {
+        setIsListening(false);
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+    } catch {
+      setIsListening(false);
     }
-  }, [candidateName, durationMinutes, interviewId, interviewerConfig.name, routeDuration, speakText]);
+  }, [clearSilenceTimer, isCompleting, isListening, isPaused, isSpeaking, isSubmitting, stopListening]);
 
+  // Safe buffer delay after AI speech ends before starting microphone (prevents speaker echo)
+  const safeStartListeningAfterTTS = useCallback(() => {
+    clearSpeechTimeouts();
+    const timeoutId = window.setTimeout(() => {
+      if (mountedRef.current && !isPaused && !isCompleting && !completingRef.current) {
+        startListening();
+      }
+    }, 600); // 600ms buffer ensures audio output has finished echoing
+    speechTimeoutsRef.current.push(timeoutId);
+  }, [clearSpeechTimeouts, isCompleting, isPaused, startListening]);
+
+  // ----------------------------------------------------------
+  // ANSWER SUBMISSION & AI ACKNOWLEDGEMENT FEEDBACK
+  // ----------------------------------------------------------
   const submitAnswer = useCallback(async () => {
     if (!interviewId || !currentQ) return;
     if (isSubmitting || isCompleting || isPaused) return;
 
-    const answer = userAnswer.trim();
+    const answer = (latestAnswerRef.current.trim() || userAnswer.trim());
 
     if (!answer) {
-      setError("Please type or dictate an answer before submitting.");
+      setError("Please speak your answer into the microphone before submitting.");
       return;
     }
 
     setIsSubmitting(true);
-    setCandidateTurn(false);
+    setVoiceState("evaluating");
     setError("");
+    clearSilenceTimer();
     stopListening();
     stopSpeaking();
 
@@ -629,48 +706,75 @@ export default function InterviewRoom() {
         backendQuestionNumber >= backendTotal ||
         questionIdx + 1 >= backendTotal;
 
+      // Reset spoken answer states for the next turn
       setUserAnswer("");
+      setInterimTranscript("");
+      latestAnswerRef.current = "";
+
+      // Professional short AI acknowledgement
+      const ack =
+        response.acknowledgement ||
+        ((response.score ?? 50) >= 60
+          ? "Good answer. Let's move to the next question."
+          : "Thank you. Let's continue with the next question.");
+
+      setVoiceState("ai_feedback");
 
       if (isLast) {
-        await completeInterview("finished");
+        speakText(
+          ack || "Excellent work. You have completed all questions for this session.",
+          async () => {
+            await completeInterview("finished");
+          },
+        );
         return;
       }
 
-      const rawNext = await interviewsApi.nextQuestion(interviewId);
-      const nextResponse = rawNext as unknown as LiveQuestion;
-      const nextQuestion =
-        (nextResponse as any)?.data ??
-        (nextResponse as any)?.current_question ??
-        nextResponse;
+      // Speak short acknowledgment, then automatically transition to next question
+      speakText(ack, async () => {
+        if (!mountedRef.current || isPaused) return;
 
-      if (!nextQuestion?.question_id) {
-        throw new Error("The server did not return the next interview question.");
-      }
+        try {
+          setVoiceState("next_question");
 
-      const nextNumber =
-        Number(nextQuestion.question_number) || backendQuestionNumber + 1;
-      const nextTotal = Number(nextQuestion.total_questions) || backendTotal;
+          const rawNext = await interviewsApi.nextQuestion(interviewId);
+          const nextResponse = rawNext as unknown as LiveQuestion;
+          const nextQuestion =
+            (nextResponse as any)?.data ??
+            (nextResponse as any)?.current_question ??
+            nextResponse;
 
-      setTotalQuestions(nextTotal);
-      setQuestionIdx(Math.max(nextNumber - 1, 0));
-      setCurrentQ({
-        ...nextQuestion,
-        question_number: nextNumber,
-        total_questions: nextTotal,
-      });
-      setQuestionSeconds(0);
-      questionStartedAtRef.current = Date.now();
+          if (!nextQuestion?.question_id) {
+            throw new Error("The server did not return the next interview question.");
+          }
 
-      const nextText = getQuestionText(nextQuestion);
-      const timeoutId = window.setTimeout(() => {
-        if (mountedRef.current && !isPaused) {
-          speakText(nextText, () => {
-            if (mountedRef.current) setCandidateTurn(true);
+          const nextNumber =
+            Number(nextQuestion.question_number) || backendQuestionNumber + 1;
+          const nextTotal = Number(nextQuestion.total_questions) || backendTotal;
+
+          setTotalQuestions(nextTotal);
+          setQuestionIdx(Math.max(nextNumber - 1, 0));
+          setCurrentQ({
+            ...nextQuestion,
+            question_number: nextNumber,
+            total_questions: nextTotal,
           });
-        }
-      }, 400);
+          setQuestionSeconds(0);
+          questionStartedAtRef.current = Date.now();
 
-      speechTimeoutsRef.current.push(timeoutId);
+          // AI speaks the next question
+          const nextText = getQuestionText(nextQuestion);
+          setVoiceState("ai_speaking");
+          speakText(nextText, () => {
+            if (mountedRef.current && !isPaused) {
+              safeStartListeningAfterTTS();
+            }
+          });
+        } catch (nextErr) {
+          console.error("Failed to load next question:", nextErr);
+          setError(getErrorMessage(nextErr));
+        }
+      });
     } catch (answerError) {
       console.error("Failed to submit answer:", answerError);
       setError(getErrorMessage(answerError));
@@ -678,6 +782,7 @@ export default function InterviewRoom() {
       if (mountedRef.current) setIsSubmitting(false);
     }
   }, [
+    clearSilenceTimer,
     completeInterview,
     currentQ,
     interviewId,
@@ -685,6 +790,7 @@ export default function InterviewRoom() {
     isPaused,
     isSubmitting,
     questionIdx,
+    safeStartListeningAfterTTS,
     speakText,
     stopListening,
     stopSpeaking,
@@ -692,18 +798,197 @@ export default function InterviewRoom() {
     userAnswer,
   ]);
 
+  // ----------------------------------------------------------
+  // START INTERVIEW: VOICE INITIALIZATION & SPOKEN INTRODUCTION
+  // ----------------------------------------------------------
+  const startInterview = useCallback(async () => {
+    if (!interviewId || startedRef.current) return;
+
+    startedRef.current = true;
+    setIsStarting(true);
+    setError("");
+
+    try {
+      // 1. Resolve and lock the deterministic voice profile first
+      const profile = await resolveVoiceProfile(resolvedVoiceGender, "en-US");
+      if (mountedRef.current) {
+        voiceProfileRef.current = profile;
+      }
+
+      // 2. Fetch the initial interview session & first question
+      const rawResponse = await interviewsApi.start(interviewId);
+      const response = rawResponse as unknown as InterviewStartResponse;
+      const question = response.data ?? response.current_question ?? response;
+
+      if (!question?.question_id) {
+        throw new Error("The server did not return a valid first question.");
+      }
+
+      const backendTotal = Number(question.total_questions) || 0;
+      const backendDuration =
+        Number(response.duration_minutes ?? response.duration) || 0;
+
+      const finalDuration =
+        backendDuration > 0
+          ? backendDuration
+          : (routeDuration ?? durationMinutes);
+      const finalTotal =
+        backendTotal ||
+        QUESTION_COUNTS[finalDuration] ||
+        QUESTION_COUNTS[routeDuration ?? 30] ||
+        6;
+      const questionNumber = Number(question.question_number) || 1;
+
+      setDurationMinutes(finalDuration);
+      setTotalQuestions(finalTotal);
+      setQuestionIdx(Math.max(questionNumber - 1, 0));
+      setUserAnswer("");
+      setInterimTranscript("");
+      latestAnswerRef.current = "";
+      setElapsed(0);
+      setQuestionSeconds(0);
+      elapsedRef.current = 0;
+      questionStartedAtRef.current = Date.now();
+      setIsPaused(false);
+
+      const firstQuestionObj: LiveQuestion = {
+        ...question,
+        question_number: questionNumber,
+        total_questions: finalTotal,
+      };
+
+      // Switch from loading screen to room layout
+      if (mountedRef.current) {
+        setIsStarting(false);
+      }
+
+      // 3. Spoken Introduction Flow:
+      // Must play strictly ONCE per interview session
+      const sessionIntroKey = `interview_intro_done_${interviewId}`;
+      const hasAlreadyIntroduced =
+        introPlayedRef.current ||
+        sessionStorage.getItem(sessionIntroKey) === "done";
+
+      if (!hasAlreadyIntroduced) {
+        introPlayedRef.current = true;
+        try {
+          sessionStorage.setItem(sessionIntroKey, "done");
+        } catch {
+          // sessionStorage fallback
+        }
+
+        // Exact natural introduction mapped to the chosen persona & voice
+        const introMessage =
+          resolvedVoiceGender === "male"
+            ? "Hi, I'm Sam, and I'll be your AI interviewer today. Let's get started."
+            : "Hi, I'm Jenny, and I'll be your AI interviewer today. Let's get started.";
+
+        if (mountedRef.current) {
+          setIsGreeting(true);
+          setVoiceState("ai_speaking");
+        }
+
+        // Wait a brief 300ms for browser DOM mount, then speak introduction
+        const timeoutId = window.setTimeout(() => {
+          if (!mountedRef.current) return;
+
+          speakText(introMessage, () => {
+            if (!mountedRef.current) return;
+            setIsGreeting(false);
+
+            // Once introduction finishes completely:
+            // 1. Show the first interview question
+            setCurrentQ(firstQuestionObj);
+            setVoiceState("ai_speaking");
+
+            // 2. Speak the first question after a small natural pause
+            const questionTimer = window.setTimeout(() => {
+              if (!mountedRef.current || isPaused) return;
+              const firstQuestionText = getQuestionText(firstQuestionObj);
+              speakText(firstQuestionText, () => {
+                if (mountedRef.current && !isPaused) {
+                  // 3. Microphone starts listening only after question finishes
+                  safeStartListeningAfterTTS();
+                }
+              });
+            }, 400);
+
+            speechTimeoutsRef.current.push(questionTimer);
+          });
+        }, 300);
+
+        speechTimeoutsRef.current.push(timeoutId);
+      } else {
+        // Introduction already played (e.g. page refresh) -> directly display & speak first question
+        setCurrentQ(firstQuestionObj);
+        setVoiceState("ai_speaking");
+
+        const timeoutId = window.setTimeout(() => {
+          if (!mountedRef.current || isPaused) return;
+          speakText(getQuestionText(firstQuestionObj), () => {
+            if (mountedRef.current && !isPaused) {
+              safeStartListeningAfterTTS();
+            }
+          });
+        }, 300);
+
+        speechTimeoutsRef.current.push(timeoutId);
+      }
+    } catch (startError) {
+      startedRef.current = false;
+      setError(getErrorMessage(startError));
+      if (mountedRef.current) setIsStarting(false);
+    }
+  }, [
+    durationMinutes,
+    interviewId,
+    isPaused,
+    resolvedVoiceGender,
+    routeDuration,
+    safeStartListeningAfterTTS,
+    speakText,
+  ]);
+
+  const handleClearAnswer = useCallback(() => {
+    clearSilenceTimer();
+    setUserAnswer("");
+    setInterimTranscript("");
+    latestAnswerRef.current = "";
+    if (!isSpeaking && !isSubmitting && !isPaused && !isGreeting) {
+      startListening();
+    }
+  }, [clearSilenceTimer, isGreeting, isPaused, isSpeaking, isSubmitting, startListening]);
+
+  const handleRereadQuestion = useCallback(() => {
+    if (isSpeaking) {
+      stopSpeaking();
+    } else {
+      stopListening();
+      setVoiceState("ai_speaking");
+      speakText(questionText, () => {
+        if (mountedRef.current && !isPaused) {
+          safeStartListeningAfterTTS();
+        }
+      });
+    }
+  }, [isPaused, isSpeaking, questionText, safeStartListeningAfterTTS, speakText, stopListening, stopSpeaking]);
+
   const togglePause = useCallback(() => {
     if (isCompleting) return;
 
     setIsPaused((previous) => {
       const next = !previous;
       if (next) {
+        clearSilenceTimer();
         stopListening();
         stopSpeaking();
+      } else {
+        // Resuming: if not speaking, activate mic
+        safeStartListeningAfterTTS();
       }
       return next;
     });
-  }, [isCompleting, stopListening, stopSpeaking]);
+  }, [clearSilenceTimer, isCompleting, safeStartListeningAfterTTS, stopListening, stopSpeaking]);
 
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -728,6 +1013,7 @@ export default function InterviewRoom() {
     if (confirmed) void completeInterview("exit");
   }, [completeInterview, isCompleting]);
 
+  // Main session boot effect - runs once per interviewId
   useEffect(() => {
     mountedRef.current = true;
 
@@ -749,6 +1035,7 @@ export default function InterviewRoom() {
     return () => {
       mountedRef.current = false;
       clearSpeechTimeouts();
+      clearSilenceTimer();
       stopTimer();
       stopListening();
       stopSpeaking();
@@ -758,16 +1045,8 @@ export default function InterviewRoom() {
         document.exitFullscreen().catch(() => undefined);
       }
     };
-  }, [
-    clearSpeechTimeouts,
-    interviewId,
-    startCamera,
-    startInterview,
-    stopCamera,
-    stopListening,
-    stopSpeaking,
-    stopTimer,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interviewId]);
 
   useEffect(() => {
     const handleFullscreenChange = () =>
@@ -811,6 +1090,14 @@ export default function InterviewRoom() {
     stopTimer,
   ]);
 
+  // Combined real-time display transcript
+  const fullDisplayTranscript = useMemo(() => {
+    const main = userAnswer.trim();
+    const interim = interimTranscript.trim();
+    if (main && interim) return `${main} ${interim}`;
+    return main || interim;
+  }, [userAnswer, interimTranscript]);
+
   // Loading Screen
   if (isStarting) {
     return (
@@ -820,9 +1107,9 @@ export default function InterviewRoom() {
             <Bot size={32} />
           </div>
           <Loader2 size={24} className="animate-spin text-[#2196F3] mx-auto mb-3" />
-          <h1 className="text-xl font-black text-[#0D47A1] mb-2">Connecting to AI Interview Room</h1>
+          <h1 className="text-xl font-black text-[#0D47A1] mb-2">Connecting to AI Voice Interview</h1>
           <p className="text-xs text-slate-600 leading-relaxed mb-6">
-            Joining session with <strong>{interviewerConfig.name}</strong> ({interviewerConfig.roleLabel}) and preparing your questions...
+            Joining session with <strong>{interviewerConfig.name}</strong> ({interviewerConfig.genderLabel} · {interviewerConfig.roleLabel}) and preparing voice interaction...
           </p>
           <div className="w-full bg-[#E3F2FD] h-2 rounded-full overflow-hidden">
             <div className="bg-[#2196F3] h-full w-2/3 animate-pulse rounded-full" />
@@ -833,7 +1120,7 @@ export default function InterviewRoom() {
   }
 
   // Error Screen
-  if (error && !currentQ) {
+  if (error && !currentQ && !isGreeting) {
     return (
       <div className="w-screen h-screen min-h-screen bg-[#F8FCFF] flex items-center justify-center p-4">
         <div className="max-w-md w-full p-8 rounded-3xl bg-white border border-rose-200 shadow-xl text-center">
@@ -889,8 +1176,11 @@ export default function InterviewRoom() {
           </div>
 
           <div className="flex flex-col">
-            <div className="text-xs sm:text-sm font-black text-[#0D47A1] leading-tight">
-              InterviewerBuddy AI
+            <div className="text-xs sm:text-sm font-black text-[#0D47A1] leading-tight flex items-center gap-1.5">
+              <span>InterviewerBuddy AI</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-[#E3F2FD] text-[#2196F3] font-bold">
+                Voice Mode
+              </span>
             </div>
             <div className="text-[10px] sm:text-[11px] text-[#2196F3] font-semibold line-clamp-1 max-w-[140px] sm:max-w-[280px]">
               {roleTitle}
@@ -901,13 +1191,15 @@ export default function InterviewRoom() {
         {/* Center: Question Progress */}
         <div className="flex flex-col items-center max-w-[140px] sm:max-w-xs w-full mx-2 sm:mx-4">
           <div className="flex items-center justify-between w-full text-[11px] sm:text-xs font-bold text-[#0D47A1] mb-1">
-            <span>Question {currentQuestionNumber} of {totalQuestions}</span>
-            <span>{Math.round(progress)}%</span>
+            <span>
+              {isGreeting ? "Starting Session" : `Question ${currentQuestionNumber} of ${totalQuestions}`}
+            </span>
+            <span>{isGreeting ? "0%" : `${Math.round(progress)}%`}</span>
           </div>
           <div className="w-full bg-[#E3F2FD] h-1.5 sm:h-2 rounded-full overflow-hidden border border-[#90CAF9]/30">
             <div
               className="bg-[#2196F3] h-full rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${isGreeting ? 5 : progress}%` }}
             />
           </div>
         </div>
@@ -916,7 +1208,7 @@ export default function InterviewRoom() {
         <div className="flex items-center gap-1.5 sm:gap-2.5">
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E3F2FD] border border-[#90CAF9] text-[11px] font-bold text-[#0D47A1]">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Live Session</span>
+            <span>Voice Session</span>
           </div>
 
           <div
@@ -948,9 +1240,20 @@ export default function InterviewRoom() {
             <AlertCircle size={15} />
             <span>{error}</span>
           </div>
-          <button onClick={() => setError("")} className="cursor-pointer">
-            <X size={15} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setError("");
+                startListening();
+              }}
+              className="underline font-bold hover:text-rose-900 cursor-pointer"
+            >
+              Retry Microphone
+            </button>
+            <button onClick={() => setError("")} className="cursor-pointer ml-2">
+              <X size={15} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -978,23 +1281,34 @@ export default function InterviewRoom() {
                 {interviewerConfig.initialLetter}
               </div>
               <h3 className="text-xl font-bold text-white">{interviewerConfig.name}</h3>
-              <p className="text-xs text-[#90CAF9] mt-1">{interviewerConfig.roleLabel}</p>
+              <p className="text-xs text-[#90CAF9] mt-1">
+                {interviewerConfig.genderLabel} · {interviewerConfig.roleLabel}
+              </p>
             </div>
           )}
 
           {/* FLOATING STATUS PILL OVERLAY (TOP-LEFT) */}
           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 z-20">
-            {isSubmitting ? (
+            {isSubmitting || voiceState === "evaluating" ? (
               <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-slate-900/90 backdrop-blur-md text-[#90CAF9] border border-[#2196F3]/50 text-xs font-bold shadow-lg">
                 <Loader2 size={13} className="animate-spin text-[#2196F3]" />
-                <span>Processing answer...</span>
+                <span>Evaluating answer...</span>
               </div>
             ) : isGreeting ? (
               <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-[#0D47A1]/90 backdrop-blur-md text-white border border-[#2196F3] text-xs font-bold shadow-lg">
                 <Sparkles size={13} className="text-[#90CAF9] animate-pulse" />
-                <span>Greeting {candidateName}...</span>
+                <span>AI Interviewer Introduction...</span>
               </div>
-            ) : isSpeaking ? (
+            ) : voiceState === "ai_feedback" ? (
+              <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-[#0D47A1]/90 backdrop-blur-md text-white border border-[#2196F3] text-xs font-bold shadow-lg">
+                <div className="flex items-center gap-0.5">
+                  <span className="w-1 h-3 bg-[#90CAF9] rounded-full animate-bounce" />
+                  <span className="w-1 h-4 bg-[#2196F3] rounded-full animate-bounce [animation-delay:0.15s]" />
+                  <span className="w-1 h-2 bg-[#90CAF9] rounded-full animate-bounce [animation-delay:0.3s]" />
+                </div>
+                <span>AI response...</span>
+              </div>
+            ) : isSpeaking || voiceState === "ai_speaking" ? (
               <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-[#0D47A1]/90 backdrop-blur-md text-white border border-[#2196F3] text-xs font-bold shadow-lg">
                 <div className="flex items-center gap-0.5">
                   <span className="w-1 h-3 bg-[#90CAF9] rounded-full animate-bounce" />
@@ -1004,15 +1318,20 @@ export default function InterviewRoom() {
                 </div>
                 <span>AI is speaking...</span>
               </div>
-            ) : isListening ? (
+            ) : voiceState === "user_speaking" ? (
+              <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-blue-950/90 backdrop-blur-md text-[#90CAF9] border border-[#2196F3] text-xs font-bold shadow-lg">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2196F3] animate-pulse" />
+                <span>You are speaking · Dictating answer...</span>
+              </div>
+            ) : isListening || voiceState === "listening" ? (
               <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-emerald-950/90 backdrop-blur-md text-emerald-300 border border-emerald-500/50 text-xs font-bold shadow-lg">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                <span>Listening... Speak or type below</span>
+                <span>Listening... Speak your answer now</span>
               </div>
             ) : (
               <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-slate-900/85 backdrop-blur-md text-white border border-[#90CAF9]/40 text-xs font-medium shadow-md">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span>Your turn · Speak or type below</span>
+                <span>Your turn · Speak to answer</span>
               </div>
             )}
           </div>
@@ -1021,6 +1340,8 @@ export default function InterviewRoom() {
           <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-10 hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/75 backdrop-blur-md border border-[#90CAF9]/30 text-white text-xs font-semibold">
             <Bot size={13} className="text-[#2196F3]" />
             <span>{interviewerConfig.name}</span>
+            <span className="text-slate-400 text-[10px]">•</span>
+            <span className="text-[#90CAF9] text-[10px] font-bold">{interviewerConfig.genderLabel}</span>
             <span className="text-slate-400 text-[10px]">•</span>
             <span className="text-slate-300 text-[10px]">{interviewerConfig.roleLabel}</span>
           </div>
@@ -1072,11 +1393,11 @@ export default function InterviewRoom() {
               <button
                 type="button"
                 onClick={isListening ? stopListening : startListening}
-                disabled={!speechSupported || isSubmitting}
+                disabled={!speechSupported || isSubmitting || isSpeaking || isGreeting}
                 title={isListening ? "Stop microphone" : "Start microphone"}
                 className="p-1 rounded text-white hover:text-[#90CAF9] transition-colors cursor-pointer"
               >
-                {isListening ? <Mic size={13} className="text-rose-400 animate-pulse" /> : <MicOff size={13} />}
+                {isListening ? <Mic size={13} className="text-emerald-400 animate-pulse" /> : <MicOff size={13} />}
               </button>
             </div>
           </div>
@@ -1084,10 +1405,10 @@ export default function InterviewRoom() {
       </div>
 
       {/* ====================================================
-          4. QUESTION, TRANSCRIPT & BOTTOM CONTROL BAR
+          4. QUESTION & VOICE TRANSCRIPT INTERACTION AREA
       ==================================================== */}
       <div className="shrink-0 flex flex-col gap-2.5 px-3 sm:px-4 pb-3">
-        {/* ROW 1: QUESTION (LEFT) & ANSWER / TRANSCRIPT (RIGHT) */}
+        {/* ROW 1: QUESTION (LEFT 5 COLS) & VOICE TRANSCRIPT (RIGHT 7 COLS) */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 sm:gap-3 items-stretch">
           {/* QUESTION SECTION (5 cols) */}
           <div className="md:col-span-5 bg-white rounded-2xl border border-[#90CAF9]/40 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between">
@@ -1095,15 +1416,15 @@ export default function InterviewRoom() {
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-1.5">
                   <span className="px-2.5 py-0.5 rounded-full bg-[#E3F2FD] border border-[#90CAF9] text-[10px] sm:text-[11px] font-black text-[#0D47A1]">
-                    QUESTION {String(currentQuestionNumber).padStart(2, "0")}
+                    {isGreeting ? "INTRODUCTION" : `QUESTION ${String(currentQuestionNumber).padStart(2, "0")}`}
                   </span>
-                  {currentQ?.topic && (
+                  {currentQ?.topic && !isGreeting && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 truncate max-w-[120px]">
                       {currentQ.topic}
                     </span>
                   )}
                 </div>
-                {currentQ?.difficulty && (
+                {currentQ?.difficulty && !isGreeting && (
                   <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full border capitalize bg-[#E3F2FD] text-[#0D47A1] border-[#90CAF9]">
                     {currentQ.difficulty}
                   </span>
@@ -1112,11 +1433,15 @@ export default function InterviewRoom() {
 
               <div className="text-[11px] font-bold text-[#2196F3] flex items-center gap-1 mb-1">
                 <Bot size={13} />
-                <span>{interviewerConfig.name} asks:</span>
+                <span>{interviewerConfig.name} ({interviewerConfig.genderLabel}):</span>
               </div>
 
               <p className="text-xs sm:text-sm md:text-base font-extrabold text-[#0D47A1] leading-snug line-clamp-3 sm:line-clamp-4">
-                "{questionText}"
+                {isGreeting
+                  ? `"${resolvedVoiceGender === "male"
+                      ? "Hi, I'm Sam, and I'll be your AI interviewer today. Let's get started."
+                      : "Hi, I'm Jenny, and I'll be your AI interviewer today. Let's get started."}"`
+                  : `"${questionText}"`}
               </p>
             </div>
 
@@ -1127,58 +1452,194 @@ export default function InterviewRoom() {
               </span>
               <button
                 type="button"
-                onClick={() => (isSpeaking ? stopSpeaking() : speakText(questionText))}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2196F3] hover:text-[#0D47A1] cursor-pointer"
+                onClick={handleRereadQuestion}
+                disabled={isGreeting}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2196F3] hover:text-[#0D47A1] cursor-pointer disabled:opacity-40"
               >
                 <Volume2 size={12} />
-                <span>{isSpeaking ? "Stop Voice" : "Re-read"}</span>
+                <span>{isSpeaking ? "Stop Voice" : "Re-read Question"}</span>
               </button>
             </div>
           </div>
 
-          {/* CANDIDATE ANSWER / TRANSCRIPT SECTION (7 cols) */}
+          {/* CANDIDATE VOICE TRANSCRIPT SECTION (7 cols) - VOICE ONLY, NO TYPING */}
           <div className="md:col-span-7 bg-white rounded-2xl border border-[#90CAF9]/40 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-black text-[#0D47A1] uppercase tracking-wider">
-                    Your Answer
+                    Spoken Answer
                   </span>
-                  {isListening && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-bold border border-rose-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-                      Live Dictation Active
+
+                  {/* Dynamic Voice State Badge */}
+                  {isGreeting && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-[#0D47A1] text-[10px] font-bold border border-blue-200">
+                      <Sparkles size={11} className="text-[#2196F3] animate-pulse" />
+                      Introduction
+                    </span>
+                  )}
+                  {!isGreeting && voiceState === "ai_speaking" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-[#0D47A1] text-[10px] font-bold border border-blue-200">
+                      <Volume2 size={11} className="text-[#2196F3] animate-pulse" />
+                      AI Speaking
+                    </span>
+                  )}
+                  {voiceState === "listening" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                      Mic Active · Speak
+                    </span>
+                  )}
+                  {voiceState === "user_speaking" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E3F2FD] text-[#0D47A1] text-[10px] font-bold border border-[#90CAF9]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#2196F3] animate-pulse" />
+                      Transcribing Live
+                    </span>
+                  )}
+                  {(voiceState === "evaluating" || isSubmitting) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-200">
+                      <Loader2 size={10} className="animate-spin text-indigo-600" />
+                      Evaluating
+                    </span>
+                  )}
+                  {voiceState === "ai_feedback" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-[#0D47A1] text-[10px] font-bold border border-[#90CAF9]">
+                      <Volume2 size={11} className="text-[#2196F3]" />
+                      AI Feedback
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] font-mono text-slate-400">
-                  {userAnswer.length} chars
-                </span>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-slate-400">
+                    Voice Dictation
+                  </span>
+                </div>
               </div>
 
-              <textarea
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                disabled={isSubmitting || isPaused}
-                placeholder={
-                  isListening
-                    ? "Listening... Speak naturally and your words will appear here in real time."
-                    : "Click 'Voice Dictation' to speak, or type your structured answer here..."
-                }
-                className={`w-full h-18 sm:h-20 md:h-22 p-2.5 rounded-xl bg-[#F8FCFF] text-slate-800 border text-xs sm:text-sm leading-relaxed resize-none shadow-2xs focus:outline-hidden transition-all ${
-                  isListening
-                    ? "border-[#2196F3] ring-2 ring-[#90CAF9]/50"
-                    : "border-[#90CAF9] focus:border-[#2196F3] focus:ring-2 focus:ring-[#90CAF9]/30"
+              {/* REAL-TIME LIVE VOICE TRANSCRIPT DISPLAY (REPLACES TYPING TEXTAREA) */}
+              <div
+                className={`w-full h-20 sm:h-22 md:h-24 p-2.5 rounded-xl bg-[#F8FCFF] border transition-all flex flex-col justify-between overflow-hidden shadow-2xs ${
+                  isSpeaking
+                    ? "border-[#90CAF9] bg-[#F4F9FF]"
+                    : isListening
+                    ? "border-[#2196F3] ring-2 ring-[#90CAF9]/40 bg-white"
+                    : "border-[#90CAF9]"
                 }`}
-                aria-label="Candidate interview answer"
-              />
+              >
+                {/* Scrollable Transcript Text */}
+                <div className="flex-1 overflow-y-auto pr-1 text-xs sm:text-sm leading-relaxed">
+                  {fullDisplayTranscript ? (
+                    <div>
+                      <span className="text-slate-800 font-medium whitespace-pre-wrap">
+                        {userAnswer}
+                      </span>
+                      {interimTranscript && (
+                        <span className="text-[#2196F3] italic font-medium ml-1">
+                          {interimTranscript}
+                        </span>
+                      )}
+                      {voiceState === "user_speaking" && (
+                        <span className="inline-block w-1.5 h-3.5 bg-[#2196F3] ml-1 animate-pulse align-middle" />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="h-full min-h-[60px] flex flex-col items-center justify-center text-center p-1">
+                      {isGreeting ? (
+                        <div className="flex flex-col items-center gap-1 text-slate-500">
+                          <div className="flex items-center gap-1">
+                            <span className="w-1 h-3 bg-[#2196F3] rounded-full animate-bounce" />
+                            <span className="w-1 h-4 bg-[#0D47A1] rounded-full animate-bounce [animation-delay:0.15s]" />
+                            <span className="w-1 h-2 bg-[#2196F3] rounded-full animate-bounce [animation-delay:0.3s]" />
+                          </div>
+                          <span className="text-xs font-semibold text-[#0D47A1]">
+                            {interviewerConfig.name} is introducing the interview...
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            First question will begin immediately after
+                          </span>
+                        </div>
+                      ) : isSpeaking ? (
+                        <div className="flex flex-col items-center gap-1 text-slate-500">
+                          <div className="flex items-center gap-1">
+                            <span className="w-1 h-3 bg-[#2196F3] rounded-full animate-bounce" />
+                            <span className="w-1 h-4 bg-[#0D47A1] rounded-full animate-bounce [animation-delay:0.15s]" />
+                            <span className="w-1 h-2 bg-[#2196F3] rounded-full animate-bounce [animation-delay:0.3s]" />
+                          </div>
+                          <span className="text-xs font-semibold text-[#0D47A1]">
+                            {interviewerConfig.name} is speaking...
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Microphone will start automatically when speech ends
+                          </span>
+                        </div>
+                      ) : isListening ? (
+                        <div className="flex flex-col items-center gap-1 text-slate-500">
+                          <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center animate-pulse">
+                            <Mic size={15} />
+                          </div>
+                          <span className="text-xs font-bold text-emerald-700">
+                            Listening... Speak your answer now
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Your spoken answer appears here in real time
+                          </span>
+                        </div>
+                      ) : isSubmitting ? (
+                        <div className="flex flex-col items-center gap-1 text-slate-500">
+                          <Loader2 size={18} className="animate-spin text-[#2196F3]" />
+                          <span className="text-xs font-bold text-[#0D47A1]">
+                            Evaluating your spoken answer...
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Scoring communication clarity and technical accuracy
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 text-slate-400">
+                          <Mic size={15} />
+                          <span className="text-xs font-medium">
+                            Voice-only answer mode active
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sub-bar inside transcript box */}
+                <div className="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[10px]">
+                  <div className="flex items-center gap-2">
+                    {fullDisplayTranscript ? (
+                      <button
+                        type="button"
+                        onClick={handleClearAnswer}
+                        disabled={isSubmitting || isSpeaking || isGreeting}
+                        className="inline-flex items-center gap-1 font-bold text-slate-500 hover:text-rose-600 transition-colors cursor-pointer disabled:opacity-40"
+                        title="Clear transcript and re-speak"
+                      >
+                        <RotateCcw size={11} />
+                        <span>Re-speak Answer</span>
+                      </button>
+                    ) : (
+                      <span className="text-slate-400">
+                        {isListening ? "Auto-submits after 3s silence" : "Live Dictation"}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-slate-400 font-mono">
+                    {userAnswer ? `${userAnswer.split(/\s+/).filter(Boolean).length} words` : ""}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400">
-              <span>Press Submit when finished answering</span>
+              <span>Speak clearly · Voice is automatically captured & transcribed</span>
               {isSubmitting && (
                 <span className="text-[#2196F3] font-bold flex items-center gap-1">
-                  <Loader2 size={11} className="animate-spin" /> Evaluating answer...
+                  <Loader2 size={11} className="animate-spin" /> Evaluating...
                 </span>
               )}
             </div>
@@ -1192,16 +1653,16 @@ export default function InterviewRoom() {
             <button
               type="button"
               onClick={isListening ? stopListening : startListening}
-              disabled={!speechSupported || isSubmitting}
-              title={isListening ? "Stop microphone dictation" : "Start microphone dictation"}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+              disabled={!speechSupported || isSubmitting || isSpeaking || isGreeting}
+              title={isListening ? "Mute microphone" : "Unmute microphone"}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer disabled:opacity-40 ${
                 isListening
-                  ? "bg-rose-50 text-rose-700 border-rose-300 ring-2 ring-rose-300/40"
-                  : "bg-[#E3F2FD] hover:bg-[#90CAF9]/40 text-[#0D47A1] border-[#90CAF9]"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300 ring-2 ring-emerald-300/40"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-300"
               }`}
             >
-              <Mic size={14} className={isListening ? "animate-pulse text-rose-600" : "text-[#2196F3]"} />
-              <span className="hidden sm:inline">{isListening ? "Stop Dictation" : "Voice Dictation"}</span>
+              <Mic size={14} className={isListening ? "animate-pulse text-emerald-600" : "text-slate-500"} />
+              <span className="hidden sm:inline">{isListening ? "Listening Active" : "Unmute Mic"}</span>
             </button>
 
             <button
@@ -1220,12 +1681,13 @@ export default function InterviewRoom() {
 
             <button
               type="button"
-              onClick={() => (isSpeaking ? stopSpeaking() : speakText(questionText))}
+              onClick={handleRereadQuestion}
+              disabled={isGreeting}
               title="Re-read question aloud"
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 hover:bg-[#E3F2FD] text-[#0D47A1] text-xs font-bold border border-slate-200 hover:border-[#90CAF9] transition-colors cursor-pointer"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 hover:bg-[#E3F2FD] text-[#0D47A1] text-xs font-bold border border-slate-200 hover:border-[#90CAF9] transition-colors cursor-pointer disabled:opacity-40"
             >
               <Volume2 size={14} className="text-[#2196F3]" />
-              <span>{isSpeaking ? "Stop Audio" : "Re-read"}</span>
+              <span>{isSpeaking ? "Stop Voice" : "Re-read"}</span>
             </button>
           </div>
 
@@ -1243,26 +1705,26 @@ export default function InterviewRoom() {
 
             <div className="hidden lg:flex items-center gap-1.5 text-xs text-emerald-600 font-semibold pl-2 border-l border-slate-200">
               <Wifi size={13} />
-              <span>Stable</span>
+              <span>Voice Ready</span>
             </div>
           </div>
 
-          {/* Right Primary Action & Submit */}
+          {/* Right Primary Action: Done Speaking / Submit */}
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => void submitAnswer()}
-              disabled={!userAnswer.trim() || isSubmitting || isPaused || isCompleting}
+              disabled={!fullDisplayTranscript.trim() || isSubmitting || isPaused || isCompleting || isSpeaking || isGreeting}
               className="inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 rounded-xl bg-gradient-to-r from-[#2196F3] to-[#0D47A1] hover:from-[#1E88E5] hover:to-[#0B3D91] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#2196F3]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  <span>Analyzing...</span>
+                  <span>Evaluating...</span>
                 </>
               ) : (
                 <>
-                  <span>Submit Answer</span>
+                  <span>Done Speaking</span>
                   <Send size={13} />
                 </>
               )}

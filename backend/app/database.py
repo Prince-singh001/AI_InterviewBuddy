@@ -510,13 +510,6 @@ async def init_db() -> None:
 
         # IMPORTANT:
         # Do NOT create an "id" index here.
-        #
-        # Beanie's Document.id is mapped to MongoDB _id.
-        #
-        # The old id_1 index can cause:
-        # E11000 duplicate key error
-        # dup key: { id: null }
-
         # ----------------------------------------------------
         # QUESTIONS
         # ----------------------------------------------------
@@ -573,6 +566,26 @@ async def init_db() -> None:
         await _db.documents.create_index(
             "id",
             unique=True,
+        )
+
+        # ----------------------------------------------------
+        # PRACTICE QUESTIONS
+        # ----------------------------------------------------
+        await _db.practice_questions.create_index(
+            "id",
+            unique=True,
+        )
+
+        await _db.practice_questions.create_index(
+            [
+                ("subject", 1),
+                ("difficulty", 1),
+                ("topic", 1),
+            ]
+        )
+
+        await _db.practice_questions.create_index(
+            "subject"
         )
 
         logger.info(

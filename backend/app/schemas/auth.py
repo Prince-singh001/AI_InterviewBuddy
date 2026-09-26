@@ -1,4 +1,4 @@
-﻿from typing import Optional
+from typing import Optional
 
 from pydantic import BaseModel, EmailStr
 
@@ -46,6 +46,29 @@ class ResendOTPRequest(BaseModel):
 class OTPResponse(BaseModel):
     message: str
     email: EmailStr
+
+
+# ============================================================
+# FORGOT & RESET PASSWORD
+# ============================================================
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    token: str
+    new_password: str
+
+
+class ResetPasswordResponse(BaseModel):
+    message: str
 
 
 # ============================================================

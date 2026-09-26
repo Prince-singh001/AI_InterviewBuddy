@@ -1,10 +1,15 @@
 import random
+import re
+from typing import Optional, List, Union
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from app.database import get_db
 from app.models.user import User
 from app.routes.auth import get_user_from_token
 from app.agents.interview_manager import EvaluationAgent
+from app.data import ALL_PRACTICE_QUESTIONS, QUESTIONS_BY_ID, SUBJECT_MAP
 
 
 # ============================================================
@@ -275,6 +280,32 @@ PRACTICE_QUESTIONS = {
 
 CATEGORY_ALIASES = {
 
+    "c": "C",
+    "c_programming": "C",
+    "c-programming": "C",
+    "c programming": "C",
+
+    "cpp": "C++",
+    "c++": "C++",
+    "cplusplus": "C++",
+    "c_plus_plus": "C++",
+    "c-plus-plus": "C++",
+
+    "python": "Python",
+    "py": "Python",
+
+    "java": "Java",
+
+    "aptitude": "Aptitude",
+    "apt": "Aptitude",
+    "quant": "Aptitude",
+    "quantitative": "Aptitude",
+    "quantitative_aptitude": "Aptitude",
+    "quantitative-aptitude": "Aptitude",
+    "quantitative aptitude": "Aptitude",
+    "logical_reasoning": "Aptitude",
+    "logical reasoning": "Aptitude",
+
     "machine_learning": "ml",
     "machine-learning": "ml",
     "machine learning": "ml",
@@ -365,14 +396,16 @@ def normalize_difficulty(
     )
 
     difficulty_map = {
-        "beginner": "Beginner",
-        "easy": "Beginner",
+        "basic": "Basic",
+        "beginner": "Basic",
+        "easy": "Basic",
 
         "intermediate": "Intermediate",
         "medium": "Intermediate",
 
         "advanced": "Advanced",
         "hard": "Advanced",
+        "expert": "Advanced",
     }
 
     if normalized not in difficulty_map:
@@ -380,7 +413,7 @@ def normalize_difficulty(
             status_code=400,
             detail=(
                 "Invalid difficulty. "
-                "Choose Beginner, Intermediate, or Advanced."
+                "Choose Basic, Intermediate, or Advanced."
             ),
         )
 
@@ -395,94 +428,522 @@ def normalize_difficulty(
 async def get_practice_question(
     body: dict,
     current_user: User = Depends(get_user_from_token),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """
-    Generate a practice question for the selected category.
-
-    IMPORTANT:
-    The selected category is strictly enforced.
-
-    We NEVER fall back to Machine Learning.
+    Generate or fetch a practice question for the selected category/subject.
+    Checks MongoDB 'practice_questions' collection first, with seamless fallback
+    to in-memory questions.
     """
 
-    # --------------------------------------------------------
-    # Read category
-    # --------------------------------------------------------
-
     raw_category = body.get("category")
+    category = normalize_category(raw_category)
 
-    category = normalize_category(
-        raw_category
+    raw_diff = body.get("difficulty")
+    difficulty = normalize_difficulty(raw_diff)
+
+    topic = body.get("topic")
+    exclude_ids = body.get("exclude_ids", [])
+
+    # --------------------------------------------------------
+    # 1. Query MongoDB practice_questions
+    # --------------------------------------------------------
+    if db is not None:
+        try:
+            subject_name = CATEGORY_ALIASES.get(category.lower(), category)
+            mongo_query = {
+                "subject": {"$regex": f"^{re.escape(subject_name)}$", "$options": "i"}
+            }
+
+            if difficulty and difficulty.lower() != "all":
+                mongo_query["difficulty"] = {"$regex": f"^{re.escape(difficulty)}$", "$options": "i"}
+
+            if topic and str(topic).strip().lower() not in {"all", "any", ""}:
+                mongo_query["topic"] = {"$regex": f"^{re.escape(str(topic).strip())}$", "$options": "i"}
+
+            # Filter out questions already seen in this session if possible
+            if exclude_ids and isinstance(exclude_ids, list):
+                query_with_exclude = dict(mongo_query)
+                query_with_exclude["id"] = {"$nin": exclude_ids}
+                cursor = db.practice_questions.find(query_with_exclude)
+                matching_docs = await cursor.to_list(length=100)
+                if not matching_docs:
+                    # If all were excluded, reset and pick from all matching
+                    cursor = db.practice_questions.find(mongo_query)
+                    matching_docs = await cursor.to_list(length=100)
+            else:
+                cursor = db.practice_questions.find(mongo_query)
+                matching_docs = await cursor.to_list(length=100)
+
+            if matching_docs:
+                q = random.choice(matching_docs)
+                return {
+                    "id": q["id"],
+                    "question": q["question"],
+                    "subject": q.get("subject", subject_name),
+                    "category": q.get("subject", subject_name),
+                    "topic": q.get("topic", "General"),
+                    "difficulty": q.get("difficulty", difficulty),
+                    "type": q.get("type", "mcq"),
+                    "code": q.get("code"),
+                    "options": q.get("options", []),
+                    "time_limit": 120,
+                    # Note: correct_answer & explanation are withheld until /submit
+                }
+        except Exception as exc:
+            print(f"[Practice Route] MongoDB query fallback: {exc}")
+
+    # --------------------------------------------------------
+    # 2. Check ALL_PRACTICE_QUESTIONS in-memory
+    # --------------------------------------------------------
+    subject_candidates = [
+        q for q in ALL_PRACTICE_QUESTIONS
+        if q["subject"].lower() == category.lower()
+        or q["subject"].lower() == CATEGORY_ALIASES.get(category.lower(), "").lower()
+    ]
+
+    if subject_candidates:
+        if difficulty and difficulty.lower() != "all":
+            diff_candidates = [
+                q for q in subject_candidates
+                if q["difficulty"].lower() == difficulty.lower()
+            ]
+            if diff_candidates:
+                subject_candidates = diff_candidates
+
+        if topic and str(topic).strip().lower() not in {"all", "any", ""}:
+            top_candidates = [
+                q for q in subject_candidates
+                if q["topic"].lower() == str(topic).strip().lower()
+            ]
+            if top_candidates:
+                subject_candidates = top_candidates
+
+        if exclude_ids and isinstance(exclude_ids, list):
+            non_excluded = [q for q in subject_candidates if q["id"] not in exclude_ids]
+            if non_excluded:
+                subject_candidates = non_excluded
+
+        q = random.choice(subject_candidates)
+        return {
+            "id": q["id"],
+            "question": q["question"],
+            "subject": q["subject"],
+            "category": q["subject"],
+            "topic": q.get("topic", "General"),
+            "difficulty": q.get("difficulty", difficulty),
+            "type": q.get("type", "mcq"),
+            "code": q.get("code"),
+            "options": q.get("options", []),
+            "time_limit": 120,
+        }
+
+    # --------------------------------------------------------
+    # 3. Fallback to legacy PRACTICE_QUESTIONS strings
+    # --------------------------------------------------------
+    if category in PRACTICE_QUESTIONS:
+        questions = PRACTICE_QUESTIONS[category]
+        if not questions:
+            raise HTTPException(
+                status_code=500,
+                detail=f"No practice questions available for category '{category}'.",
+            )
+        question = random.choice(questions)
+        return {
+            "id": f"{category}-{random.randint(1000, 9999)}",
+            "question": question,
+            "category": category,
+            "difficulty": difficulty,
+            "time_limit": 120,
+        }
+
+    available_categories = ", ".join(
+        sorted(list(PRACTICE_QUESTIONS.keys()) + ["C", "C++", "Python", "Java", "Aptitude"])
+    )
+    raise HTTPException(
+        status_code=400,
+        detail=f"Unsupported practice category: {raw_category}. Available: {available_categories}",
     )
 
-    # --------------------------------------------------------
-    # Validate category
-    # --------------------------------------------------------
 
-    if category not in PRACTICE_QUESTIONS:
+# ============================================================
+# LIST PRACTICE QUESTIONS (FILTERABLE)
+# ============================================================
 
-        available_categories = ", ".join(
-            PRACTICE_QUESTIONS.keys()
-        )
+@router.get("/questions")
+async def list_practice_questions(
+    subject: Optional[str] = Query(None, description="Subject filter: C, C++, Python, Java, Aptitude"),
+    topic: Optional[str] = Query(None, description="Topic filter"),
+    difficulty: Optional[str] = Query(None, description="Difficulty filter: Basic, Intermediate, Advanced"),
+    type: Optional[str] = Query(None, description="Question type filter"),
+    limit: int = Query(50, ge=1, le=200),
+    skip: int = Query(0, ge=0),
+    current_user: User = Depends(get_user_from_token),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    List and filter questions from the question bank.
+    Does not expose correct answers or explanations to prevent cheating.
+    """
+    query = {}
+    if subject and subject.strip().lower() != "all":
+        norm_sub = CATEGORY_ALIASES.get(subject.strip().lower(), subject.strip())
+        query["subject"] = {"$regex": f"^{re.escape(norm_sub)}$", "$options": "i"}
 
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Unsupported practice category: "
-                f"{raw_category}. "
-                f"Available categories: "
-                f"{available_categories}"
-            ),
-        )
+    if difficulty and difficulty.strip().lower() != "all":
+        norm_diff = normalize_difficulty(difficulty)
+        query["difficulty"] = {"$regex": f"^{re.escape(norm_diff)}$", "$options": "i"}
 
-    # --------------------------------------------------------
-    # Read difficulty
-    # --------------------------------------------------------
+    if topic and topic.strip().lower() != "all":
+        query["topic"] = {"$regex": f"^{re.escape(topic.strip())}$", "$options": "i"}
 
-    difficulty = normalize_difficulty(
-        body.get("difficulty")
-    )
+    if type and type.strip().lower() != "all":
+        query["type"] = {"$regex": f"^{re.escape(type.strip())}$", "$options": "i"}
 
-    # --------------------------------------------------------
-    # Get category-specific questions
-    # --------------------------------------------------------
+    questions = []
+    total = 0
 
-    questions = PRACTICE_QUESTIONS[category]
+    if db is not None:
+        try:
+            cursor = db.practice_questions.find(
+                query,
+                {
+                    "id": 1,
+                    "subject": 1,
+                    "topic": 1,
+                    "difficulty": 1,
+                    "type": 1,
+                    "question": 1,
+                    "code": 1,
+                    "options": 1,
+                    "_id": 0,
+                },
+            ).skip(skip).limit(limit)
+
+            questions = await cursor.to_list(length=limit)
+            total = await db.practice_questions.count_documents(query)
+        except Exception:
+            pass
 
     if not questions:
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                f"No practice questions available "
-                f"for category '{category}'."
-            ),
-        )
-
-    # --------------------------------------------------------
-    # Select random question
-    # --------------------------------------------------------
-
-    question = random.choice(
-        questions
-    )
-
-    # --------------------------------------------------------
-    # Return response
-    # --------------------------------------------------------
+        # Fallback to in-memory list
+        filtered = ALL_PRACTICE_QUESTIONS
+        if subject and subject.strip().lower() != "all":
+            norm_sub = CATEGORY_ALIASES.get(subject.strip().lower(), subject.strip())
+            filtered = [q for q in filtered if q["subject"].lower() == norm_sub.lower()]
+        if difficulty and difficulty.strip().lower() != "all":
+            norm_diff = normalize_difficulty(difficulty)
+            filtered = [q for q in filtered if q["difficulty"].lower() == norm_diff.lower()]
+        if topic and topic.strip().lower() != "all":
+            filtered = [q for q in filtered if q["topic"].lower() == topic.strip().lower()]
+        total = len(filtered)
+        questions = [
+            {
+                "id": q["id"],
+                "subject": q["subject"],
+                "topic": q["topic"],
+                "difficulty": q["difficulty"],
+                "type": q["type"],
+                "question": q["question"],
+                "code": q.get("code"),
+                "options": q["options"],
+            }
+            for q in filtered[skip : skip + limit]
+        ]
 
     return {
-        "id": (
-            f"{category}-"
-            f"{random.randint(1000, 9999)}"
-        ),
+        "total": total,
+        "count": len(questions),
+        "skip": skip,
+        "limit": limit,
+        "questions": questions,
+    }
 
-        "question": question,
 
-        "category": category,
+# ============================================================
+# GET SINGLE QUESTION
+# ============================================================
 
+@router.get("/questions/{question_id}")
+async def get_single_question(
+    question_id: str,
+    current_user: User = Depends(get_user_from_token),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Fetch a single practice question by ID (without correct answer).
+    """
+    doc = None
+    if db is not None:
+        doc = await db.practice_questions.find_one(
+            {"id": question_id},
+            {"_id": 0, "correct_answer": 0, "explanation": 0, "correct_index": 0},
+        )
+    if not doc:
+        q = QUESTIONS_BY_ID.get(question_id)
+        if q:
+            doc = {k: v for k, v in q.items() if k not in {"correct_answer", "explanation", "correct_index"}}
+    if not doc:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return doc
+
+
+# ============================================================
+# GET TOPICS & COUNTS
+# ============================================================
+
+@router.get("/topics")
+async def get_practice_topics(
+    subject: Optional[str] = Query(None),
+    current_user: User = Depends(get_user_from_token),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Get available subjects and their topics with question counts.
+    """
+    match_stage = {}
+    if subject and subject.strip().lower() != "all":
+        norm_sub = CATEGORY_ALIASES.get(subject.strip().lower(), subject.strip())
+        match_stage["subject"] = {"$regex": f"^{re.escape(norm_sub)}$", "$options": "i"}
+
+    formatted = []
+    if db is not None:
+        try:
+            pipeline = [
+                {"$match": match_stage} if match_stage else {"$match": {}},
+                {
+                    "$group": {
+                        "_id": {
+                            "subject": "$subject",
+                            "topic": "$topic",
+                        },
+                        "count": {"$sum": 1},
+                    }
+                },
+            ]
+            cursor = db.practice_questions.aggregate(pipeline)
+            raw_results = await cursor.to_list(length=500)
+
+            subjects_dict = {}
+            for item in raw_results:
+                sub = item["_id"]["subject"]
+                top = item["_id"]["topic"]
+                cnt = item["count"]
+                if sub not in subjects_dict:
+                    subjects_dict[sub] = {"subject": sub, "total_questions": 0, "topics": {}}
+                subjects_dict[sub]["total_questions"] += cnt
+                subjects_dict[sub]["topics"][top] = subjects_dict[sub]["topics"].get(top, 0) + cnt
+
+            for sub, data in subjects_dict.items():
+                formatted.append({
+                    "subject": sub,
+                    "total_questions": data["total_questions"],
+                    "topics": [
+                        {"name": t, "count": c}
+                        for t, c in sorted(data["topics"].items(), key=lambda x: x[0])
+                    ],
+                })
+        except Exception:
+            pass
+
+    if not formatted:
+        # Fallback to in-memory ALL_PRACTICE_QUESTIONS
+        subjects_dict = {}
+        for q in ALL_PRACTICE_QUESTIONS:
+            sub = q["subject"]
+            top = q["topic"]
+            if match_stage and sub.lower() != norm_sub.lower():
+                continue
+            if sub not in subjects_dict:
+                subjects_dict[sub] = {"subject": sub, "total_questions": 0, "topics": {}}
+            subjects_dict[sub]["total_questions"] += 1
+            subjects_dict[sub]["topics"][top] = subjects_dict[sub]["topics"].get(top, 0) + 1
+
+        for sub, data in subjects_dict.items():
+            formatted.append({
+                "subject": sub,
+                "total_questions": data["total_questions"],
+                "topics": [
+                    {"name": t, "count": c}
+                    for t, c in sorted(data["topics"].items(), key=lambda x: x[0])
+                ],
+            })
+
+    order = {"C": 1, "C++": 2, "Python": 3, "Java": 4, "Aptitude": 5}
+    formatted.sort(key=lambda s: (order.get(s["subject"], 99), s["subject"]))
+    return {"subjects": formatted}
+
+
+# ============================================================
+# SUBMIT PRACTICE ANSWER
+# ============================================================
+
+@router.post("/submit")
+async def submit_practice_answer(
+    body: dict,
+    current_user: User = Depends(get_user_from_token),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Submit and validate answer for a practice question.
+    Immediately returns correctness, the correct answer, and explanation.
+    """
+    question_id = body.get("question_id")
+    if not question_id:
+        raise HTTPException(status_code=400, detail="question_id is required")
+
+    selected_option = body.get("selected_option")
+    answer_text = body.get("answer")
+
+    question = None
+    if db is not None:
+        try:
+            question = await db.practice_questions.find_one({"id": question_id})
+        except Exception:
+            pass
+
+    if not question:
+        question = QUESTIONS_BY_ID.get(question_id)
+
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+
+    # For MCQ questions with options
+    if question.get("options"):
+        options = question.get("options", [])
+        correct_answer = question.get("correct_answer")
+        correct_index = question.get("correct_index")
+
+        is_correct = False
+
+        if isinstance(selected_option, int):
+            if correct_index is not None and selected_option == correct_index:
+                is_correct = True
+            elif 0 <= selected_option < len(options):
+                is_correct = (
+                    options[selected_option].strip().lower()
+                    == str(correct_answer).strip().lower()
+                )
+        elif isinstance(selected_option, str):
+            clean_sel = selected_option.strip().lower()
+            clean_correct = str(correct_answer).strip().lower()
+            if clean_sel == clean_correct:
+                is_correct = True
+            elif correct_index is not None and 0 <= correct_index < len(options):
+                if clean_sel == options[correct_index].strip().lower():
+                    is_correct = True
+            if clean_sel in {"a", "0", "option a"} and correct_index == 0:
+                is_correct = True
+            elif clean_sel in {"b", "1", "option b"} and correct_index == 1:
+                is_correct = True
+            elif clean_sel in {"c", "2", "option c"} and correct_index == 2:
+                is_correct = True
+            elif clean_sel in {"d", "3", "option d"} and correct_index == 3:
+                is_correct = True
+
+        return {
+            "question_id": question["id"],
+            "is_correct": is_correct,
+            "selected_option": selected_option,
+            "correct_answer": correct_answer,
+            "correct_index": correct_index,
+            "explanation": question.get("explanation", ""),
+            "subject": question.get("subject"),
+            "topic": question.get("topic"),
+            "difficulty": question.get("difficulty"),
+        }
+
+    # For open-ended questions without options, evaluate with AI
+    raw_answer = str(answer_text or selected_option or "").strip()
+    if not raw_answer:
+        raise HTTPException(status_code=400, detail="Answer is required for evaluation")
+
+    eval_result = evaluator.evaluate_answer(question["question"], raw_answer)
+    return {
+        "question_id": question["id"],
+        "evaluation": eval_result,
+        "suggested_answer": question.get("explanation", ""),
+    }
+
+
+# ============================================================
+# START PRACTICE SESSION
+# ============================================================
+
+@router.post("/session")
+async def start_practice_session(
+    body: dict,
+    current_user: User = Depends(get_user_from_token),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Start a randomized practice session with N questions matching the filters.
+    """
+    subject = body.get("subject") or body.get("category")
+    topic = body.get("topic")
+    difficulty = body.get("difficulty")
+    limit = int(body.get("limit") or 10)
+    limit = max(1, min(limit, 50))
+
+    query = {}
+    if subject and subject.strip().lower() != "all":
+        norm_sub = CATEGORY_ALIASES.get(subject.strip().lower(), subject.strip())
+        query["subject"] = {"$regex": f"^{re.escape(norm_sub)}$", "$options": "i"}
+
+    if difficulty and difficulty.strip().lower() != "all":
+        norm_diff = normalize_difficulty(difficulty)
+        query["difficulty"] = {"$regex": f"^{re.escape(norm_diff)}$", "$options": "i"}
+
+    if topic and topic.strip().lower() != "all":
+        query["topic"] = {"$regex": f"^{re.escape(topic.strip())}$", "$options": "i"}
+
+    all_matching = []
+    if db is not None:
+        try:
+            cursor = db.practice_questions.find(
+                query,
+                {
+                    "id": 1,
+                    "subject": 1,
+                    "topic": 1,
+                    "difficulty": 1,
+                    "type": 1,
+                    "question": 1,
+                    "code": 1,
+                    "options": 1,
+                    "_id": 0,
+                },
+            )
+            all_matching = await cursor.to_list(length=200)
+        except Exception:
+            pass
+
+    if not all_matching:
+        all_matching = [
+            {
+                "id": q["id"],
+                "subject": q["subject"],
+                "topic": q["topic"],
+                "difficulty": q["difficulty"],
+                "type": q["type"],
+                "question": q["question"],
+                "code": q.get("code"),
+                "options": q["options"],
+            }
+            for q in ALL_PRACTICE_QUESTIONS
+            if (not query.get("subject") or q["subject"].lower() == norm_sub.lower())
+        ]
+
+    random.shuffle(all_matching)
+    selected_questions = all_matching[:limit]
+
+    return {
+        "session_id": f"session-{random.randint(100000, 999999)}",
+        "total_questions": len(selected_questions),
+        "subject": subject,
         "difficulty": difficulty,
-
-        "time_limit": 120,
+        "topic": topic,
+        "questions": selected_questions,
     }
 
 

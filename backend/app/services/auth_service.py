@@ -3,6 +3,7 @@ import hashlib
 import secrets
 import smtplib
 import base64
+import urllib.parse
 
 from datetime import datetime, timedelta
 from typing import Any
@@ -1385,3 +1386,277 @@ async def get_current_user(
         )
 
     return user
+
+
+# ============================================================
+# SEND PASSWORD RESET EMAIL
+# ============================================================
+
+async def send_password_reset_email(
+    email: str,
+    name: str,
+    reset_link: str,
+    expiry_minutes: int = 15,
+):
+    """
+    Send password reset email with secure link reusing the existing email service.
+    """
+
+    subject = "Reset Your Interviewer Buddy AI Password"
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Reset Your Password</title>
+    </head>
+    <body style="
+        margin: 0;
+        padding: 30px;
+        background: #f5f7fb;
+        font-family: Arial, sans-serif;
+    ">
+        <div style="
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        ">
+            <h2 style="
+                margin-top: 0;
+                color: #0284c7;
+                font-size: 22px;
+            ">
+                Interviewer Buddy AI
+            </h2>
+
+            <p style="color: #374151; font-size: 15px; line-height: 1.5;">
+                Hello {name},
+            </p>
+
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.5;">
+                We received a request to reset the password for your Interviewer Buddy AI account.
+            </p>
+
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.5;">
+                Click the button below to set a new password:
+            </p>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{reset_link}" style="
+                    display: inline-block;
+                    background: linear-gradient(135deg, #0284c7, #2563eb);
+                    color: #ffffff;
+                    text-decoration: none;
+                    padding: 14px 28px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    font-size: 15px;
+                ">
+                    Reset Password
+                </a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 13px; line-height: 1.5;">
+                If the button above does not work, copy and paste this link into your browser:
+            </p>
+
+            <p style="
+                color: #0284c7;
+                font-size: 12px;
+                word-break: break-all;
+                background: #f1f5f9;
+                padding: 10px;
+                border-radius: 6px;
+            ">
+                {reset_link}
+            </p>
+
+            <p style="color: #6b7280; font-size: 13px; line-height: 1.5; margin-top: 20px;">
+                This link will expire in <strong>{expiry_minutes} minutes</strong>.
+            </p>
+
+            <p style="color: #6b7280; font-size: 13px; line-height: 1.5;">
+                If you did not request a password reset, you can safely ignore this email.
+            </p>
+
+            <hr style="
+                border: 0;
+                border-top: 1px solid #e5e7eb;
+                margin: 25px 0;
+            ">
+
+            <small style="
+                color: #9ca3af;
+                font-size: 12px;
+            ">
+                Interviewer Buddy AI Security
+            </small>
+        </div>
+    </body>
+    </html>
+    """
+
+    await send_email(
+        to_email=email,
+        subject=subject,
+        html_body=html,
+    )
+
+
+# ============================================================
+# REQUEST PASSWORD RESET
+# ============================================================
+
+async def request_password_reset(
+    db: AsyncIOMotorDatabase,
+    email: str,
+    frontend_origin: str = "http://localhost:5173",
+) -> str:
+    """
+    Generate secure reset token, hash it for storage, and send reset email.
+    Safely prevents account enumeration by always providing a reassuring response.
+    """
+
+    clean_email = email.lower().strip()
+
+    doc = await db.users.find_one({"email": clean_email})
+
+    if not doc:
+        # Return generic success to prevent email enumeration
+        return "If an account with this email exists, a password reset link has been sent to your email."
+
+    user = User.from_doc(doc)
+
+    if not user:
+        return "If an account with this email exists, a password reset link has been sent to your email."
+
+    # Generate secure random token
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+
+    await db.users.update_one(
+        {"id": user.id},
+        {
+            "$set": {
+                "reset_token_hash": token_hash,
+                "reset_token_expires_at": expires_at,
+                "updated_at": datetime.utcnow(),
+            }
+        },
+    )
+
+    origin = (frontend_origin or "http://localhost:5173").rstrip("/")
+    encoded_email = urllib.parse.quote(user.email)
+    reset_link = f"{origin}/reset-password?token={raw_token}&email={encoded_email}"
+
+    try:
+        await send_password_reset_email(
+            email=user.email,
+            name=user.name or "User",
+            reset_link=reset_link,
+            expiry_minutes=15,
+        )
+    except Exception as exc:
+        print(f"Failed to send password reset email: {exc}")
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to send password reset email. Please try again later.",
+        )
+
+    return "If an account with this email exists, a password reset link has been sent to your email."
+
+
+# ============================================================
+# RESET PASSWORD
+# ============================================================
+
+async def reset_password(
+    db: AsyncIOMotorDatabase,
+    email: str,
+    token: str,
+    new_password: str,
+) -> str:
+    """
+    Validate reset token and expiry, update password, and invalidate token (single-use).
+    """
+
+    clean_email = email.lower().strip()
+    clean_token = token.strip()
+
+    if not clean_token:
+        raise HTTPException(
+            status_code=400,
+            detail="Password reset token is required.",
+        )
+
+    if len(new_password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters long.",
+        )
+
+    doc = await db.users.find_one({"email": clean_email})
+
+    if not doc:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired reset link. Please request a new one.",
+        )
+
+    user = User.from_doc(doc)
+
+    if not user or not user.reset_token_hash or not user.reset_token_expires_at:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired reset link. Please request a new one.",
+        )
+
+    # Check expiration
+    if datetime.utcnow() > user.reset_token_expires_at:
+        # Invalidate expired token
+        await db.users.update_one(
+            {"id": user.id},
+            {
+                "$set": {
+                    "reset_token_hash": None,
+                    "reset_token_expires_at": None,
+                    "updated_at": datetime.utcnow(),
+                }
+            },
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Password reset link has expired. Please request a new one.",
+        )
+
+    # Compare SHA-256 hash using constant-time comparison
+    computed_hash = hashlib.sha256(clean_token.encode("utf-8")).hexdigest()
+
+    if not secrets.compare_digest(user.reset_token_hash, computed_hash):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired reset link. Please request a new one.",
+        )
+
+    # Hash new password
+    hashed_password = hash_password(new_password)
+
+    # Invalidate token and update password (single use)
+    await db.users.update_one(
+        {"id": user.id},
+        {
+            "$set": {
+                "hashed_password": hashed_password,
+                "reset_token_hash": None,
+                "reset_token_expires_at": None,
+                "updated_at": datetime.utcnow(),
+            }
+        },
+    )
+
+    return "Password has been reset successfully. You can now log in."

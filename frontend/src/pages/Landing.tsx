@@ -423,7 +423,12 @@ function HeroDashboardMockup() {
       <motion.div
         className="floating-widget float-bottom-left"
         animate={{ y: [0, 6, 0] }}
-        transition={{ repeat: Infinity, duration: 5.2, delay: 0.5, ease: "easeInOut" }}
+        transition={{
+          repeat: Infinity,
+          duration: 5.2,
+          delay: 0.5,
+          ease: "easeInOut",
+        }}
       >
         <div className="widget-icon-pill">
           <CheckCircle2 size={16} />
@@ -479,7 +484,9 @@ export default function Landing() {
       {/* ======================================================
           1. NAVBAR
       ====================================================== */}
-      <header className={`sticky-navbar ${isScrolled ? "navbar-scrolled" : ""}`}>
+      <header
+        className={`sticky-navbar ${isScrolled ? "navbar-scrolled" : ""}`}
+      >
         <div className="navbar-container">
           {/* Logo & Product Name */}
           <button
@@ -898,9 +905,9 @@ export default function Landing() {
                     <div>
                       <h4 className="bullet-title">Role-Based Preparation</h4>
                       <p className="bullet-desc">
-                        Tailor practice sessions to Python developers,
-                        full-stack engineers, AI/ML specialists, and backend
-                        architects.
+                        Tailor practice sessions to Python developers,Java
+                        Developers, full-stack engineers, AI/ML specialists, and
+                        backend architects.
                       </p>
                     </div>
                   </div>

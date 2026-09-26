@@ -209,6 +209,8 @@ export default function InterviewSetup() {
       typePayload = customType;
     }
 
+    const voiceGender = interviewer === "samm" ? "male" : "female";
+
     try {
       const response = await interviewsApi.create({
         role: rolePayload,
@@ -217,6 +219,9 @@ export default function InterviewSetup() {
         duration_minutes: duration,
         mode,
         personality,
+        interviewer,
+        voice_gender: voiceGender,
+        language: "en-US",
       });
 
       const interviewId = getInterviewId(response);
@@ -224,6 +229,7 @@ export default function InterviewSetup() {
       try {
         sessionStorage.setItem("active_interview_id", interviewId);
         sessionStorage.setItem("active_interviewer", interviewer);
+        sessionStorage.setItem("active_voice_gender", voiceGender);
       } catch (e) {
         console.warn("[InterviewSetup] sessionStorage warning:", e);
       }
@@ -249,6 +255,8 @@ export default function InterviewSetup() {
           mode,
           personality,
           interviewer,
+          voice_gender: voiceGender,
+          language: "en-US",
         },
       });
     } catch (err) {
@@ -575,9 +583,9 @@ export default function InterviewSetup() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-600 mt-0.5">Professional AI Interview Assistant</p>
+            <p className="text-xs text-slate-600 mt-0.5">Professional AI Interviewer • Female Voice</p>
             <span className="inline-block mt-2 text-[11px] font-semibold text-[#2196F3]">
-              ● Interactive Video Avatar (jenny.mp4)
+              ● Interactive Video Avatar (jenny.mp4) • Female Voice
             </span>
           </div>
         </button>
@@ -604,9 +612,9 @@ export default function InterviewSetup() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-600 mt-0.5">Technical & Architectural Specialist</p>
+            <p className="text-xs text-slate-600 mt-0.5">Technical & Architectural Specialist • Male Voice</p>
             <span className="inline-block mt-2 text-[11px] font-semibold text-[#2196F3]">
-              ● Interactive Video Avatar (samm.mp4)
+              ● Interactive Video Avatar (samm.mp4) • Male Voice
             </span>
           </div>
         </button>
