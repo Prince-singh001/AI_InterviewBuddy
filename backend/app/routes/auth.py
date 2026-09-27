@@ -42,6 +42,7 @@ from app.services.auth_service import (
     get_current_user,
     request_password_reset,
     reset_password,
+    calculate_profile_completion,
 )
 
 from app.auth.jwt_handler import (
@@ -420,81 +421,169 @@ async def update_profile(
     update_data = {}
 
     # --------------------------------------------------------
-    # COLLEGE
+    # BASIC INFO
+    # --------------------------------------------------------
+
+    if req.name is not None:
+        current_user.name = req.name
+        update_data["name"] = req.name
+
+    if req.headline is not None:
+        current_user.headline = req.headline
+        update_data["headline"] = req.headline
+
+    if req.phone is not None:
+        current_user.phone = req.phone
+        update_data["phone"] = req.phone
+
+    if req.location is not None:
+        current_user.location = req.location
+        update_data["location"] = req.location
+
+    if req.city is not None:
+        current_user.city = req.city
+        update_data["city"] = req.city
+
+    if req.country is not None:
+        current_user.country = req.country
+        update_data["country"] = req.country
+
+    career_obj = req.career_objective if req.career_objective is not None else req.careerObjective
+    if career_obj is not None:
+        current_user.career_objective = career_obj
+        update_data["career_objective"] = career_obj
+
+    if req.about is not None:
+        current_user.about = req.about
+        update_data["about"] = req.about
+
+    pref_job = req.preferred_job_type if req.preferred_job_type is not None else req.preferredJobType
+    if pref_job is not None:
+        current_user.preferred_job_type = pref_job
+        update_data["preferred_job_type"] = pref_job
+
+    pref_loc = req.preferred_location if req.preferred_location is not None else req.preferredLocation
+    if pref_loc is not None:
+        current_user.preferred_location = pref_loc
+        update_data["preferred_location"] = pref_loc
+
+    # --------------------------------------------------------
+    # EDUCATION
     # --------------------------------------------------------
 
     if req.college is not None:
-
         current_user.college = req.college
         update_data["college"] = req.college
 
+    if req.degree is not None:
+        current_user.degree = req.degree
+        update_data["degree"] = req.degree
+
+    field_of_study = req.field_of_study if req.field_of_study is not None else req.fieldOfStudy
+    if field_of_study is not None:
+        current_user.field_of_study = field_of_study
+        update_data["field_of_study"] = field_of_study
+
+    grad_year = req.graduation_year if req.graduation_year is not None else req.graduationYear
+    if grad_year is not None:
+        current_user.graduation_year = grad_year
+        update_data["graduation_year"] = grad_year
+
+    if req.cgpa is not None:
+        current_user.cgpa = req.cgpa
+        update_data["cgpa"] = req.cgpa
+
     # --------------------------------------------------------
-    # TARGET ROLE
+    # CAREER & SKILLS
     # --------------------------------------------------------
 
-    if req.target_role is not None:
-
-        current_user.target_role = req.target_role
-        update_data["target_role"] = req.target_role
-
-    # --------------------------------------------------------
-    # EXPERIENCE
-    # --------------------------------------------------------
+    target_role = req.target_role if req.target_role is not None else req.targetRole
+    if target_role is not None:
+        current_user.target_role = target_role
+        update_data["target_role"] = target_role
 
     if req.experience is not None:
-
         current_user.experience = req.experience
         update_data["experience"] = req.experience
 
-    # --------------------------------------------------------
-    # SKILLS
-    # --------------------------------------------------------
-
     if req.skills is not None:
-
         skills_value = (
             json.dumps(req.skills)
             if isinstance(req.skills, list)
             else req.skills
         )
-
         current_user.skills = skills_value
         update_data["skills"] = skills_value
 
     # --------------------------------------------------------
-    # GITHUB
+    # SOCIAL / PROFESSIONAL LINKS
     # --------------------------------------------------------
 
     if req.github is not None:
-
         current_user.github = req.github
         update_data["github"] = req.github
 
-    # --------------------------------------------------------
-    # LINKEDIN
-    # --------------------------------------------------------
-
     if req.linkedin is not None:
-
         current_user.linkedin = req.linkedin
         update_data["linkedin"] = req.linkedin
 
-    # --------------------------------------------------------
-    # PORTFOLIO
-    # --------------------------------------------------------
-
     if req.portfolio is not None:
-
         current_user.portfolio = req.portfolio
         update_data["portfolio"] = req.portfolio
 
     # --------------------------------------------------------
-    # PROFILE COMPLETE
+    # ATTACHMENTS & ARRAYS
     # --------------------------------------------------------
 
-    current_user.profile_complete = True
+    if req.avatar is not None:
+        current_user.avatar = req.avatar
+        update_data["avatar"] = req.avatar
 
-    update_data["profile_complete"] = True
+    resume_fn = req.resume_filename if req.resume_filename is not None else req.resumeFilename
+    if resume_fn is not None:
+        current_user.resume_filename = resume_fn
+        update_data["resume_filename"] = resume_fn
+
+    resume_up = req.resume_uploaded_at if req.resume_uploaded_at is not None else req.resumeUploadedAt
+    if resume_up is not None:
+        current_user.resume_uploaded_at = resume_up
+        update_data["resume_uploaded_at"] = resume_up
+
+    if req.educations is not None:
+        current_user.educations = req.educations
+        update_data["educations"] = req.educations
+        # If user college / degree is not set, derive from primary education entry
+        if req.educations and len(req.educations) > 0:
+            first_edu = req.educations[0]
+            if isinstance(first_edu, dict):
+                if not current_user.college and first_edu.get("college"):
+                    current_user.college = first_edu.get("college")
+                    update_data["college"] = first_edu.get("college")
+                if not current_user.degree and first_edu.get("degree"):
+                    current_user.degree = first_edu.get("degree")
+                    update_data["degree"] = first_edu.get("degree")
+
+    if req.projects is not None:
+        current_user.projects = req.projects
+        update_data["projects"] = req.projects
+
+    if req.certifications is not None:
+        current_user.certifications = req.certifications
+        update_data["certifications"] = req.certifications
+
+    if req.languages is not None:
+        current_user.languages = req.languages
+        update_data["languages"] = req.languages
+
+    # --------------------------------------------------------
+    # RECALCULATE PROFILE COMPLETION
+    # --------------------------------------------------------
+
+    percentage, is_complete = calculate_profile_completion(current_user)
+    current_user.profile_complete = is_complete
+
+    update_data["profile_complete"] = is_complete
+    update_data["profile_completion"] = percentage
     update_data["updated_at"] = datetime.utcnow()
 
     # --------------------------------------------------------
@@ -514,7 +603,6 @@ async def update_profile(
     )
 
     if result.matched_count == 0:
-
         raise HTTPException(
             status_code=404,
             detail="User not found",

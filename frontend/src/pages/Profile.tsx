@@ -1,6 +1,13 @@
 import { getInitials } from "@/lib/utils";
-import { authApi } from "@/services/apiService";
-import { useAuthStore } from "@/store/authStore";
+import { authApi, formatUser } from "@/services/apiService";
+import {
+  useAuthStore,
+  type EducationItem,
+  type ProjectItem,
+  type CertificationItem,
+  type LanguageItem,
+} from "@/store/authStore";
+import { calculateProfileCompletion } from "@/utils/profileCompletion";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
@@ -167,38 +174,7 @@ const JOB_TYPE_OPTIONS = ["Full-time", "Internship", "Part-time", "Contract"];
 const WORK_LOCATION_OPTIONS = ["Hybrid", "Remote", "On-site"];
 const PROFICIENCY_OPTIONS = ["Basic", "Intermediate", "Fluent", "Native"];
 
-// ── DATA INTERFACES ─────────────────────────────────────────────
-interface EducationItem {
-  id: string;
-  college: string;
-  degree: string;
-  fieldOfStudy: string;
-  graduationYear: string;
-  cgpa?: string;
-  level?: string;
-}
 
-interface ProjectItem {
-  id: string;
-  title: string;
-  description: string;
-  techStack: string[];
-  githubUrl?: string;
-  liveUrl?: string;
-}
-
-interface CertificationItem {
-  id: string;
-  name: string;
-  issuer: string;
-  issueDate: string;
-  credentialUrl?: string;
-}
-
-interface LanguageItem {
-  language: string;
-  proficiency: string;
-}
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -220,7 +196,7 @@ export default function Profile() {
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [customSkillInput, setCustomSkillInput] = useState("");
 
-  // Local storage persistence key
+  // Local storage persistence key (fallback cache only)
   const storageKey = `ib_candidate_profile_extra_${user?.id || "default"}`;
 
   // Load persisted extra fields or fallbacks
@@ -235,26 +211,26 @@ export default function Profile() {
 
   const savedExtra = getSavedExtra();
 
-  // Form State initialized dynamically from authenticated user
+  // Form State initialized dynamically from authenticated user (authoritative user preferred)
   const [form, setForm] = useState({
     name: user?.name || "",
     email: user?.email || "",
-    headline: savedExtra?.headline || "",
-    phone: savedExtra?.phone || "",
-    location: savedExtra?.location || "",
-    city: savedExtra?.city || "",
-    country: savedExtra?.country || "",
-    targetRole: user?.targetRole || savedExtra?.targetRole || "",
+    headline: user?.headline || savedExtra?.headline || "",
+    phone: user?.phone || savedExtra?.phone || "",
+    location: user?.location || savedExtra?.location || "",
+    city: user?.city || savedExtra?.city || "",
+    country: user?.country || savedExtra?.country || "",
+    targetRole: user?.targetRole || user?.target_role || savedExtra?.targetRole || "",
     experience: user?.experience || savedExtra?.experience || "",
-    careerObjective: savedExtra?.careerObjective || "",
-    about: savedExtra?.about || "",
-    preferredJobType: savedExtra?.preferredJobType || "",
-    preferredLocation: savedExtra?.preferredLocation || "",
+    careerObjective: user?.careerObjective || user?.career_objective || savedExtra?.careerObjective || "",
+    about: user?.about || savedExtra?.about || "",
+    preferredJobType: user?.preferredJobType || user?.preferred_job_type || savedExtra?.preferredJobType || "",
+    preferredLocation: user?.preferredLocation || user?.preferred_location || savedExtra?.preferredLocation || "",
     college: user?.college || savedExtra?.college || "",
-    degree: savedExtra?.degree || "",
-    fieldOfStudy: savedExtra?.fieldOfStudy || "",
-    graduationYear: savedExtra?.graduationYear || "",
-    cgpa: savedExtra?.cgpa || "",
+    degree: user?.degree || savedExtra?.degree || "",
+    fieldOfStudy: user?.fieldOfStudy || user?.field_of_study || savedExtra?.fieldOfStudy || "",
+    graduationYear: user?.graduationYear || user?.graduation_year || savedExtra?.graduationYear || "",
+    cgpa: user?.cgpa || savedExtra?.cgpa || "",
     github: user?.github || savedExtra?.github || "",
     linkedin: user?.linkedin || savedExtra?.linkedin || "",
     portfolio: user?.portfolio || savedExtra?.portfolio || "",
@@ -263,9 +239,73 @@ export default function Profile() {
       user?.skills && user.skills.length > 0
         ? user.skills
         : savedExtra?.skills || [],
-    resumeFilename: savedExtra?.resumeFilename || "",
-    resumeUploadedAt: savedExtra?.resumeUploadedAt || "",
+    resumeFilename: user?.resumeFilename || user?.resume_filename || savedExtra?.resumeFilename || "",
+    resumeUploadedAt: user?.resumeUploadedAt || user?.resume_uploaded_at || savedExtra?.resumeUploadedAt || "",
   });
+
+  // Fetch authoritative persisted profile from MongoDB on mount to ensure cross-device sync
+  useEffect(() => {
+    let active = true;
+    authApi
+      .me()
+      .then((apiUser) => {
+        if (!active || !apiUser) return;
+        const normalized = formatUser(apiUser);
+        updateUser(normalized);
+
+        setForm((prev) => ({
+          ...prev,
+          name: normalized.name || prev.name,
+          email: normalized.email || prev.email,
+          headline: normalized.headline || prev.headline,
+          phone: normalized.phone || prev.phone,
+          location: normalized.location || prev.location,
+          city: normalized.city || prev.city,
+          country: normalized.country || prev.country,
+          targetRole: normalized.targetRole || prev.targetRole,
+          experience: normalized.experience || prev.experience,
+          careerObjective: normalized.careerObjective || prev.careerObjective,
+          about: normalized.about || prev.about,
+          preferredJobType: normalized.preferredJobType || prev.preferredJobType,
+          preferredLocation: normalized.preferredLocation || prev.preferredLocation,
+          college: normalized.college || prev.college,
+          degree: normalized.degree || prev.degree,
+          fieldOfStudy: normalized.fieldOfStudy || prev.fieldOfStudy,
+          graduationYear: normalized.graduationYear || prev.graduationYear,
+          cgpa: normalized.cgpa || prev.cgpa,
+          github: normalized.github || prev.github,
+          linkedin: normalized.linkedin || prev.linkedin,
+          portfolio: normalized.portfolio || prev.portfolio,
+          avatar: normalized.avatar || prev.avatar,
+          skills:
+            normalized.skills && normalized.skills.length > 0
+              ? normalized.skills
+              : prev.skills,
+          resumeFilename: normalized.resumeFilename || prev.resumeFilename,
+          resumeUploadedAt: normalized.resumeUploadedAt || prev.resumeUploadedAt,
+        }));
+
+        if (normalized.educations && normalized.educations.length > 0) {
+          setEducations(normalized.educations);
+        }
+        if (normalized.projects && normalized.projects.length > 0) {
+          setProjects(normalized.projects);
+        }
+        if (normalized.certifications && normalized.certifications.length > 0) {
+          setCertifications(normalized.certifications);
+        }
+        if (normalized.languages && normalized.languages.length > 0) {
+          setLanguages(normalized.languages);
+        }
+      })
+      .catch((err) => {
+        console.warn("Unable to fetch latest user profile:", err);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Synchronize with user store if user data changes externally
   useEffect(() => {
@@ -274,37 +314,72 @@ export default function Profile() {
         ...prev,
         name: user.name || prev.name,
         email: user.email || prev.email,
+        headline: user.headline || prev.headline,
+        phone: user.phone || prev.phone,
+        location: user.location || prev.location,
+        city: user.city || prev.city,
+        country: user.country || prev.country,
         college: user.college || prev.college,
-        targetRole: user.targetRole || prev.targetRole,
+        degree: user.degree || prev.degree,
+        fieldOfStudy: user.fieldOfStudy || user.field_of_study || prev.fieldOfStudy,
+        graduationYear: user.graduationYear || user.graduation_year || prev.graduationYear,
+        cgpa: user.cgpa || prev.cgpa,
+        targetRole: user.targetRole || user.target_role || prev.targetRole,
         experience: user.experience || prev.experience,
+        careerObjective: user.careerObjective || user.career_objective || prev.careerObjective,
+        about: user.about || prev.about,
+        preferredJobType: user.preferredJobType || user.preferred_job_type || prev.preferredJobType,
+        preferredLocation: user.preferredLocation || user.preferred_location || prev.preferredLocation,
         github: user.github || prev.github,
         linkedin: user.linkedin || prev.linkedin,
         portfolio: user.portfolio || prev.portfolio,
         avatar: user.avatar || prev.avatar,
         skills:
           user.skills && user.skills.length > 0 ? user.skills : prev.skills,
+        resumeFilename: user.resumeFilename || user.resume_filename || prev.resumeFilename,
+        resumeUploadedAt: user.resumeUploadedAt || user.resume_uploaded_at || prev.resumeUploadedAt,
       }));
+      if (user.educations && user.educations.length > 0) {
+        setEducations(user.educations);
+      }
+      if (user.projects && user.projects.length > 0) {
+        setProjects(user.projects);
+      }
+      if (user.certifications && user.certifications.length > 0) {
+        setCertifications(user.certifications);
+      }
+      if (user.languages && user.languages.length > 0) {
+        setLanguages(user.languages);
+      }
     }
   }, [user]);
 
-  // Education list (defaults to empty unless added by user)
+  // Education list (defaults to user.educations from MongoDB)
   const [educations, setEducations] = useState<EducationItem[]>(
-    savedExtra?.educations || [],
+    user?.educations && user.educations.length > 0
+      ? user.educations
+      : savedExtra?.educations || [],
   );
 
-  // Featured Projects list (defaults to empty unless added by user)
+  // Featured Projects list (defaults to user.projects from MongoDB)
   const [projects, setProjects] = useState<ProjectItem[]>(
-    savedExtra?.projects || [],
+    user?.projects && user.projects.length > 0
+      ? user.projects
+      : savedExtra?.projects || [],
   );
 
-  // Certifications list (defaults to empty unless added by user)
+  // Certifications list (defaults to user.certifications from MongoDB)
   const [certifications, setCertifications] = useState<CertificationItem[]>(
-    savedExtra?.certifications || [],
+    user?.certifications && user.certifications.length > 0
+      ? user.certifications
+      : savedExtra?.certifications || [],
   );
 
-  // Languages list (defaults to empty unless added by user)
+  // Languages list (defaults to user.languages from MongoDB)
   const [languages, setLanguages] = useState<LanguageItem[]>(
-    savedExtra?.languages || [],
+    user?.languages && user.languages.length > 0
+      ? user.languages
+      : savedExtra?.languages || [],
   );
 
   // Inline forms temporary state
@@ -337,46 +412,12 @@ export default function Profile() {
     proficiency: "Fluent",
   });
 
-  // Dynamic Profile Completeness calculation
+  // Dynamic Profile Completeness calculation (using single authoritative source of truth)
   const completionStats = useMemo(() => {
-    const checks = [
-      {
-        id: "basic",
-        label: "Basic Information",
-        done: Boolean(
-          form.name.trim() && form.email.trim() && form.headline.trim(),
-        ),
-      },
-      {
-        id: "education",
-        label: "Education",
-        done: Boolean(
-          educations.length > 0 && form.college.trim() && form.degree.trim(),
-        ),
-      },
-      {
-        id: "career",
-        label: "Career Information",
-        done: Boolean(
-          form.targetRole.trim() && form.experience.trim() && form.about.trim(),
-        ),
-      },
-      {
-        id: "skills",
-        label: "Skills (3+)",
-        done: form.skills.length >= 3,
-      },
-      {
-        id: "links",
-        label: "Professional Links",
-        done: Boolean(form.github.trim() || form.linkedin.trim()),
-      },
-    ];
-
-    const completedCount = checks.filter((c) => c.done).length;
-    const percentage = Math.round((completedCount / checks.length) * 100);
-
-    return { percentage, checks, isComplete: percentage >= 80 };
+    return calculateProfileCompletion({
+      ...form,
+      educations,
+    });
   }, [form, educations]);
 
   // Real-time Field Validation Rules
@@ -473,66 +514,101 @@ export default function Profile() {
     try {
       setSaving(true);
 
-      // 1. Update Core User Store (Preserved exactly as required)
-      await updateUser({
+      const effectiveCollege = form.college || (educations[0]?.college ?? "");
+      const effectiveDegree = form.degree || (educations[0]?.degree ?? "");
+
+      // 1. Prepare full profile payload for MongoDB persistence
+      const profilePayload = {
         name: form.name,
         email: form.email,
-        college: form.college,
-        targetRole: form.targetRole,
-        experience: form.experience,
-        github: form.github,
-        linkedin: form.linkedin,
-        portfolio: form.portfolio,
-        skills: form.skills,
-        avatar: form.avatar,
-      });
-
-      // 2. Persist extended profile data safely in localStorage
-      const extraData = {
         headline: form.headline,
         phone: form.phone,
         location: form.location,
         city: form.city,
         country: form.country,
         careerObjective: form.careerObjective,
+        career_objective: form.careerObjective,
         about: form.about,
         preferredJobType: form.preferredJobType,
+        preferred_job_type: form.preferredJobType,
         preferredLocation: form.preferredLocation,
-        college: form.college,
-        degree: form.degree,
-        fieldOfStudy: form.fieldOfStudy,
-        graduationYear: form.graduationYear,
-        cgpa: form.cgpa,
+        preferred_location: form.preferredLocation,
+        college: effectiveCollege,
+        degree: effectiveDegree,
+        fieldOfStudy: form.fieldOfStudy || (educations[0]?.fieldOfStudy ?? ""),
+        field_of_study: form.fieldOfStudy || (educations[0]?.fieldOfStudy ?? ""),
+        graduationYear: form.graduationYear || (educations[0]?.graduationYear ?? ""),
+        graduation_year: form.graduationYear || (educations[0]?.graduationYear ?? ""),
+        cgpa: form.cgpa || (educations[0]?.cgpa ?? ""),
+        targetRole: form.targetRole,
+        target_role: form.targetRole,
+        experience: form.experience,
+        skills: form.skills,
         github: form.github,
         linkedin: form.linkedin,
         portfolio: form.portfolio,
-        skills: form.skills,
         avatar: form.avatar,
         resumeFilename: form.resumeFilename,
+        resume_filename: form.resumeFilename,
         resumeUploadedAt: form.resumeUploadedAt,
+        resume_uploaded_at: form.resumeUploadedAt,
         educations,
         projects,
         certifications,
         languages,
       };
-      localStorage.setItem(storageKey, JSON.stringify(extraData));
 
-      // 3. Attempt backend update gracefully if connected
+      // 2. Persist extended profile data safely in localStorage as offline fallback
       try {
-        await authApi.updateProfile({
-          name: form.name,
-          college: form.college,
-          target_role: form.targetRole,
-          experience: form.experience,
-          skills: form.skills,
-          github: form.github,
-          linkedin: form.linkedin,
-          portfolio: form.portfolio,
-          profile_complete: completionStats.percentage >= 80,
-        });
+        localStorage.setItem(storageKey, JSON.stringify(profilePayload));
       } catch {
-        // Backend optional/mock fallback
+        /* ignore */
       }
+
+      // 3. Send profile data to backend and wait for successful MongoDB response
+      const savedUserResponse = await authApi.updateProfile(profilePayload);
+      const formatted = formatUser(savedUserResponse);
+
+      // 4. Update core user store with authoritative returned profile
+      updateUser(formatted);
+
+      // 5. Replace state with returned saved profile
+      setForm((prev) => ({
+        ...prev,
+        name: formatted.name || prev.name,
+        email: formatted.email || prev.email,
+        headline: formatted.headline || prev.headline,
+        phone: formatted.phone || prev.phone,
+        location: formatted.location || prev.location,
+        city: formatted.city || prev.city,
+        country: formatted.country || prev.country,
+        targetRole: formatted.targetRole || prev.targetRole,
+        experience: formatted.experience || prev.experience,
+        careerObjective: formatted.careerObjective || prev.careerObjective,
+        about: formatted.about || prev.about,
+        preferredJobType: formatted.preferredJobType || prev.preferredJobType,
+        preferredLocation: formatted.preferredLocation || prev.preferredLocation,
+        college: formatted.college || prev.college,
+        degree: formatted.degree || prev.degree,
+        fieldOfStudy: formatted.fieldOfStudy || prev.fieldOfStudy,
+        graduationYear: formatted.graduationYear || prev.graduationYear,
+        cgpa: formatted.cgpa || prev.cgpa,
+        github: formatted.github || prev.github,
+        linkedin: formatted.linkedin || prev.linkedin,
+        portfolio: formatted.portfolio || prev.portfolio,
+        avatar: formatted.avatar || prev.avatar,
+        skills:
+          formatted.skills && formatted.skills.length > 0
+            ? formatted.skills
+            : prev.skills,
+        resumeFilename: formatted.resumeFilename || prev.resumeFilename,
+        resumeUploadedAt: formatted.resumeUploadedAt || prev.resumeUploadedAt,
+      }));
+
+      if (formatted.educations) setEducations(formatted.educations);
+      if (formatted.projects) setProjects(formatted.projects);
+      if (formatted.certifications) setCertifications(formatted.certifications);
+      if (formatted.languages) setLanguages(formatted.languages);
 
       setEditing(false);
       toast.success("Candidate profile updated successfully!");
@@ -546,36 +622,35 @@ export default function Profile() {
 
   // Cancel edit mode and revert to last saved state
   const handleCancel = () => {
-    const latestExtra = getSavedExtra();
     setForm({
       name: user?.name || "",
       email: user?.email || "",
-      headline: latestExtra?.headline || "",
-      phone: latestExtra?.phone || "",
-      location: latestExtra?.location || "",
-      city: latestExtra?.city || "",
-      country: latestExtra?.country || "",
-      targetRole: user?.targetRole || latestExtra?.targetRole || "",
-      experience: user?.experience || latestExtra?.experience || "",
-      careerObjective: latestExtra?.careerObjective || "",
-      about: latestExtra?.about || "",
-      preferredJobType: latestExtra?.preferredJobType || "",
-      preferredLocation: latestExtra?.preferredLocation || "",
-      college: user?.college || latestExtra?.college || "",
-      degree: latestExtra?.degree || "",
-      fieldOfStudy: latestExtra?.fieldOfStudy || "",
-      graduationYear: latestExtra?.graduationYear || "",
-      cgpa: latestExtra?.cgpa || "",
-      github: user?.github || latestExtra?.github || "",
-      linkedin: user?.linkedin || latestExtra?.linkedin || "",
-      portfolio: user?.portfolio || latestExtra?.portfolio || "",
-      avatar: user?.avatar || latestExtra?.avatar || "",
+      headline: user?.headline || savedExtra?.headline || "",
+      phone: user?.phone || savedExtra?.phone || "",
+      location: user?.location || savedExtra?.location || "",
+      city: user?.city || savedExtra?.city || "",
+      country: user?.country || savedExtra?.country || "",
+      targetRole: user?.targetRole || user?.target_role || savedExtra?.targetRole || "",
+      experience: user?.experience || savedExtra?.experience || "",
+      careerObjective: user?.careerObjective || user?.career_objective || savedExtra?.careerObjective || "",
+      about: user?.about || savedExtra?.about || "",
+      preferredJobType: user?.preferredJobType || user?.preferred_job_type || savedExtra?.preferredJobType || "",
+      preferredLocation: user?.preferredLocation || user?.preferred_location || savedExtra?.preferredLocation || "",
+      college: user?.college || savedExtra?.college || "",
+      degree: user?.degree || savedExtra?.degree || "",
+      fieldOfStudy: user?.fieldOfStudy || user?.field_of_study || savedExtra?.fieldOfStudy || "",
+      graduationYear: user?.graduationYear || user?.graduation_year || savedExtra?.graduationYear || "",
+      cgpa: user?.cgpa || savedExtra?.cgpa || "",
+      github: user?.github || savedExtra?.github || "",
+      linkedin: user?.linkedin || savedExtra?.linkedin || "",
+      portfolio: user?.portfolio || savedExtra?.portfolio || "",
+      avatar: user?.avatar || savedExtra?.avatar || "",
       skills:
         user?.skills && user.skills.length > 0
           ? user.skills
-          : latestExtra?.skills || [],
-      resumeFilename: latestExtra?.resumeFilename || "",
-      resumeUploadedAt: latestExtra?.resumeUploadedAt || "",
+          : savedExtra?.skills || [],
+      resumeFilename: user?.resumeFilename || user?.resume_filename || savedExtra?.resumeFilename || "",
+      resumeUploadedAt: user?.resumeUploadedAt || user?.resume_uploaded_at || savedExtra?.resumeUploadedAt || "",
     });
     setEditing(false);
     setShowAddEducation(false);
@@ -1945,17 +2020,23 @@ export default function Profile() {
                         toast.error("College and degree are required");
                         return;
                       }
-                      setEducations((curr) => [
-                        ...curr,
-                        {
-                          id: Date.now().toString(),
-                          college: newEdu.college || "",
-                          degree: newEdu.degree || "B.Tech",
-                          fieldOfStudy: newEdu.fieldOfStudy || "",
-                          graduationYear: newEdu.graduationYear || "2025",
-                          cgpa: newEdu.cgpa || "",
-                        },
-                      ]);
+                      const addedItem: EducationItem = {
+                        id: Date.now().toString(),
+                        college: newEdu.college || "",
+                        degree: newEdu.degree || "B.Tech",
+                        fieldOfStudy: newEdu.fieldOfStudy || "",
+                        graduationYear: newEdu.graduationYear || "2025",
+                        cgpa: newEdu.cgpa || "",
+                      };
+                      setEducations((curr) => [...curr, addedItem]);
+                      setForm((c) => ({
+                        ...c,
+                        college: c.college || addedItem.college,
+                        degree: c.degree || addedItem.degree,
+                        fieldOfStudy: c.fieldOfStudy || addedItem.fieldOfStudy,
+                        graduationYear: c.graduationYear || addedItem.graduationYear,
+                        cgpa: c.cgpa || addedItem.cgpa,
+                      }));
                       setShowAddEducation(false);
                       setNewEdu({
                         college: "",

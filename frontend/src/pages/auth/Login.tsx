@@ -1,4 +1,4 @@
-import { authApi } from '@/services/apiService'
+import { authApi, formatUser } from '@/services/apiService'
 import { useAuthStore } from '@/store/authStore'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
@@ -41,19 +41,7 @@ export default function Login() {
       // PREPARE USER FOR ZUSTAND
       // ========================================================
 
-      const user = {
-        id: res.user.id,
-        email: res.user.email,
-        name: res.user.name,
-        college: res.user.college,
-        targetRole: res.user.target_role,
-        experience: res.user.experience,
-        skills: res.user.skills ?? [],
-        github: res.user.github,
-        linkedin: res.user.linkedin,
-        portfolio: res.user.portfolio,
-        profileComplete: res.user.profile_complete,
-      }
+      const user = formatUser(res.user);
 
       // ========================================================
       // SAVE USER + TOKENS

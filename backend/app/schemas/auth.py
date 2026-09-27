@@ -1,6 +1,5 @@
-from typing import Optional
-
-from pydantic import BaseModel, EmailStr
+from typing import Optional, Any
+from pydantic import BaseModel, EmailStr, Field
 
 
 # ============================================================
@@ -90,7 +89,30 @@ class UserResponse(BaseModel):
     linkedin: Optional[str] = None
     portfolio: Optional[str] = None
 
+    # Extended profile fields
+    headline: Optional[str] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    career_objective: Optional[str] = None
+    about: Optional[str] = None
+    preferred_job_type: Optional[str] = None
+    preferred_location: Optional[str] = None
+    degree: Optional[str] = None
+    field_of_study: Optional[str] = None
+    graduation_year: Optional[str] = None
+    cgpa: Optional[str] = None
+    avatar: Optional[str] = None
+    resume_filename: Optional[str] = None
+    resume_uploaded_at: Optional[str] = None
+    educations: Optional[list[dict[str, Any]]] = None
+    projects: Optional[list[dict[str, Any]]] = None
+    certifications: Optional[list[dict[str, Any]]] = None
+    languages: Optional[list[dict[str, Any]]] = None
+
     profile_complete: bool = False
+    profile_completion: int = 0
 
 
 # ============================================================
@@ -107,13 +129,32 @@ class TokenResponse(BaseModel):
 
 
 # ============================================================
-# PROFILE
+# PROFILE SETUP / UPDATE
 # ============================================================
 
 class ProfileSetupRequest(BaseModel):
-
+    name: Optional[str] = None
+    headline: Optional[str] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    career_objective: Optional[str] = None
+    careerObjective: Optional[str] = None
+    about: Optional[str] = None
+    preferred_job_type: Optional[str] = None
+    preferredJobType: Optional[str] = None
+    preferred_location: Optional[str] = None
+    preferredLocation: Optional[str] = None
     college: Optional[str] = None
+    degree: Optional[str] = None
+    field_of_study: Optional[str] = None
+    fieldOfStudy: Optional[str] = None
+    graduation_year: Optional[str] = None
+    graduationYear: Optional[str] = None
+    cgpa: Optional[str] = None
     target_role: Optional[str] = None
+    targetRole: Optional[str] = None
     experience: Optional[str] = None
 
     skills: Optional[list[str]] = None
@@ -121,6 +162,18 @@ class ProfileSetupRequest(BaseModel):
     github: Optional[str] = None
     linkedin: Optional[str] = None
     portfolio: Optional[str] = None
+    avatar: Optional[str] = None
+    resume_filename: Optional[str] = None
+    resumeFilename: Optional[str] = None
+    resume_uploaded_at: Optional[str] = None
+    resumeUploadedAt: Optional[str] = None
+    educations: Optional[list[dict[str, Any]]] = None
+    projects: Optional[list[dict[str, Any]]] = None
+    certifications: Optional[list[dict[str, Any]]] = None
+    languages: Optional[list[dict[str, Any]]] = None
+
+    profile_complete: Optional[bool] = None
+    profileComplete: Optional[bool] = None
 
 
 TokenResponse.model_rebuild()

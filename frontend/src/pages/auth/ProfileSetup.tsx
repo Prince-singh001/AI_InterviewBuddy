@@ -1,4 +1,5 @@
 import { sleep } from "@/lib/utils";
+import { authApi, formatUser } from "@/services/apiService";
 import { useAuthStore } from "@/store/authStore";
 import { motion } from "framer-motion";
 import {
@@ -91,11 +92,26 @@ export default function ProfileSetup() {
 
   const handleComplete = async () => {
     setLoading(true);
-    await sleep(1200);
-    updateUser({ ...form, profileComplete: true });
-    toast.success("Profile complete! Welcome to Interviewer Buddy AI 🎉");
-    navigate("/dashboard");
-    setLoading(false);
+    try {
+      const res = await authApi.updateProfile({
+        college: form.college,
+        target_role: form.targetRole,
+        experience: form.experience,
+        skills: form.skills,
+        github: form.github,
+        linkedin: form.linkedin,
+      });
+      updateUser(formatUser(res));
+      toast.success("Profile complete! Welcome to Interviewer Buddy AI 🎉");
+      navigate("/dashboard");
+    } catch {
+      await sleep(500);
+      updateUser({ ...form, profileComplete: true });
+      toast.success("Profile complete! Welcome to Interviewer Buddy AI 🎉");
+      navigate("/dashboard");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const steps = [

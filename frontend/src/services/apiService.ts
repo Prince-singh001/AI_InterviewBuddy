@@ -487,6 +487,8 @@ async function request<T>(
  * ============================================================
  */
 
+import type { User, EducationItem, ProjectItem, CertificationItem, LanguageItem } from "@/store/authStore";
+
 export interface UserResponse {
   id: string;
   email: string;
@@ -494,6 +496,7 @@ export interface UserResponse {
 
   college?: string;
   target_role?: string;
+  targetRole?: string;
   experience?: string;
 
   skills: string[];
@@ -502,7 +505,86 @@ export interface UserResponse {
   linkedin?: string;
   portfolio?: string;
 
+  headline?: string;
+  phone?: string;
+  location?: string;
+  city?: string;
+  country?: string;
+  career_objective?: string;
+  careerObjective?: string;
+  about?: string;
+  preferred_job_type?: string;
+  preferredJobType?: string;
+  preferred_location?: string;
+  preferredLocation?: string;
+  degree?: string;
+  field_of_study?: string;
+  fieldOfStudy?: string;
+  graduation_year?: string;
+  graduationYear?: string;
+  cgpa?: string;
+  avatar?: string;
+  resume_filename?: string;
+  resumeFilename?: string;
+  resume_uploaded_at?: string;
+  resumeUploadedAt?: string;
+  educations?: EducationItem[];
+  projects?: ProjectItem[];
+  certifications?: CertificationItem[];
+  languages?: LanguageItem[];
+
   profile_complete: boolean;
+  profile_completion?: number;
+}
+
+export function formatUser(apiUser: any): User {
+  if (!apiUser) return apiUser;
+  return {
+    ...apiUser,
+    id: apiUser.id || apiUser._id,
+    name: apiUser.name || "",
+    email: apiUser.email || "",
+    headline: apiUser.headline || "",
+    phone: apiUser.phone || "",
+    location: apiUser.location || "",
+    city: apiUser.city || "",
+    country: apiUser.country || "",
+    college: apiUser.college || "",
+    company: apiUser.company || "",
+    targetRole: apiUser.targetRole || apiUser.target_role || "",
+    target_role: apiUser.target_role || apiUser.targetRole || "",
+    experience: apiUser.experience || "",
+    careerObjective: apiUser.careerObjective || apiUser.career_objective || "",
+    career_objective: apiUser.career_objective || apiUser.careerObjective || "",
+    about: apiUser.about || "",
+    preferredJobType: apiUser.preferredJobType || apiUser.preferred_job_type || "",
+    preferred_job_type: apiUser.preferred_job_type || apiUser.preferredJobType || "",
+    preferredLocation: apiUser.preferredLocation || apiUser.preferred_location || "",
+    preferred_location: apiUser.preferred_location || apiUser.preferredLocation || "",
+    degree: apiUser.degree || "",
+    fieldOfStudy: apiUser.fieldOfStudy || apiUser.field_of_study || "",
+    field_of_study: apiUser.field_of_study || apiUser.fieldOfStudy || "",
+    graduationYear: apiUser.graduationYear || apiUser.graduation_year || "",
+    graduation_year: apiUser.graduation_year || apiUser.graduationYear || "",
+    cgpa: apiUser.cgpa || "",
+    skills: Array.isArray(apiUser.skills) ? apiUser.skills : [],
+    github: apiUser.github || "",
+    linkedin: apiUser.linkedin || "",
+    portfolio: apiUser.portfolio || "",
+    avatar: apiUser.avatar || "",
+    resumeFilename: apiUser.resumeFilename || apiUser.resume_filename || "",
+    resume_filename: apiUser.resume_filename || apiUser.resumeFilename || "",
+    resumeUploadedAt: apiUser.resumeUploadedAt || apiUser.resume_uploaded_at || "",
+    resume_uploaded_at: apiUser.resume_uploaded_at || apiUser.resumeUploadedAt || "",
+    educations: Array.isArray(apiUser.educations) ? apiUser.educations : [],
+    projects: Array.isArray(apiUser.projects) ? apiUser.projects : [],
+    certifications: Array.isArray(apiUser.certifications) ? apiUser.certifications : [],
+    languages: Array.isArray(apiUser.languages) ? apiUser.languages : [],
+    profileComplete: Boolean(apiUser.profileComplete ?? apiUser.profile_complete),
+    profile_complete: Boolean(apiUser.profile_complete ?? apiUser.profileComplete),
+    profileCompletion: Number(apiUser.profileCompletion ?? apiUser.profile_completion ?? 0),
+    profile_completion: Number(apiUser.profile_completion ?? apiUser.profileCompletion ?? 0),
+  };
 }
 
 

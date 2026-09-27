@@ -1,4 +1,4 @@
-import { authApi } from "@/services/apiService";
+import { authApi, formatUser } from "@/services/apiService";
 import { useAuthStore } from "@/store/authStore";
 import { motion } from "framer-motion";
 import { ArrowLeft, Check, Eye, EyeOff, Loader2, Mail } from "lucide-react";
@@ -136,7 +136,7 @@ export default function Register() {
       // SAVE AUTHENTICATION STATE
       // ========================================================
 
-      setAuth(res.user, res.access_token, res.refresh_token);
+      setAuth(formatUser(res.user), res.access_token, res.refresh_token);
 
       toast.success("Email verified! Account created successfully.");
 

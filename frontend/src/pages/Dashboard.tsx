@@ -21,8 +21,10 @@ import {
   Zap,
 } from "lucide-react";
 
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { authApi, formatUser } from "@/services/apiService";
+import { calculateProfileCompletion } from "@/utils/profileCompletion";
 
 import {
   Area,
@@ -308,8 +310,24 @@ function DashboardSkeleton() {
 ========================================================= */
 
 export default function Dashboard() {
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const navigate = useNavigate();
+
+  // Fetch authoritative persisted profile on mount to ensure synchronization
+  useEffect(() => {
+    let active = true;
+    authApi
+      .me()
+      .then((apiUser) => {
+        if (!active || !apiUser) return;
+        updateUser(formatUser(apiUser));
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   /* ---------------------------------------------------------
      FETCH DASHBOARD DATA
@@ -356,23 +374,14 @@ export default function Dashboard() {
   const firstName = actualName.split(" ")[0] || "Candidate";
 
   /* ---------------------------------------------------------
-     PROFILE COMPLETION
+     PROFILE COMPLETION (Single Source of Truth)
   --------------------------------------------------------- */
 
-  const profileFields = [
-    Boolean(user?.name),
-    Boolean(user?.email),
-    Boolean(user?.targetRole),
-    Boolean(user?.skills && user.skills.length > 0),
-    Boolean(user?.college),
-    Boolean(user?.github || user?.linkedin),
-  ];
+  const profileStats = useMemo(() => {
+    return calculateProfileCompletion(user);
+  }, [user]);
 
-  const completedProfileCount = profileFields.filter(Boolean).length;
-
-  const profilePercent = Math.round(
-    (completedProfileCount / profileFields.length) * 100,
-  );
+  const profilePercent = profileStats.percentage;
 
   return (
     <>

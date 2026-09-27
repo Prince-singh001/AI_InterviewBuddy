@@ -1,20 +1,83 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export interface EducationItem {
+  id: string;
+  college: string;
+  degree: string;
+  fieldOfStudy?: string;
+  graduationYear?: string;
+  cgpa?: string;
+  level?: string;
+}
+
+export interface ProjectItem {
+  id: string;
+  title: string;
+  description: string;
+  techStack?: string[];
+  githubUrl?: string;
+  liveUrl?: string;
+}
+
+export interface CertificationItem {
+  id: string;
+  name: string;
+  issuer: string;
+  issueDate?: string;
+  credentialUrl?: string;
+}
+
+export interface LanguageItem {
+  id?: string;
+  language: string;
+  proficiency: string;
+}
+
 export interface User {
-  id: string
-  email: string
-  name: string
-  avatar?: string
-  college?: string
-  company?: string
-  targetRole?: string
-  experience?: string
-  skills?: string[]
-  github?: string
-  linkedin?: string
-  portfolio?: string
-  profileComplete?: boolean
+  id: string;
+  email: string;
+  name: string;
+  headline?: string;
+  phone?: string;
+  location?: string;
+  city?: string;
+  country?: string;
+  avatar?: string;
+  college?: string;
+  company?: string;
+  targetRole?: string;
+  target_role?: string;
+  experience?: string;
+  careerObjective?: string;
+  career_objective?: string;
+  about?: string;
+  preferredJobType?: string;
+  preferred_job_type?: string;
+  preferredLocation?: string;
+  preferred_location?: string;
+  degree?: string;
+  fieldOfStudy?: string;
+  field_of_study?: string;
+  graduationYear?: string;
+  graduation_year?: string;
+  cgpa?: string;
+  skills?: string[];
+  github?: string;
+  linkedin?: string;
+  portfolio?: string;
+  resumeFilename?: string;
+  resume_filename?: string;
+  resumeUploadedAt?: string;
+  resume_uploaded_at?: string;
+  educations?: EducationItem[];
+  projects?: ProjectItem[];
+  certifications?: CertificationItem[];
+  languages?: LanguageItem[];
+  profileComplete?: boolean;
+  profile_complete?: boolean;
+  profileCompletion?: number;
+  profile_completion?: number;
 }
 
 interface AuthState {

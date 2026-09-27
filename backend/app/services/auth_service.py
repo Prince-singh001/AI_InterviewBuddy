@@ -56,6 +56,62 @@ MAX_OTP_ATTEMPTS = getattr(
 
 
 # ============================================================
+# PROFILE COMPLETION CALCULATION
+# ============================================================
+
+def calculate_profile_completion(user: User) -> tuple[int, bool]:
+    """
+    Calculate profile completion percentage and status.
+    Uses the exact 5 core checks required by the UI:
+    1. Basic Information (name, email, headline)
+    2. Education (college, degree, or educations entry)
+    3. Career Information (target_role, experience)
+    4. Skills (3+ skills)
+    5. Professional Links (github, linkedin, or portfolio)
+    """
+    name = (user.name or "").strip()
+    email = (user.email or "").strip()
+    headline = (user.headline or "").strip()
+    basic_done = bool(name and email and headline)
+
+    college = (user.college or "").strip()
+    degree = (user.degree or "").strip()
+    has_edu_entry = False
+    if user.educations and isinstance(user.educations, list):
+        for e in user.educations:
+            if isinstance(e, dict) and e.get("college") and e.get("degree"):
+                has_edu_entry = True
+                break
+    education_done = bool(has_edu_entry or (college and (degree or user.educations)))
+
+    target_role = (user.target_role or "").strip()
+    experience = (user.experience or "").strip()
+    career_done = bool(target_role and experience)
+
+    skills: list = []
+    if isinstance(user.skills, list):
+        skills = user.skills
+    elif user.skills:
+        try:
+            skills = json.loads(user.skills)
+        except Exception:
+            skills = [s.strip() for s in user.skills.split(",") if s.strip()]
+    skills_done = bool(len(skills) >= 3)
+
+    github = (user.github or "").strip()
+    linkedin = (user.linkedin or "").strip()
+    portfolio = (user.portfolio or "").strip()
+    links_done = bool(github or linkedin or portfolio)
+
+    checks = [basic_done, education_done, career_done, skills_done, links_done]
+    completed_count = sum(1 for c in checks if c)
+    percentage = round((completed_count / len(checks)) * 100)
+    is_complete = percentage >= 80
+
+    return percentage, is_complete
+
+
+# ============================================================
 # USER → RESPONSE
 # ============================================================
 
@@ -85,6 +141,8 @@ def user_to_response(user: User) -> UserResponse:
 
         skills = []
 
+    percentage, is_complete = calculate_profile_completion(user)
+
     return UserResponse(
         id=user.id,
         email=user.email,
@@ -100,7 +158,29 @@ def user_to_response(user: User) -> UserResponse:
         linkedin=user.linkedin,
         portfolio=user.portfolio,
 
-        profile_complete=user.profile_complete,
+        headline=user.headline,
+        phone=user.phone,
+        location=user.location,
+        city=user.city,
+        country=user.country,
+        career_objective=user.career_objective,
+        about=user.about,
+        preferred_job_type=user.preferred_job_type,
+        preferred_location=user.preferred_location,
+        degree=user.degree,
+        field_of_study=user.field_of_study,
+        graduation_year=user.graduation_year,
+        cgpa=user.cgpa,
+        avatar=user.avatar,
+        resume_filename=user.resume_filename,
+        resume_uploaded_at=user.resume_uploaded_at,
+        educations=user.educations,
+        projects=user.projects,
+        certifications=user.certifications,
+        languages=user.languages,
+
+        profile_complete=is_complete,
+        profile_completion=percentage,
     )
 
 
