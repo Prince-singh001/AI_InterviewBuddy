@@ -389,10 +389,18 @@ async def send_email_using_gmail_api(
 
     except Exception as exc:
 
+        err_msg = str(exc)
+
         print(
             f"Gmail API email error: "
             f"{type(exc).__name__}: {exc}"
         )
+
+        if "invalid_grant" in err_msg.lower() or "expired or revoked" in err_msg.lower():
+            print(
+                "Gmail API refresh token is expired/revoked. "
+                "Generate a new Gmail OAuth refresh token and update the deployment environment variable."
+            )
 
         return False
 
@@ -409,79 +417,17 @@ async def send_email(
     """
     Send email using the following priority:
 
-    1. Gmail API
-    2. Resend HTTPS API
-    3. Gmail SMTP
+    1. Resend HTTPS API (Preferred production provider)
+    2. Gmail API (First fallback over HTTPS)
+    3. Gmail SMTP (Final fallback)
 
-    Gmail API is the primary provider because it works
-    through HTTPS and avoids Render SMTP restrictions.
+    Resend is the preferred provider for cloud deployments (like Render)
+    because it operates reliably over HTTPS. Sending to arbitrary recipients
+    requires a verified domain configured in RESEND_FROM_EMAIL.
     """
 
     # ========================================================
-    # GMAIL API CONFIGURATION
-    # ========================================================
-
-    gmail_client_id = getattr(
-        settings,
-        "GMAIL_CLIENT_ID",
-        None,
-    )
-
-    gmail_client_secret = getattr(
-        settings,
-        "GMAIL_CLIENT_SECRET",
-        None,
-    )
-
-    gmail_refresh_token = getattr(
-        settings,
-        "GMAIL_REFRESH_TOKEN",
-        None,
-    )
-
-    gmail_from_email = getattr(
-        settings,
-        "GMAIL_FROM_EMAIL",
-        None,
-    )
-
-    # ========================================================
-    # TRY GMAIL API FIRST
-    # ========================================================
-
-    if (
-        gmail_client_id
-        and gmail_client_secret
-        and gmail_refresh_token
-        and gmail_from_email
-    ):
-
-        gmail_api_success = (
-            await send_email_using_gmail_api(
-                to_email=to_email,
-                subject=subject,
-                html_body=html_body,
-            )
-        )
-
-        if gmail_api_success:
-
-            return
-
-        print(
-            "Gmail API failed. "
-            "Trying Resend fallback..."
-        )
-
-    else:
-
-        print(
-            "Gmail API configuration is incomplete. "
-            "Trying Resend fallback..."
-        )
-
-    # ========================================================
-    # RESEND CONFIGURATION
+    # 1. RESEND HTTPS API (PREFERRED)
     # ========================================================
 
     resend_api_key = getattr(
@@ -495,44 +441,6 @@ async def send_email(
         "RESEND_FROM_EMAIL",
         None,
     )
-
-    # ========================================================
-    # SMTP CONFIGURATION
-    # ========================================================
-
-    smtp_host = getattr(
-        settings,
-        "SMTP_HOST",
-        "smtp.gmail.com",
-    )
-
-    smtp_port = getattr(
-        settings,
-        "SMTP_PORT",
-        587,
-    )
-
-    smtp_username = getattr(
-        settings,
-        "SMTP_USERNAME",
-        None,
-    )
-
-    smtp_password = getattr(
-        settings,
-        "SMTP_PASSWORD",
-        None,
-    )
-
-    smtp_from_email = getattr(
-        settings,
-        "SMTP_FROM_EMAIL",
-        None,
-    )
-
-    # ========================================================
-    # TRY RESEND
-    # ========================================================
 
     if resend_api_key and resend_from_email:
 
@@ -577,6 +485,13 @@ async def send_email(
             # RESEND FAILED
             # ------------------------------------------------
 
+            if response.status_code == 403:
+
+                print(
+                    "Resend rejected the email because the sender domain is not verified. "
+                    "Configure RESEND_FROM_EMAIL using a verified Resend domain."
+                )
+
             print(
                 "Resend API error:",
                 response.status_code,
@@ -584,7 +499,7 @@ async def send_email(
             )
 
             print(
-                "Trying Gmail SMTP fallback..."
+                "Trying Gmail API fallback..."
             )
 
         except httpx.RequestError as exc:
@@ -594,7 +509,7 @@ async def send_email(
             )
 
             print(
-                "Trying Gmail SMTP fallback..."
+                "Trying Gmail API fallback..."
             )
 
         except Exception as exc:
@@ -604,12 +519,108 @@ async def send_email(
             )
 
             print(
-                "Trying Gmail SMTP fallback..."
+                "Trying Gmail API fallback..."
             )
 
+    else:
+
+        print(
+            "Resend configuration is incomplete. "
+            "Trying Gmail API fallback..."
+        )
+
     # ========================================================
-    # GMAIL SMTP FALLBACK
+    # 2. GMAIL API FALLBACK
     # ========================================================
+
+    gmail_client_id = getattr(
+        settings,
+        "GMAIL_CLIENT_ID",
+        None,
+    )
+
+    gmail_client_secret = getattr(
+        settings,
+        "GMAIL_CLIENT_SECRET",
+        None,
+    )
+
+    gmail_refresh_token = getattr(
+        settings,
+        "GMAIL_REFRESH_TOKEN",
+        None,
+    )
+
+    gmail_from_email = getattr(
+        settings,
+        "GMAIL_FROM_EMAIL",
+        None,
+    )
+
+    if (
+        gmail_client_id
+        and gmail_client_secret
+        and gmail_refresh_token
+        and gmail_from_email
+    ):
+
+        gmail_api_success = (
+            await send_email_using_gmail_api(
+                to_email=to_email,
+                subject=subject,
+                html_body=html_body,
+            )
+        )
+
+        if gmail_api_success:
+
+            return
+
+        print(
+            "Gmail API failed. "
+            "Trying Gmail SMTP fallback..."
+        )
+
+    else:
+
+        print(
+            "Gmail API configuration is incomplete. "
+            "Trying Gmail SMTP fallback..."
+        )
+
+    # ========================================================
+    # 3. GMAIL SMTP FALLBACK
+    # ========================================================
+
+    smtp_host = getattr(
+        settings,
+        "SMTP_HOST",
+        "smtp.gmail.com",
+    )
+
+    smtp_port = getattr(
+        settings,
+        "SMTP_PORT",
+        587,
+    )
+
+    smtp_username = getattr(
+        settings,
+        "SMTP_USERNAME",
+        None,
+    )
+
+    smtp_password = getattr(
+        settings,
+        "SMTP_PASSWORD",
+        None,
+    )
+
+    smtp_from_email = getattr(
+        settings,
+        "SMTP_FROM_EMAIL",
+        None,
+    )
 
     if smtp_username and smtp_password:
 
@@ -672,14 +683,23 @@ async def send_email(
                 f"Gmail SMTP error: {exc}"
             )
 
+    else:
+
+        print(
+            "Gmail SMTP configuration is incomplete."
+        )
+
     # ========================================================
-    # NO EMAIL PROVIDER WORKED
+    # NO EMAIL PROVIDER WORKED -> FINAL ERROR
     # ========================================================
 
-    raise RuntimeError(
-        "Unable to send email. "
-        "Configure Gmail API, Resend, "
-        "or Gmail SMTP correctly."
+    print(
+        "All email providers failed."
+    )
+
+    raise HTTPException(
+        status_code=500,
+        detail="Unable to send OTP email. Please try again later.",
     )
 
 
@@ -890,6 +910,10 @@ async def register_user(
                     otp=otp,
                 )
 
+            except HTTPException:
+
+                raise
+
             except Exception as exc:
 
                 print(
@@ -898,7 +922,7 @@ async def register_user(
 
                 raise HTTPException(
                     status_code=500,
-                    detail="Unable to send OTP email",
+                    detail="Unable to send OTP email. Please try again later.",
                 )
 
             return user_to_response(
@@ -975,6 +999,20 @@ async def register_user(
             otp=otp,
         )
 
+    except HTTPException:
+
+        # ----------------------------------------------------
+        # DELETE INCOMPLETE USER
+        # ----------------------------------------------------
+
+        await db.users.delete_one(
+            {
+                "id": user.id
+            }
+        )
+
+        raise
+
     except Exception as exc:
 
         # ----------------------------------------------------
@@ -993,7 +1031,7 @@ async def register_user(
 
         raise HTTPException(
             status_code=500,
-            detail="Unable to send OTP email",
+            detail="Unable to send OTP email. Please try again later.",
         )
 
     return user_to_response(
@@ -1284,6 +1322,10 @@ async def resend_signup_otp(
             otp=otp,
         )
 
+    except HTTPException:
+
+        raise
+
     except Exception as exc:
 
         print(
@@ -1292,7 +1334,7 @@ async def resend_signup_otp(
 
         raise HTTPException(
             status_code=500,
-            detail="Unable to send OTP email",
+            detail="Unable to send OTP email. Please try again later.",
         )
 
     return user_to_response(
@@ -1640,6 +1682,11 @@ async def request_password_reset(
             name=user.name or "User",
             reset_link=reset_link,
             expiry_minutes=15,
+        )
+    except HTTPException:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to send password reset email. Please try again later.",
         )
     except Exception as exc:
         print(f"Failed to send password reset email: {exc}")

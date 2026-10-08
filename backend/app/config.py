@@ -70,7 +70,18 @@ class Settings(BaseSettings):
     AZURE_OPENAI_API_VERSION: str = "2024-02-01"
 
     # ============================================================
-    # Email — Gmail API
+    # Email — Resend API (Preferred Provider)
+    # ============================================================
+
+    RESEND_API_KEY: Optional[str] = None
+
+    # Resend sender address. Must be a verified domain in Resend for production
+    # (e.g. 'Interviewer Buddy AI <noreply@yourdomain.com>').
+    # Note: 'onboarding@resend.dev' is restricted to the Resend account owner's email only.
+    RESEND_FROM_EMAIL: str = "onboarding@resend.dev"
+
+    # ============================================================
+    # Email — Gmail API (Fallback 1)
     # ============================================================
 
     # Google Cloud OAuth Desktop App credentials
@@ -85,8 +96,7 @@ class Settings(BaseSettings):
     GMAIL_FROM_EMAIL: Optional[str] = None
 
     # ============================================================
-    # Email — Gmail SMTP
-    # Optional fallback
+    # Email — Gmail SMTP (Fallback 2)
     # ============================================================
 
     SMTP_HOST: str = "smtp.gmail.com"
@@ -98,15 +108,6 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
 
     SMTP_FROM_EMAIL: Optional[str] = None
-
-    # ============================================================
-    # Email — Resend API
-    # Optional fallback
-    # ============================================================
-
-    RESEND_API_KEY: Optional[str] = None
-
-    RESEND_FROM_EMAIL: str = "onboarding@resend.dev"
 
     # ============================================================
     # OTP Security
