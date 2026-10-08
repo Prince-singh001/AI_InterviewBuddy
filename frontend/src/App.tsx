@@ -11,28 +11,30 @@ import AuthLayout from "@/layouts/AuthLayout";
 // Public pages
 import Landing from "@/pages/Landing";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
-import ResetPassword from "@/pages/auth/ResetPassword";
 import Login from "@/pages/auth/Login";
 import ProfileSetup from "@/pages/auth/ProfileSetup";
 import Register from "@/pages/auth/Register";
+import ResetPassword from "@/pages/auth/ResetPassword";
 
 // App pages
 import AIInsights from "@/pages/AIInsights";
+import Assessment from "@/pages/Assessment";
+import AssessmentResult from "@/pages/AssessmentResult";
+import AssessmentTest from "@/pages/AssessmentTest";
 import CareerRoadmap from "@/pages/CareerRoadmap";
+import CodingPractice from "@/pages/CodingPractice";
+import CodingProblem from "@/pages/CodingProblem";
+import CompanyPractice from "@/pages/CompanyPractice";
+import CompanyPracticeDetails from "@/pages/CompanyPracticeDetails";
 import Dashboard from "@/pages/Dashboard";
 import InterviewComplete from "@/pages/InterviewComplete";
 import InterviewRoom from "@/pages/InterviewRoom";
 import InterviewSetup from "@/pages/InterviewSetup";
 import Interviews from "@/pages/Interviews";
 import JobAnalyzer from "@/pages/JobAnalyzer";
-import Practice from "@/pages/Practice";
-import Assessment from "@/pages/Assessment";
-import AssessmentTest from "@/pages/AssessmentTest";
-import AssessmentResult from "@/pages/AssessmentResult";
-import CompanyPractice from "@/pages/CompanyPractice";
-import CompanyPracticeDetails from "@/pages/CompanyPracticeDetails";
-import CodingPractice from "@/pages/CodingPractice";
-import CodingProblem from "@/pages/CodingProblem";
+import MockInterview from "@/pages/MockInterview";
+import MockPractice from "@/pages/MockPractice";
+import MockTest from "@/pages/MockTest";
 import Profile from "@/pages/Profile";
 import Progress from "@/pages/Progress";
 import Reports from "@/pages/Reports";
@@ -78,12 +80,6 @@ export default function App() {
    */
   const previousAuthRef = useRef(isAuthenticated);
 
-  /**
-   * Clear React Query cache after logout.
-   *
-   * This prevents previously authenticated user's
-   * server data from remaining in memory.
-   */
   useEffect(() => {
     if (previousAuthRef.current && !isAuthenticated) {
       queryClient.clear();
@@ -211,18 +207,45 @@ export default function App() {
         />
 
         {/* =========================================================
-            PRACTICE
+            PRACTICE & INTERVIEW ROUTES
         ========================================================= */}
 
         <Route
-          path="/practice"
+          path="/practice/mock-interview"
           element={
             <PrivateRoute>
               <AppLayout>
-                <Practice />
+                <MockInterview />
               </AppLayout>
             </PrivateRoute>
           }
+        />
+
+        <Route
+          path="/practice/mock-tests"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <MockTest />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/practice/mock-practice"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <MockPractice />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/practice"
+          element={<Navigate to="/practice/mock-practice" replace />}
         />
 
         <Route
@@ -340,6 +363,17 @@ export default function App() {
         />
 
         <Route
+          path="/resume-builder"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <Resume />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
           path="/job-analyzer"
           element={
             <PrivateRoute>
@@ -408,7 +442,7 @@ export default function App() {
 
         <Route
           path="/interview"
-          element={<Navigate to="/interview/setup" replace />}
+          element={<Navigate to="/practice/mock-interview" replace />}
         />
 
         <Route
@@ -438,6 +472,13 @@ export default function App() {
               <InterviewComplete />
             </PrivateRoute>
           }
+        />
+
+        {/* Convenient Route Aliases */}
+        <Route path="/jobs" element={<Navigate to="/job-analyzer" replace />} />
+        <Route
+          path="/history"
+          element={<Navigate to="/interviews" replace />}
         />
 
         {/* =========================================================

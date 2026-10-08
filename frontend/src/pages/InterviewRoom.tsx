@@ -253,6 +253,7 @@ export default function InterviewRoom() {
   const [isPaused, setIsPaused] = useState(false);
   const [isStarting, setIsStarting] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -283,6 +284,11 @@ export default function InterviewRoom() {
   const elapsedRef = useRef(0);
   const questionStartedAtRef = useRef(0);
   const interviewContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Duplicate Answer & TTS Guards (prevents 400 already answered)
+  const answeredQuestionIdsRef = useRef<Set<string>>(new Set());
+  const submittingQuestionIdRef = useRef<string | null>(null);
+  const spokenQuestionIdsRef = useRef<Set<string>>(new Set());
 
   const durationSeconds = durationMinutes * 60;
   const remainingSeconds = Math.max(0, durationSeconds - elapsed);
@@ -597,6 +603,8 @@ export default function InterviewRoom() {
         clearSilenceTimer();
         silenceTimerRef.current = setTimeout(() => {
           if (!mountedRef.current) return;
+          if (isSubmitting || isTransitioning || !currentQ?.question_id) return;
+          if (answeredQuestionIdsRef.current.has(String(currentQ.question_id))) return;
           const currentAnswer = latestAnswerRef.current.trim();
           const wordCount = currentAnswer.split(/\s+/).filter(Boolean).length;
           if (wordCount >= 3) {
@@ -660,8 +668,19 @@ export default function InterviewRoom() {
   // ANSWER SUBMISSION & AI ACKNOWLEDGEMENT FEEDBACK
   // ----------------------------------------------------------
   const submitAnswer = useCallback(async () => {
-    if (!interviewId || !currentQ) return;
-    if (isSubmitting || isCompleting || isPaused) return;
+    if (!interviewId || !currentQ?.question_id) return;
+    if (isSubmitting || isTransitioning || isCompleting || isPaused) return;
+
+    const currentQuestionId = String(currentQ.question_id);
+
+    // CRITICAL: Idempotency & duplicate check
+    if (
+      submittingQuestionIdRef.current === currentQuestionId ||
+      answeredQuestionIdsRef.current.has(currentQuestionId)
+    ) {
+      console.warn(`[InterviewRoom] Question ${currentQuestionId} already answered or in flight. Skipping.`);
+      return;
+    }
 
     const answer = (latestAnswerRef.current.trim() || userAnswer.trim());
 
@@ -670,6 +689,7 @@ export default function InterviewRoom() {
       return;
     }
 
+    submittingQuestionIdRef.current = currentQuestionId;
     setIsSubmitting(true);
     setVoiceState("evaluating");
     setError("");
@@ -685,10 +705,13 @@ export default function InterviewRoom() {
 
       const rawResponse = await interviewsApi.answer(
         interviewId,
-        currentQ.question_id,
+        currentQuestionId,
         answer,
         questionDuration,
       );
+
+      // Successfully saved! Immediately register as answered so it can NEVER be submitted again
+      answeredQuestionIdsRef.current.add(currentQuestionId);
 
       const response = rawResponse as unknown as InterviewAnswerResponse;
       const backendTotal = Number(response.total_questions) || totalQuestions;
@@ -730,56 +753,69 @@ export default function InterviewRoom() {
         return;
       }
 
-      // Speak short acknowledgment, then automatically transition to next question
-      speakText(ack, async () => {
-        if (!mountedRef.current || isPaused) return;
+      // Immediately fetch next question while or right before acknowledgment
+      setIsTransitioning(true);
+      try {
+        const rawNext = await interviewsApi.nextQuestion(interviewId);
+        const nextResponse = rawNext as unknown as LiveQuestion;
+        const nextQuestion =
+          (nextResponse as any)?.data ??
+          (nextResponse as any)?.current_question ??
+          nextResponse;
 
-        try {
-          setVoiceState("next_question");
-
-          const rawNext = await interviewsApi.nextQuestion(interviewId);
-          const nextResponse = rawNext as unknown as LiveQuestion;
-          const nextQuestion =
-            (nextResponse as any)?.data ??
-            (nextResponse as any)?.current_question ??
-            nextResponse;
-
-          if (!nextQuestion?.question_id) {
-            throw new Error("The server did not return the next interview question.");
-          }
-
-          const nextNumber =
-            Number(nextQuestion.question_number) || backendQuestionNumber + 1;
-          const nextTotal = Number(nextQuestion.total_questions) || backendTotal;
-
-          setTotalQuestions(nextTotal);
-          setQuestionIdx(Math.max(nextNumber - 1, 0));
-          setCurrentQ({
-            ...nextQuestion,
-            question_number: nextNumber,
-            total_questions: nextTotal,
-          });
-          setQuestionSeconds(0);
-          questionStartedAtRef.current = Date.now();
-
-          // AI speaks the next question
-          const nextText = getQuestionText(nextQuestion);
-          setVoiceState("ai_speaking");
-          speakText(nextText, () => {
-            if (mountedRef.current && !isPaused) {
-              safeStartListeningAfterTTS();
-            }
-          });
-        } catch (nextErr) {
-          console.error("Failed to load next question:", nextErr);
-          setError(getErrorMessage(nextErr));
+        if (!nextQuestion?.question_id) {
+          throw new Error("The server did not return the next interview question.");
         }
-      });
+
+        const nextNumber =
+          Number(nextQuestion.question_number) || backendQuestionNumber + 1;
+        const nextTotal = Number(nextQuestion.total_questions) || backendTotal;
+
+        // Transition current question state IMMEDIATELY so previous question can NEVER be re-submitted
+        const nextQuestionObj: LiveQuestion = {
+          ...nextQuestion,
+          question_number: nextNumber,
+          total_questions: nextTotal,
+        };
+
+        setTotalQuestions(nextTotal);
+        setQuestionIdx(Math.max(nextNumber - 1, 0));
+        setCurrentQ(nextQuestionObj);
+        setQuestionSeconds(0);
+        questionStartedAtRef.current = Date.now();
+
+        // Speak acknowledgment first, then speak next question once
+        speakText(ack, () => {
+          if (!mountedRef.current || isPaused) return;
+          const nextQId = String(nextQuestionObj.question_id);
+          if (!spokenQuestionIdsRef.current.has(nextQId)) {
+            spokenQuestionIdsRef.current.add(nextQId);
+            setVoiceState("ai_speaking");
+            const nextText = getQuestionText(nextQuestionObj);
+            speakText(nextText, () => {
+              if (mountedRef.current && !isPaused) {
+                safeStartListeningAfterTTS();
+              }
+            });
+          }
+        });
+      } catch (nextErr) {
+        console.error("Failed to load next question:", nextErr);
+        setError(getErrorMessage(nextErr));
+      } finally {
+        if (mountedRef.current) {
+          setIsTransitioning(false);
+          submittingQuestionIdRef.current = null;
+        }
+      }
     } catch (answerError) {
       console.error("Failed to submit answer:", answerError);
       setError(getErrorMessage(answerError));
+      submittingQuestionIdRef.current = null;
     } finally {
-      if (mountedRef.current) setIsSubmitting(false);
+      if (mountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   }, [
     clearSilenceTimer,
@@ -789,6 +825,7 @@ export default function InterviewRoom() {
     isCompleting,
     isPaused,
     isSubmitting,
+    isTransitioning,
     questionIdx,
     safeStartListeningAfterTTS,
     speakText,
@@ -904,6 +941,10 @@ export default function InterviewRoom() {
             // 2. Speak the first question after a small natural pause
             const questionTimer = window.setTimeout(() => {
               if (!mountedRef.current || isPaused) return;
+              const firstQId = String(firstQuestionObj.question_id);
+              if (spokenQuestionIdsRef.current.has(firstQId)) return;
+              spokenQuestionIdsRef.current.add(firstQId);
+
               const firstQuestionText = getQuestionText(firstQuestionObj);
               speakText(firstQuestionText, () => {
                 if (mountedRef.current && !isPaused) {
@@ -925,6 +966,10 @@ export default function InterviewRoom() {
 
         const timeoutId = window.setTimeout(() => {
           if (!mountedRef.current || isPaused) return;
+          const firstQId = String(firstQuestionObj.question_id);
+          if (spokenQuestionIdsRef.current.has(firstQId)) return;
+          spokenQuestionIdsRef.current.add(firstQId);
+
           speakText(getQuestionText(firstQuestionObj), () => {
             if (mountedRef.current && !isPaused) {
               safeStartListeningAfterTTS();
@@ -1714,13 +1759,23 @@ export default function InterviewRoom() {
             <button
               type="button"
               onClick={() => void submitAnswer()}
-              disabled={!fullDisplayTranscript.trim() || isSubmitting || isPaused || isCompleting || isSpeaking || isGreeting}
+              disabled={
+                !fullDisplayTranscript.trim() ||
+                isSubmitting ||
+                isTransitioning ||
+                isPaused ||
+                isCompleting ||
+                isSpeaking ||
+                isGreeting ||
+                !currentQ ||
+                answeredQuestionIdsRef.current.has(String(currentQ.question_id))
+              }
               className="inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 rounded-xl bg-gradient-to-r from-[#2196F3] to-[#0D47A1] hover:from-[#1E88E5] hover:to-[#0B3D91] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#2196F3]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? (
+              {isSubmitting || isTransitioning ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  <span>Evaluating...</span>
+                  <span>{isTransitioning ? "Next Question..." : "Evaluating..."}</span>
                 </>
               ) : (
                 <>

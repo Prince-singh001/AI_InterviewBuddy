@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 400" fill="none">
+  <defs>
+    <linearGradient id="jobsBg" x1="0" y1="0" x2="560" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#CDF5FD" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#A0E9FF" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="jobsBrandGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00A9FF"/>
+      <stop offset="100%" stop-color="#0077B6"/>
+    </linearGradient>
+    <filter id="jobsShadow" x="30" y="30" width="500" height="340" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#00A9FF" flood-opacity="0.14"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.08"/>
+    </filter>
+    <filter id="msLogoFloat" x="380" y="220" width="150" height="130" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0077B6" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <!-- Ambient background glow -->
+  <rect width="560" height="400" rx="24" fill="url(#jobsBg)"/>
+  <circle cx="490" cy="70" r="110" fill="#89CFF3" fill-opacity="0.3" filter="blur(30px)"/>
+  <circle cx="80" cy="330" r="80" fill="#CDF5FD" fill-opacity="0.6" filter="blur(20px)"/>
+
+  <!-- Main Career Portal Dashboard -->
+  <g filter="url(#jobsShadow)">
+    <rect x="52" y="44" width="456" height="312" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+
+    <!-- Dashboard Header -->
+    <rect x="52" y="44" width="456" height="42" rx="16" fill="#F8FAFC"/>
+    <path d="M52 86H508" stroke="#E2E8F0" stroke-width="1"/>
+
+    <!-- Window controls -->
+    <circle cx="74" cy="65" r="4.5" fill="#EF4444" fill-opacity="0.8"/>
+    <circle cx="88" cy="65" r="4.5" fill="#F59E0B" fill-opacity="0.8"/>
+    <circle cx="102" cy="65" r="4.5" fill="#10B981" fill-opacity="0.8"/>
+
+    <!-- Title Search Pill in header -->
+    <rect x="124" y="55" width="220" height="20" rx="6" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+    <circle cx="136" cy="65" r="3.5" fill="none" stroke="#94A3B8" stroke-width="1.2"/>
+    <line x1="138.5" y1="67.5" x2="142" y2="71" stroke="#94A3B8" stroke-width="1.2" stroke-linecap="round"/>
+    <text x="148" y="68.5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="8" fill="#64748B">Filter by role, skills, company...</text>
+
+    <!-- Opportunities Count Pill -->
+    <rect x="390" y="56" width="104" height="18" rx="9" fill="#E0F2FE"/>
+    <circle cx="400" cy="65" r="3" fill="#00A9FF"/>
+    <text x="408" y="68.5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7.5" font-weight="700" fill="#0284C7">MATCHED ROLES (14)</text>
+
+    <!-- Job Opportunity Cards (Left side list) -->
+    <!-- Card 1: Microsoft -->
+    <rect x="70" y="102" width="280" height="68" rx="10" fill="#F8FAFC" stroke="#89CFF3" stroke-width="1.5"/>
+    <!-- Logo square (Microsoft 4 tiles) -->
+    <rect x="84" y="116" width="38" height="38" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+    <rect x="92" y="124" width="10" height="10" fill="#F25022"/>
+    <rect x="104" y="124" width="10" height="10" fill="#7FBA00"/>
+    <rect x="92" y="136" width="10" height="10" fill="#00A4EF"/>
+    <rect x="104" y="136" width="10" height="10" fill="#FFB900"/>
+
+    <text x="132" y="125" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" font-weight="800" fill="#0F172A">AI/ML Engineer</text>
+    <text x="132" y="136" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="8" font-weight="600" fill="#475569">Microsoft • Bengaluru, India</text>
+    
+    <rect x="132" y="142" width="46" height="12" rx="3" fill="#E0F2FE"/>
+    <text x="155" y="151" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6.5" font-weight="750" fill="#0284C7" text-anchor="middle">Full-Time</text>
+    <rect x="182" y="142" width="56" height="12" rx="3" fill="#CDF5FD"/>
+    <text x="210" y="151" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6.5" font-weight="750" fill="#0077B6" text-anchor="middle">3-5 yrs exp</text>
+
+    <!-- Match score pill -->
+    <rect x="294" y="112" width="46" height="16" rx="8" fill="#DCFCE7"/>
+    <text x="317" y="123" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7.5" font-weight="800" fill="#166534" text-anchor="middle">96% Fit</text>
+
+    <!-- Card 2: Google -->
+    <rect x="70" y="180" width="280" height="68" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+    <!-- Logo square (Google) -->
+    <rect x="84" y="194" width="38" height="38" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+    <!-- Google colored G icon -->
+    <path d="M103 213H112V216C110.8 219.5 107.5 222 103 222C97.5 222 93 217.5 93 212C93 206.5 97.5 202 103 202C105.5 202 107.8 203 109.5 204.6L107 207C105.8 205.8 104.5 205.2 103 205.2C99.2 205.2 96.2 208.2 96.2 212C96.2 215.8 99.2 218.8 103 218.8C105.8 218.8 107.8 217.2 108.5 215.2H103V213Z" fill="#4285F4"/>
+
+    <text x="132" y="203" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" font-weight="800" fill="#0F172A">Senior Cloud Architect</text>
+    <text x="132" y="214" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="8" font-weight="600" fill="#475569">Google • Mountain View, CA</text>
+
+    <rect x="132" y="220" width="46" height="12" rx="3" fill="#E0F2FE"/>
+    <text x="155" y="229" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6.5" font-weight="750" fill="#0284C7" text-anchor="middle">Full-Time</text>
+    <rect x="182" y="220" width="56" height="12" rx="3" fill="#CDF5FD"/>
+    <text x="210" y="229" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6.5" font-weight="750" fill="#0077B6" text-anchor="middle">5+ yrs exp</text>
+
+    <rect x="294" y="190" width="46" height="16" rx="8" fill="#DCFCE7"/>
+    <text x="317" y="201" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7.5" font-weight="800" fill="#166534" text-anchor="middle">91% Fit</text>
+
+    <!-- Card 3: Amazon -->
+    <rect x="70" y="258" width="280" height="68" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+    <!-- Logo square (Amazon) -->
+    <rect x="84" y="272" width="38" height="38" rx="8" fill="#131921" stroke="#334155" stroke-width="1"/>
+    <path d="M94 294C99 297 106 296 111 293" stroke="#FF9900" stroke-width="2" stroke-linecap="round"/>
+    <path d="M109 291L112 293L109 295" stroke="#FF9900" stroke-width="1.5" stroke-linecap="round"/>
+
+    <text x="132" y="281" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" font-weight="800" fill="#0F172A">Full Stack SDE II</text>
+    <text x="132" y="292" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="8" font-weight="600" fill="#475569">Amazon • Seattle, WA</text>
+
+    <rect x="132" y="298" width="46" height="12" rx="3" fill="#E0F2FE"/>
+    <text x="155" y="307" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6.5" font-weight="750" fill="#0284C7" text-anchor="middle">Full-Time</text>
+    <rect x="182" y="298" width="56" height="12" rx="3" fill="#CDF5FD"/>
+    <text x="210" y="307" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6.5" font-weight="750" fill="#0077B6" text-anchor="middle">2-4 yrs exp</text>
+
+    <rect x="294" y="268" width="46" height="16" rx="8" fill="#DCFCE7"/>
+    <text x="317" y="279" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7.5" font-weight="800" fill="#166534" text-anchor="middle">89% Fit</text>
+
+    <!-- Right Side: Match Analytics & Target Company Details -->
+    <rect x="362" y="102" width="132" height="136" rx="10" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="374" y="119" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="8" font-weight="700" fill="#64748B">SKILL MATCH RADAR</text>
+
+    <!-- Skill Match Bar 1 -->
+    <text x="374" y="137" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7" font-weight="600" fill="#1E293B">Python &amp; PyTorch</text>
+    <text x="472" y="137" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7" font-weight="700" fill="#00A9FF">98%</text>
+    <rect x="374" y="141" width="108" height="4" rx="2" fill="#E2E8F0"/>
+    <rect x="374" y="141" width="106" height="4" rx="2" fill="#00A9FF"/>
+
+    <!-- Skill Match Bar 2 -->
+    <text x="374" y="159" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7" font-weight="600" fill="#1E293B">System Architecture</text>
+    <text x="472" y="159" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7" font-weight="700" fill="#00A9FF">92%</text>
+    <rect x="374" y="163" width="108" height="4" rx="2" fill="#E2E8F0"/>
+    <rect x="374" y="163" width="99" height="4" rx="2" fill="#00A9FF"/>
+
+    <!-- Skill Match Bar 3 -->
+    <text x="374" y="181" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7" font-weight="600" fill="#1E293B">Cloud &amp; DevOps</text>
+    <text x="472" y="181" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7" font-weight="700" fill="#00A9FF">88%</text>
+    <rect x="374" y="185" width="108" height="4" rx="2" fill="#E2E8F0"/>
+    <rect x="374" y="185" width="95" height="4" rx="2" fill="#00A9FF"/>
+
+    <rect x="374" y="202" width="108" height="24" rx="6" fill="#00A9FF"/>
+    <text x="428" y="217" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="8" font-weight="750" fill="#FFFFFF" text-anchor="middle">Practice for Role</text>
+  </g>
+
+  <!-- Floating Callout Card -->
+  <g filter="url(#msLogoFloat)">
+    <rect x="368" y="252" width="144" height="66" rx="12" fill="#FFFFFF" stroke="#89CFF3" stroke-width="1.5"/>
+    <rect x="380" y="264" width="30" height="30" rx="6" fill="#CDF5FD"/>
+    <path d="M388 279H402M395 272V286" stroke="#00A9FF" stroke-width="2" stroke-linecap="round"/>
+    <text x="418" y="277" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9" font-weight="800" fill="#0F172A">Direct Apply</text>
+    <text x="418" y="289" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7.5" font-weight="500" fill="#64748B">Verified top employers</text>
+  </g>
+</svg>

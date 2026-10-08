@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 400" fill="none">
+  <defs>
+    <linearGradient id="bgGlow" x1="0" y1="0" x2="560" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#CDF5FD" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#A0E9FF" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.8"/>
+    </linearGradient>
+    <linearGradient id="laptopBody" x1="100" y1="60" x2="460" y2="330" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="blueAccent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00A9FF"/>
+      <stop offset="100%" stop-color="#0077B6"/>
+    </linearGradient>
+    <filter id="shadowLg" x="50" y="30" width="460" height="340" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#00A9FF" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.12"/>
+    </filter>
+    <filter id="cardFloat" x="330" y="190" width="200" height="150" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0077B6" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <!-- Ambient background glow -->
+  <rect width="560" height="400" rx="24" fill="url(#bgGlow)"/>
+  <circle cx="480" cy="80" r="120" fill="#89CFF3" fill-opacity="0.25" filter="blur(30px)"/>
+  <circle cx="80" cy="320" r="90" fill="#CDF5FD" fill-opacity="0.5" filter="blur(20px)"/>
+
+  <!-- Laptop Stand / Base -->
+  <g filter="url(#shadowLg)">
+    <!-- Base Plate -->
+    <path d="M70 316C70 312 73 309 77 309H483C487 309 490 312 490 316V322C490 327.5 485.5 332 480 332H80C74.5 332 70 327.5 70 322V316Z" fill="#CBD5E1"/>
+    <!-- Base Notch -->
+    <rect x="250" y="309" width="60" height="5" rx="2.5" fill="#94A3B8"/>
+
+    <!-- Screen Bezel -->
+    <rect x="96" y="52" width="368" height="254" rx="14" fill="url(#laptopBody)" stroke="#334155" stroke-width="2"/>
+    <!-- Camera -->
+    <circle cx="280" cy="62" r="3" fill="#0F172A"/>
+    <circle cx="280" cy="62" r="1.5" fill="#38BDF8"/>
+
+    <!-- Screen Display Area -->
+    <rect x="108" y="74" width="344" height="220" rx="6" fill="#F8FAFC"/>
+
+    <!-- Resume Document inside screen -->
+    <rect x="122" y="86" width="230" height="196" rx="4" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+
+    <!-- Resume Header Banner -->
+    <rect x="134" y="96" width="206" height="34" rx="3" fill="#F1F5F9"/>
+    <!-- Avatar / Initial -->
+    <rect x="142" y="103" width="20" height="20" rx="10" fill="url(#blueAccent)"/>
+    <text x="152" y="117" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">AR</text>
+    <!-- Name & Role -->
+    <rect x="170" y="104" width="76" height="7" rx="2" fill="#0F172A"/>
+    <rect x="170" y="115" width="110" height="5" rx="1.5" fill="#00A9FF"/>
+
+    <!-- Resume Section 1: Experience -->
+    <rect x="134" y="138" width="55" height="5" rx="1.5" fill="#00A9FF"/>
+    <line x1="134" y1="146" x2="338" y2="146" stroke="#E2E8F0" stroke-width="1"/>
+
+    <rect x="134" y="152" width="70" height="5" rx="1.5" fill="#1E293B"/>
+    <rect x="290" y="152" width="48" height="4" rx="1" fill="#94A3B8"/>
+    <rect x="134" y="161" width="190" height="3.5" rx="1" fill="#64748B"/>
+    <rect x="134" y="168" width="175" height="3.5" rx="1" fill="#94A3B8"/>
+    <rect x="134" y="175" width="150" height="3.5" rx="1" fill="#CBD5E1"/>
+
+    <!-- Resume Section 2: Skills & Competencies -->
+    <rect x="134" y="188" width="45" height="5" rx="1.5" fill="#00A9FF"/>
+    <line x1="134" y1="196" x2="338" y2="196" stroke="#E2E8F0" stroke-width="1"/>
+
+    <rect x="134" y="202" width="38" height="12" rx="3" fill="#CDF5FD"/>
+    <text x="153" y="211" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6" font-weight="700" fill="#0077B6" text-anchor="middle">PYTHON</text>
+
+    <rect x="176" y="202" width="32" height="12" rx="3" fill="#CDF5FD"/>
+    <text x="192" y="211" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6" font-weight="700" fill="#0077B6" text-anchor="middle">REACT</text>
+
+    <rect x="212" y="202" width="36" height="12" rx="3" fill="#CDF5FD"/>
+    <text x="230" y="211" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6" font-weight="700" fill="#0077B6" text-anchor="middle">DOCKER</text>
+
+    <rect x="252" y="202" width="30" height="12" rx="3" fill="#CDF5FD"/>
+    <text x="267" y="211" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6" font-weight="700" fill="#0077B6" text-anchor="middle">AWS</text>
+
+    <rect x="286" y="202" width="34" height="12" rx="3" fill="#E2E8F0"/>
+    <text x="303" y="211" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6" font-weight="700" fill="#475569" text-anchor="middle">+6 MORE</text>
+
+    <!-- Resume Section 3: Projects -->
+    <rect x="134" y="222" width="40" height="5" rx="1.5" fill="#00A9FF"/>
+    <line x1="134" y1="230" x2="338" y2="230" stroke="#E2E8F0" stroke-width="1"/>
+    <rect x="134" y="236" width="85" height="4" rx="1" fill="#334155"/>
+    <rect x="134" y="244" width="180" height="3" rx="1" fill="#94A3B8"/>
+    <rect x="134" y="250" width="140" height="3" rx="1" fill="#CBD5E1"/>
+
+    <!-- Right Side HUD in Laptop: Real-Time ATS Score Widget -->
+    <rect x="362" y="86" width="80" height="90" rx="6" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="402" y="103" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7.5" font-weight="700" fill="#64748B" text-anchor="middle">ATS SCORE</text>
+    
+    <!-- Score Circle -->
+    <circle cx="402" cy="132" r="22" stroke="#E2E8F0" stroke-width="4.5" fill="none"/>
+    <circle cx="402" cy="132" r="22" stroke="#00A9FF" stroke-width="4.5" stroke-dasharray="138" stroke-dashoffset="10" stroke-linecap="round" fill="none"/>
+    <text x="402" y="137" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="14" font-weight="800" fill="#0F172A" text-anchor="middle">98%</text>
+    <rect x="372" y="162" width="60" height="8" rx="4" fill="#E0F2FE"/>
+    <text x="402" y="168.5" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="5.5" font-weight="750" fill="#0284C7" text-anchor="middle">PASSED CHECKS</text>
+
+    <!-- Mini Checklist Widget in Screen -->
+    <rect x="362" y="184" width="80" height="98" rx="6" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="372" y="198" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7" font-weight="700" fill="#1E293B">ATS Verification</text>
+
+    <circle cx="373" cy="212" r="4" fill="#10B981"/>
+    <path d="M371.5 212L372.5 213.5L375 210.5" stroke="#FFF" stroke-width="1" stroke-linecap="round"/>
+    <text x="382" y="214" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6" fill="#334155">Keywords (42/44)</text>
+
+    <circle cx="373" cy="227" r="4" fill="#10B981"/>
+    <path d="M371.5 227L372.5 228.5L375 225.5" stroke="#FFF" stroke-width="1" stroke-linecap="round"/>
+    <text x="382" y="229" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6" fill="#334155">Clean Formatting</text>
+
+    <circle cx="373" cy="242" r="4" fill="#10B981"/>
+    <path d="M371.5 242L372.5 243.5L375 240.5" stroke="#FFF" stroke-width="1" stroke-linecap="round"/>
+    <text x="382" y="244" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6" fill="#334155">Work Chronology</text>
+
+    <circle cx="373" cy="257" r="4" fill="#10B981"/>
+    <path d="M371.5 257L372.5 258.5L375 255.5" stroke="#FFF" stroke-width="1" stroke-linecap="round"/>
+    <text x="382" y="259" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="6" fill="#334155">Impact Metrics</text>
+  </g>
+
+  <!-- Floating Badge / Card Outside Laptop for depth -->
+  <g filter="url(#cardFloat)">
+    <rect x="340" y="200" width="176" height="66" rx="12" fill="#FFFFFF" stroke="#89CFF3" stroke-width="1.5"/>
+    <rect x="352" y="212" width="32" height="32" rx="8" fill="#CDF5FD"/>
+    <path d="M363 228L366.5 231.5L373 224" stroke="#00A9FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="394" y="225" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="800" fill="#0F172A">Optimized for ATS</text>
+    <text x="394" y="239" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="8.5" font-weight="500" fill="#64748B">Parsed by modern job portals</text>
+  </g>
+</svg>

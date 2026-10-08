@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none" role="img" aria-label="InterviewerBuddy AI Brand Icon">
+  <title>InterviewerBuddy AI Brand Icon</title>
+  <defs>
+    <!-- Brand Gradient: Primary Cyan-Blue to Vibrant Deep Blue -->
+    <linearGradient id="ibBrandBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00A9FF"/>
+      <stop offset="55%" stop-color="#0094F2"/>
+      <stop offset="100%" stop-color="#0077D4"/>
+    </linearGradient>
+
+    <!-- Subtle Top Rim Light for Premium Finish -->
+    <linearGradient id="ibBorderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#A0E9FF" stop-opacity="0.15"/>
+    </linearGradient>
+
+    <!-- Checkmark & Spark Accent Gradient -->
+    <linearGradient id="ibSymbolGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00A9FF"/>
+      <stop offset="100%" stop-color="#0077D4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 1. Rounded Square Badge Base (48x48, rx=11.5) -->
+  <rect x="0.5" y="0.5" width="47" height="47" rx="11.5" fill="url(#ibBrandBg)"/>
+  <rect x="0.5" y="0.5" width="47" height="47" rx="11.5" stroke="url(#ibBorderGrad)" stroke-width="1"/>
+
+  <!-- 2. Interview Conversation Bubble (Pure Solid White) -->
+  <path
+    d="
+      M 17 12
+      H 31
+      C 34.3 12, 36.5 14.2, 36.5 17.5
+      V 24
+      C 36.5 27.3, 34.3 29.5, 31 29.5
+      H 22.5
+      L 16.5 35
+      C 15.6 35.8, 14.5 35.2, 14.5 34
+      V 29.5
+      C 12.5 29.5, 11.5 27.8, 11.5 25
+      V 17.5
+      C 11.5 14.2, 13.7 12, 17 12
+      Z
+    "
+    fill="#FFFFFF"
+  />
+
+  <!-- 3. Dynamic Upward Evaluation Checkmark (Career Growth / Assessment) -->
+  <path
+    d="M 18 21.2 L 21.6 24.8 L 28.5 16.5"
+    stroke="url(#ibSymbolGrad)"
+    stroke-width="2.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- 4. AI Intelligence Beacon Spark (Seamlessly aligned at top of check) -->
+  <path
+    d="
+      M 30.5 12
+      Q 30.5 14.5, 28 14.5
+      Q 30.5 14.5, 30.5 17
+      Q 30.5 14.5, 33 14.5
+      Q 30.5 14.5, 30.5 12
+      Z
+    "
+    fill="url(#ibSymbolGrad)"
+  />
+
+  <!-- Subtle Center Spark Highlight Core -->
+  <circle cx="30.5" cy="14.5" r="0.8" fill="#FFFFFF"/>
+</svg>

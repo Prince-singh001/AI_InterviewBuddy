@@ -1,11 +1,13 @@
 """
-Aggregated Question Bank for Practice Center
+I add on this question Bank for Practice Center
 Contains 140 carefully constructed interview-grade questions across:
+To get placement.
 - C (28 questions)
 - C++ (28 questions)
 - Python (28 questions)
 - Java (28 questions)
 - Aptitude (28 questions)
+
 """
 
 from app.data.c_questions import C_QUESTIONS

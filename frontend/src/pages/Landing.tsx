@@ -1,4 +1,5 @@
 import { motion, useScroll, useSpring } from "framer-motion";
+import { LogoIcon } from "@/components/LogoIcon";
 import {
   ArrowRight,
   Award,
@@ -274,7 +275,7 @@ function HeroDashboardMockup() {
           <div className="mockup-sidebar">
             <div className="sidebar-brand">
               <div className="sidebar-logo-box">
-                <Bot size={15} />
+                <LogoIcon size={16} />
               </div>
               <span className="sidebar-brand-name">Buddy AI</span>
             </div>
@@ -496,7 +497,7 @@ export default function Landing() {
             aria-label="Interviewer Buddy AI Home"
           >
             <div className="brand-logo-icon">
-              <Bot size={22} />
+              <LogoIcon size={24} />
             </div>
             <div className="brand-text-col">
               <span className="brand-title">Interviewer Buddy AI</span>
@@ -1620,7 +1621,7 @@ export default function Landing() {
             <div className="footer-brand-col">
               <div className="footer-brand-badge">
                 <div className="footer-logo-box">
-                  <Bot size={20} />
+                  <LogoIcon size={22} />
                 </div>
                 <span className="footer-brand-name">Interviewer Buddy AI</span>
               </div>

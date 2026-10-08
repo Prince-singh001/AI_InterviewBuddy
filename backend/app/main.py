@@ -166,10 +166,14 @@ app = FastAPI(
 # ============================================================================
 
 allowed_origins = [
+    "https://ai-interviewbuddy-1.onrender.com",
+    "https://ai-interviewbuddy.onrender.com",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
 ]
 
 
@@ -220,22 +224,12 @@ app.add_middleware(
     # Explicitly allowed origins
     allow_origins=allowed_origins,
 
-    # Allow local development on any port.
-    #
-    # Examples:
-    #
-    # http://localhost:5173
-    # http://localhost:5174
-    # http://localhost:5175
-    # http://localhost:3000
-    #
-    # http://127.0.0.1:5173
-    # http://127.0.0.1:5174
-    #
+    # Allow local development on any port and onrender domains.
     allow_origin_regex=(
         r"^https?://"
         r"(localhost|127\.0\.0\.1)"
         r"(:\d+)?$"
+        r"|^https://ai-interviewbuddy(-[a-zA-Z0-9]+)?\.onrender\.com$"
     ),
 
     # Required for authenticated requests.

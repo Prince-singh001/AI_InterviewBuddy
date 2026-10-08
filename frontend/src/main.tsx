@@ -24,16 +24,6 @@ export const queryClient = new QueryClient({
   },
 });
 
-/**
- * Application entry point
- *
- * Provider hierarchy:
- *
- * React.StrictMode
- * └── QueryClientProvider
- *     └── BrowserRouter
- *         └── App
- */
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>

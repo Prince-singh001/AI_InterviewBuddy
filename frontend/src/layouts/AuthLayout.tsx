@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Bot } from "lucide-react";
+import { LogoIcon } from "@/components/LogoIcon";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -79,12 +79,11 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
               alignItems: "center",
               justifyContent: "center",
               background: "#ffffff",
-              color: "#2196F3",
               marginBottom: "28px",
               boxShadow: "0 12px 30px rgba(0,0,0,0.15)",
             }}
           >
-            <Bot size={32} strokeWidth={2.2} />
+            <LogoIcon size={38} />
           </div>
 
           <h1

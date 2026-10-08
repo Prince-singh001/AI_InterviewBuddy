@@ -128,7 +128,7 @@ class Settings(BaseSettings):
     # CORS
     # ============================================================
 
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = "https://ai-interviewbuddy-1.onrender.com"
 
     # ============================================================
     # Vector Database

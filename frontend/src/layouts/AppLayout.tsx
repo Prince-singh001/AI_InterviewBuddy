@@ -1,62 +1,74 @@
 import CommandPalette from "@/components/CommandPalette";
 import { LogoIcon } from "@/components/LogoIcon";
+import NavbarDropdown, { type DropdownItem } from "@/components/navigation/NavbarDropdown";
 import { useAuthStore } from "@/store/authStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Award,
   BarChart2,
   BookOpen,
+  Bot,
   Briefcase,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   Clock,
+  Code2,
   FileCheck,
   LayoutGrid,
   LogOut,
   Menu,
   Play,
   Settings,
+  Target,
   TrendingUp,
   User as UserIcon,
+  Video,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 // ============================================================
-// Main Navigation
+// Dropdown Items
 // ============================================================
 
-const mainNavItems = [
+const interviewDropdownItems: DropdownItem[] = [
   {
-    label: "Dashboard",
-    icon: LayoutGrid,
-    path: "/dashboard",
+    label: "Mock Interview",
+    path: "/practice/mock-interview",
+    icon: Video,
+    description: "AI-powered interview",
+    badge: "AI",
   },
   {
-    label: "Interview",
-    icon: Play,
-    path: "/interview/setup",
+    label: "Mock Test",
+    path: "/practice/mock-tests",
+    icon: Award,
+    description: "Role-based assessment",
+    badge: "Test",
+  },
+];
+
+const practiceDropdownItems: DropdownItem[] = [
+  {
+    label: "Mock Practice",
+    path: "/practice/mock-practice",
+    icon: Bot,
+    description: "AI-powered practice",
   },
   {
-    label: "Practice",
-    icon: BookOpen,
-    path: "/practice",
+    label: "Coding Practice",
+    path: "/practice/coding",
+    icon: Code2,
+    description: "Programming challenges",
   },
   {
-    label: "History",
-    icon: Clock,
-    path: "/interviews",
-  },
-  {
-    label: "Resume",
-    icon: FileCheck,
-    path: "/resume",
-  },
-  {
-    label: "Jobs",
-    icon: Briefcase,
-    path: "/job-analyzer",
+    label: "Assessments",
+    path: "/practice/assessment",
+    icon: Target,
+    description: "Skill assessments",
   },
 ];
 
@@ -99,6 +111,8 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileInterviewOpen, setMobileInterviewOpen] = useState(true);
+  const [mobilePracticeOpen, setMobilePracticeOpen] = useState(true);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -351,7 +365,13 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
           <div className="navbar-brand-section">
             <NavLink to="/dashboard" className="navbar-brand-link">
               <div className="brand-badge-icon">
-                <LogoIcon size={23} />
+                <img
+                  src="/assets/logo.svg"
+                  alt="AI Interview Buddy"
+                  width="38"
+                  height="38"
+                  style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }}
+                />
               </div>
 
               <div className="brand-text-wrap">
@@ -368,21 +388,57 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
           {/* Main Navigation */}
 
           <nav className="desktop-top-nav" aria-label="Main navigation">
-            {mainNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = isNavItemActive(item.path);
+            {/* Dashboard */}
+            <NavLink
+              to="/dashboard"
+              className={`voxa-top-nav-link${location.pathname === "/dashboard" ? " active" : ""}`}
+            >
+              <LayoutGrid size={16} strokeWidth={location.pathname === "/dashboard" ? 2.4 : 2} />
+              <span>Dashboard</span>
+            </NavLink>
 
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={`voxa-top-nav-link${isActive ? " active" : ""}`}
-                >
-                  <Icon size={16} strokeWidth={isActive ? 2.4 : 2} />
-                  <span>{item.label}</span>
-                </NavLink>
-              );
-            })}
+            {/* Interview ▾ */}
+            <NavbarDropdown
+              label="Interview"
+              icon={Play}
+              items={interviewDropdownItems}
+              basePathPattern={/^\/(interview|practice\/mock-interview|practice\/mock-tests)/}
+            />
+
+            {/* Practice ▾ */}
+            <NavbarDropdown
+              label="Practice"
+              icon={BookOpen}
+              items={practiceDropdownItems}
+              basePathPattern={/^\/practice\/(mock-practice|coding|assessment|company)/}
+            />
+
+            {/* Resume */}
+            <NavLink
+              to="/resume"
+              className={`voxa-top-nav-link${location.pathname === "/resume" ? " active" : ""}`}
+            >
+              <FileCheck size={16} strokeWidth={location.pathname === "/resume" ? 2.4 : 2} />
+              <span>Resume</span>
+            </NavLink>
+
+            {/* Jobs */}
+            <NavLink
+              to="/job-analyzer"
+              className={`voxa-top-nav-link${location.pathname === "/job-analyzer" || location.pathname === "/jobs" ? " active" : ""}`}
+            >
+              <Briefcase size={16} strokeWidth={location.pathname === "/job-analyzer" || location.pathname === "/jobs" ? 2.4 : 2} />
+              <span>Jobs</span>
+            </NavLink>
+
+            {/* History */}
+            <NavLink
+              to="/interviews"
+              className={`voxa-top-nav-link${location.pathname === "/interviews" || location.pathname === "/history" || location.pathname === "/reports" ? " active" : ""}`}
+            >
+              <Clock size={16} strokeWidth={location.pathname === "/interviews" ? 2.4 : 2} />
+              <span>History</span>
+            </NavLink>
           </nav>
 
           {/* Right Actions */}
@@ -530,7 +586,13 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
                 height: 32,
               }}
             >
-              <LogoIcon size={21} />
+              <img
+                src="/assets/logo.svg"
+                alt="AI Interview Buddy"
+                width="32"
+                height="32"
+                style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }}
+              />
             </div>
 
             <div className="brand-text-wrap">
@@ -631,6 +693,61 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
         </motion.div>
       </main>
 
+      {/* Global Footer with Brand Logo */}
+      <footer
+        style={{
+          borderTop: "1px solid rgba(0, 169, 255, 0.15)",
+          background: "#ffffff",
+          padding: "1.5rem 1.5rem",
+          marginTop: "auto",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1200,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "1rem",
+            fontSize: "0.82rem",
+            color: "var(--text-muted, #64748b)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              className="brand-badge-icon"
+              style={{
+                width: 28,
+                height: 28,
+              }}
+            >
+              <img
+                src="/assets/logo.svg"
+                alt="AI Interview Buddy"
+                width="28"
+                height="28"
+                style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }}
+              />
+            </div>
+            <span style={{ fontWeight: 700, color: "var(--text-primary, #0f172a)" }}>
+              InterviewerBuddy AI
+            </span>
+            <span style={{ fontSize: "0.75rem" }}>© {new Date().getFullYear()} All rights reserved.</span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap", fontWeight: 600 }}>
+            <NavLink to="/dashboard" style={{ color: "inherit", textDecoration: "none" }}>Dashboard</NavLink>
+            <NavLink to="/practice/mock-interview" style={{ color: "inherit", textDecoration: "none" }}>Mock Interview</NavLink>
+            <NavLink to="/practice/mock-tests" style={{ color: "inherit", textDecoration: "none" }}>Mock Test</NavLink>
+            <NavLink to="/practice/mock-practice" style={{ color: "inherit", textDecoration: "none" }}>Mock Practice</NavLink>
+            <NavLink to="/resume" style={{ color: "inherit", textDecoration: "none" }}>Resume</NavLink>
+            <NavLink to="/interviews" style={{ color: "inherit", textDecoration: "none" }}>History</NavLink>
+          </div>
+        </div>
+      </footer>
+
       {/* ======================================================
           MOBILE DRAWER
       ====================================================== */}
@@ -668,7 +785,13 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
                 <div className="mobile-drawer-header">
                   <div className="navbar-brand-link">
                     <div className="brand-badge-icon">
-                      <LogoIcon size={23} />
+                      <img
+                        src="/assets/logo.svg"
+                        alt="AI Interview Buddy"
+                        width="38"
+                        height="38"
+                        style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }}
+                      />
                     </div>
 
                     <span className="brand-title">
@@ -692,31 +815,158 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
 
                 <div className="mobile-menu-label">Navigation</div>
 
-                <nav className="mobile-nav-list">
-                  {mainNavItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = isNavItemActive(item.path);
+                <nav className="mobile-nav-list space-y-1">
+                  {/* Dashboard */}
+                  <NavLink
+                    to="/dashboard"
+                    onClick={() => setMobileOpen(false)}
+                    className={`mobile-nav-link${location.pathname === "/dashboard" ? " active" : ""}`}
+                  >
+                    <div className="mobile-nav-item-icon">
+                      <LayoutGrid size={18} />
+                    </div>
+                    <span className="mobile-nav-item-label">Dashboard</span>
+                    {location.pathname === "/dashboard" && <span className="mobile-nav-active-dot" />}
+                  </NavLink>
 
-                    return (
-                      <NavLink
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={`mobile-nav-link${isActive ? " active" : ""
-                          }`}
-                      >
-                        <div className="mobile-nav-item-icon">
-                          <Icon size={18} />
-                        </div>
+                  {/* Interview Dropdown / Section */}
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/50 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setMobileInterviewOpen((prev) => !prev)}
+                      className="w-full flex items-center justify-between p-2.5 text-xs font-bold text-slate-800"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Play size={16} className="text-[#00A9FF]" />
+                        <span>Interview</span>
+                      </div>
+                      <ChevronDown
+                        size={14}
+                        className={`transition-transform duration-200 text-slate-400 ${
+                          mobileInterviewOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
 
-                        <span className="mobile-nav-item-label">
-                          {item.label}
-                        </span>
+                    {mobileInterviewOpen && (
+                      <div className="pl-4 pr-2 pb-2 space-y-1 border-t border-slate-100/80 pt-1">
+                        {interviewDropdownItems.map((sub) => {
+                          const SubIcon = sub.icon;
+                          const isSubActive = location.pathname === sub.path;
+                          return (
+                            <NavLink
+                              key={sub.path}
+                              to={sub.path}
+                              onClick={() => setMobileOpen(false)}
+                              className={`flex items-center gap-2.5 p-2 rounded-lg text-xs font-semibold transition-colors ${
+                                isSubActive
+                                  ? "bg-[#CDF5FD]/60 text-[#00A9FF] font-bold"
+                                  : "text-slate-600 hover:bg-white"
+                              }`}
+                            >
+                              {sub.customIconUrl ? (
+                                <img src={sub.customIconUrl} className="w-4 h-4 object-contain" alt="" />
+                              ) : SubIcon ? (
+                                <SubIcon size={14} />
+                              ) : null}
+                              <span>{sub.label}</span>
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
-                        {isActive && <span className="mobile-nav-active-dot" />}
-                      </NavLink>
-                    );
-                  })}
+                  {/* Practice Dropdown / Section */}
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/50 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setMobilePracticeOpen((prev) => !prev)}
+                      className="w-full flex items-center justify-between p-2.5 text-xs font-bold text-slate-800"
+                    >
+                      <div className="flex items-center gap-2">
+                        <BookOpen size={16} className="text-[#00A9FF]" />
+                        <span>Practice</span>
+                      </div>
+                      <ChevronDown
+                        size={14}
+                        className={`transition-transform duration-200 text-slate-400 ${
+                          mobilePracticeOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {mobilePracticeOpen && (
+                      <div className="pl-4 pr-2 pb-2 space-y-1 border-t border-slate-100/80 pt-1">
+                        {practiceDropdownItems.map((sub) => {
+                          const SubIcon = sub.icon;
+                          const isSubActive = location.pathname === sub.path;
+                          return (
+                            <NavLink
+                              key={sub.path}
+                              to={sub.path}
+                              onClick={() => setMobileOpen(false)}
+                              className={`flex items-center gap-2.5 p-2 rounded-lg text-xs font-semibold transition-colors ${
+                                isSubActive
+                                  ? "bg-[#CDF5FD]/60 text-[#00A9FF] font-bold"
+                                  : "text-slate-600 hover:bg-white"
+                              }`}
+                            >
+                              {sub.customIconUrl ? (
+                                <img src={sub.customIconUrl} className="w-4 h-4 object-contain" alt="" />
+                              ) : SubIcon ? (
+                                <SubIcon size={14} />
+                              ) : null}
+                              <span>{sub.label}</span>
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Resume */}
+                  <NavLink
+                    to="/resume"
+                    onClick={() => setMobileOpen(false)}
+                    className={`mobile-nav-link${location.pathname === "/resume" ? " active" : ""}`}
+                  >
+                    <div className="mobile-nav-item-icon">
+                      <FileCheck size={18} />
+                    </div>
+                    <span className="mobile-nav-item-label">Resume</span>
+                    {location.pathname === "/resume" && <span className="mobile-nav-active-dot" />}
+                  </NavLink>
+
+                  {/* Jobs */}
+                  <NavLink
+                    to="/job-analyzer"
+                    onClick={() => setMobileOpen(false)}
+                    className={`mobile-nav-link${location.pathname === "/job-analyzer" || location.pathname === "/jobs" ? " active" : ""}`}
+                  >
+                    <div className="mobile-nav-item-icon">
+                      <Briefcase size={18} />
+                    </div>
+                    <span className="mobile-nav-item-label">Jobs</span>
+                    {(location.pathname === "/job-analyzer" || location.pathname === "/jobs") && (
+                      <span className="mobile-nav-active-dot" />
+                    )}
+                  </NavLink>
+
+                  {/* History */}
+                  <NavLink
+                    to="/interviews"
+                    onClick={() => setMobileOpen(false)}
+                    className={`mobile-nav-link${location.pathname === "/interviews" || location.pathname === "/history" ? " active" : ""}`}
+                  >
+                    <div className="mobile-nav-item-icon">
+                      <Clock size={18} />
+                    </div>
+                    <span className="mobile-nav-item-label">History</span>
+                    {(location.pathname === "/interviews" || location.pathname === "/history") && (
+                      <span className="mobile-nav-active-dot" />
+                    )}
+                  </NavLink>
                 </nav>
 
                 {/* Profile */}
@@ -1033,30 +1283,19 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
     width: 38px;
     height: 38px;
 
-    border-radius: 11px;
-
-    background:
-      linear-gradient(
-        135deg,
-        var(--blue-500),
-        var(--blue-900)
-      );
-
-    border:
-      1px solid var(--blue-200);
+    border-radius: 11.5px;
 
     display: flex;
 
     align-items: center;
     justify-content: center;
 
-    color: var(--white);
-
     box-shadow:
-      0 5px 16px
-      rgba(33, 150, 243, 0.25);
+      0 4px 14px
+      rgba(0, 169, 255, 0.22);
 
     flex-shrink: 0;
+    overflow: hidden;
   }
 
   .brand-text-wrap {

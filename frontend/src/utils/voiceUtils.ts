@@ -116,16 +116,25 @@ export async function resolveVoiceProfile(
   let chosenVoice: SpeechSynthesisVoice | null = null;
 
   if (gender === "female") {
-    // 1. Look for explicit female match in lang
+    // 1. Explicitly check for preferred deterministic profile: Microsoft Heera (India)
     chosenVoice =
-      pool.find((v) => {
+      voices.find((v) => {
         const name = v.name.toLowerCase();
-        const isExcluded = MALE_NAMES.some((m) => name.includes(m));
-        if (isExcluded) return false;
-        return FEMALE_NAMES.some((f) => name.includes(f));
+        return name.includes("heera") || name.includes("microsoft heera");
       }) || null;
 
-    // 2. Fallback to any voice with 'female' or 'woman' in global list
+    // 2. Look for female match in lang
+    if (!chosenVoice) {
+      chosenVoice =
+        pool.find((v) => {
+          const name = v.name.toLowerCase();
+          const isExcluded = MALE_NAMES.some((m) => name.includes(m));
+          if (isExcluded) return false;
+          return FEMALE_NAMES.some((f) => name.includes(f));
+        }) || null;
+    }
+
+    // 3. Fallback to any voice with 'female' or 'woman' in global list
     if (!chosenVoice) {
       chosenVoice =
         voices.find((v) => {
@@ -137,7 +146,7 @@ export async function resolveVoiceProfile(
         }) || null;
     }
 
-    // 3. Fallback: select first non-male voice in language
+    // 4. Fallback: select first non-male voice in language
     if (!chosenVoice) {
       chosenVoice =
         pool.find((v) => {
@@ -151,19 +160,28 @@ export async function resolveVoiceProfile(
       pitch: 1.08, // Subtle pitch lift for feminine resonance
       rate: 0.96,  // Clear, composed interview pace
       gender: "female",
-      voiceName: chosenVoice ? chosenVoice.name : "Default Female Profile",
+      voiceName: chosenVoice ? chosenVoice.name : "Microsoft Heera (Default Female)",
     };
   } else {
-    // 1. Look for explicit male match in lang
+    // 1. Explicitly check for preferred deterministic profile: Microsoft David (US)
     chosenVoice =
-      pool.find((v) => {
+      voices.find((v) => {
         const name = v.name.toLowerCase();
-        const isExcluded = FEMALE_NAMES.some((f) => name.includes(f));
-        if (isExcluded) return false;
-        return MALE_NAMES.some((m) => name.includes(m));
+        return name.includes("david") || name.includes("microsoft david");
       }) || null;
 
-    // 2. Fallback to any voice with 'male' or known male names in global list
+    // 2. Look for explicit male match in lang
+    if (!chosenVoice) {
+      chosenVoice =
+        pool.find((v) => {
+          const name = v.name.toLowerCase();
+          const isExcluded = FEMALE_NAMES.some((f) => name.includes(f));
+          if (isExcluded) return false;
+          return MALE_NAMES.some((m) => name.includes(m));
+        }) || null;
+    }
+
+    // 3. Fallback to any voice with 'male' or known male names in global list
     if (!chosenVoice) {
       chosenVoice =
         voices.find((v) => {
@@ -175,7 +193,7 @@ export async function resolveVoiceProfile(
         }) || null;
     }
 
-    // 3. Fallback: select first non-female voice in language
+    // 4. Fallback: select first non-female voice in language
     if (!chosenVoice) {
       chosenVoice =
         pool.find((v) => {

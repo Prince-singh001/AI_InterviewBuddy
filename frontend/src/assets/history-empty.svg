@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" fill="none">
+  <defs>
+    <linearGradient id="emptyGlow" x1="0" y1="0" x2="240" y2="180">
+      <stop offset="0%" stop-color="#CDF5FD" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.8"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="180" rx="16" fill="url(#emptyGlow)"/>
+  <circle cx="120" cy="80" r="48" fill="#F0F9FF" stroke="#BAE6FD" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <rect x="94" y="52" width="52" height="66" rx="8" fill="#FFFFFF" stroke="#00A9FF" stroke-width="2"/>
+  <rect x="108" y="47" width="24" height="10" rx="3" fill="#00A9FF"/>
+  <line x1="104" y1="70" x2="136" y2="70" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+  <line x1="104" y1="80" x2="130" y2="80" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+  <line x1="104" y1="90" x2="136" y2="90" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+  <line x1="104" y1="100" x2="122" y2="100" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="140" cy="112" r="14" fill="#FFFFFF" stroke="#00A9FF" stroke-width="2"/>
+  <circle cx="140" cy="112" r="2" fill="#00A9FF"/>
+  <path d="M140 104V112L145 115" stroke="#00A9FF" stroke-width="1.8" stroke-linecap="round"/>
+</svg>

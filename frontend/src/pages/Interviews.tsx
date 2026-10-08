@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
+import React, { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertCircle,
-  ArrowUpRight,
   Calendar,
   ChevronRight,
   Filter,
@@ -11,29 +11,79 @@ import {
   RotateCcw,
   Search,
   TrendingUp,
-  Zap
-} from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+  Zap,
+  Award,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  BookOpen,
+  Check,
+  X,
+  Building2,
+  Layers,
+  ArrowUpRight,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import {
   interviewsApi,
   type InterviewListItem,
-} from '@/services/apiService'
+} from '@/services/apiService';
 
 import {
   formatDate,
   getScoreBadgeClass,
   getScoreColor,
   getScoreLabel,
-} from '@/lib/utils'
+} from '@/lib/utils';
+import type { TestAttempt } from '@/pages/MockTest';
+import { historyHeroMockup, historyEmptyIllustration } from '@/assets/illustrations';
+import CompanyLogo from '@/components/common/CompanyLogo';
+
+export interface PracticeHistoryItem {
+  id: string;
+  topicId: string;
+  topicName: string;
+  difficulty: string;
+  question: string;
+  status: 'Correct' | 'Needs Improvement' | 'Incorrect';
+  score?: number;
+  explanation: string;
+  suggestedImprovement?: string;
+  timestamp: string;
+}
+
+export type HistoryFilterType = 'all' | 'interviews' | 'tests' | 'practice';
+
+interface UnifiedHistoryRecord {
+  id: string;
+  sessionType: 'Mock Interview' | 'Mock Test' | 'Practice';
+  filterCategory: 'interviews' | 'tests' | 'practice';
+  role: string;
+  company?: string;
+  date: string;
+  timestamp: number;
+  status: 'Completed' | 'In Progress' | 'Incomplete';
+  score?: number | null;
+  rawInterview?: InterviewListItem;
+  rawTest?: TestAttempt;
+  rawPractice?: PracticeHistoryItem;
+}
 
 export default function Interviews() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState<'date' | 'score'>('date')
+  // Filters State: 'all' | 'interviews' | 'tests' | 'practice'
+  const [activeFilter, setActiveFilter] = useState<HistoryFilterType>('all');
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'score'>('date');
 
+  // Test Review Modal State
+  const [selectedTestReview, setSelectedTestReview] = useState<TestAttempt | null>(null);
+  // Practice Review Modal State
+  const [selectedPracticeReview, setSelectedPracticeReview] = useState<PracticeHistoryItem | null>(null);
+
+  // 1. Mock Interviews from Backend API (strictly real data)
   const {
     data: interviews = [],
     isLoading,
@@ -44,1140 +94,660 @@ export default function Interviews() {
     queryFn: interviewsApi.list,
     staleTime: 1000 * 60 * 2,
     retry: 1,
-  })
+  });
+
+  // 2. Mock Tests from Local Storage (strictly real completed attempts)
+  const testAttempts = useMemo<TestAttempt[]>(() => {
+    try {
+      const stored = localStorage.getItem('ib_mock_test_attempts');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  // 3. Mock Practice from Local Storage (strictly real practice attempts)
+  const practiceItems = useMemo<PracticeHistoryItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('ib_mock_practice_history');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }, []);
 
   // ------------------------------------------------------------
-  // STATS
+  // UNIFIED RECORD MAPPING (Only actual recorded data)
   // ------------------------------------------------------------
+  const unifiedRecords = useMemo<UnifiedHistoryRecord[]>(() => {
+    const list: UnifiedHistoryRecord[] = [];
 
-  const completed = interviews.filter(
-    (interview) => interview.status === 'completed',
-  )
+    // Map interviews
+    interviews.forEach((i) => {
+      let status: 'Completed' | 'In Progress' | 'Incomplete' = 'Incomplete';
+      if (i.status === 'completed') status = 'Completed';
+      else if (i.status === 'in_progress' || i.status === 'active') status = 'In Progress';
 
-  const avg = completed.length
-    ? Math.round(
-        completed.reduce(
-          (acc, interview) => acc + (interview.score ?? 0),
-          0,
-        ) / completed.length,
-      )
-    : 0
+      list.push({
+        id: `interview-${i.id}`,
+        sessionType: 'Mock Interview',
+        filterCategory: 'interviews',
+        role: i.role || 'Software Engineer',
+        company: (i as any).company_name || (i as any).company || undefined,
+        date: i.created_at,
+        timestamp: new Date(i.created_at).getTime() || 0,
+        status,
+        score: i.score ?? null,
+        rawInterview: i,
+      });
+    });
 
-  const best = completed.length
-    ? Math.max(
-        ...completed.map(
-          (interview) => interview.score ?? 0,
-        ),
-      )
-    : 0
+    // Map tests
+    testAttempts.forEach((t) => {
+      list.push({
+        id: `test-${t.id || t.timestamp}`,
+        sessionType: 'Mock Test',
+        filterCategory: 'tests',
+        role: t.role || 'Assessment',
+        company: (t as any).company || undefined,
+        date: t.timestamp,
+        timestamp: new Date(t.timestamp).getTime() || 0,
+        status: 'Completed',
+        score: t.score,
+        rawTest: t,
+      });
+    });
 
-  // ------------------------------------------------------------
-  // SEARCH + SORT
-  // ------------------------------------------------------------
+    // Map practice
+    practiceItems.forEach((p) => {
+      list.push({
+        id: `practice-${p.id || p.timestamp}`,
+        sessionType: 'Practice',
+        filterCategory: 'practice',
+        role: p.topicName || 'Technical Practice',
+        company: undefined,
+        date: p.timestamp,
+        timestamp: new Date(p.timestamp).getTime() || 0,
+        status: p.status === 'Correct' ? 'Completed' : 'Incomplete',
+        score: p.score ?? (p.status === 'Correct' ? 100 : p.status === 'Needs Improvement' ? 65 : 30),
+        rawPractice: p,
+      });
+    });
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase()
+    return list;
+  }, [interviews, testAttempts, practiceItems]);
 
-    return [...interviews]
-      .filter((interview) => {
-        if (!query) return true
+  // Filtered & Sorted Records
+  const filteredRecords = useMemo(() => {
+    const q = search.trim().toLowerCase();
 
-        return (
-          interview.role.toLowerCase().includes(query) ||
-          interview.type.toLowerCase().includes(query)
-        )
+    return unifiedRecords
+      .filter((rec) => {
+        // Tab category filter
+        if (activeFilter !== 'all' && rec.filterCategory !== activeFilter) {
+          return false;
+        }
+
+        // Search filter
+        if (q) {
+          const matchRole = rec.role.toLowerCase().includes(q);
+          const matchType = rec.sessionType.toLowerCase().includes(q);
+          const matchCompany = rec.company ? rec.company.toLowerCase().includes(q) : false;
+          if (!matchRole && !matchType && !matchCompany) return false;
+        }
+
+        return true;
       })
       .sort((a, b) => {
         if (sortBy === 'date') {
-          return (
-            new Date(b.created_at).getTime() -
-            new Date(a.created_at).getTime()
-          )
+          return b.timestamp - a.timestamp;
         }
+        return (b.score ?? 0) - (a.score ?? 0);
+      });
+  }, [unifiedRecords, activeFilter, search, sortBy]);
 
-        return (b.score ?? 0) - (a.score ?? 0)
-      })
-  }, [interviews, search, sortBy])
+  // Overall Statistics from actual backend / storage records
+  const totalCount = unifiedRecords.length;
+  const completedCount = unifiedRecords.filter((r) => r.status === 'Completed').length;
+  const recordsWithScores = unifiedRecords.filter((r) => r.score !== null && r.score !== undefined);
+  const averageScore = recordsWithScores.length
+    ? Math.round(recordsWithScores.reduce((acc, r) => acc + (r.score ?? 0), 0) / recordsWithScores.length)
+    : 0;
 
   // ------------------------------------------------------------
-  // LOADING
+  // LOADING / ERROR STATES
   // ------------------------------------------------------------
-
-  if (isLoading) {
+  if (isLoading && unifiedRecords.length === 0) {
     return (
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 1180,
-          margin: '0 auto',
-          padding: '0.5rem 0 3rem',
-        }}
-      >
-        <div
-          className="skeleton"
-          style={{
-            height: 34,
-            width: 210,
-            borderRadius: 10,
-            marginBottom: 10,
-          }}
-        />
-
-        <div
-          className="skeleton"
-          style={{
-            height: 18,
-            width: 280,
-            borderRadius: 8,
-            marginBottom: 28,
-          }}
-        />
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns:
-              'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
+      <div style={{ width: '100%', maxWidth: 1140, margin: '0 auto', padding: '1rem 0 3rem' }}>
+        <div className="skeleton" style={{ height: 160, borderRadius: 24, marginBottom: 24 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
           {[1, 2, 3].map((item) => (
-            <div
-              key={item}
-              className="skeleton"
-              style={{
-                height: 100,
-                borderRadius: 18,
-              }}
-            />
+            <div key={item} className="skeleton" style={{ height: 80, borderRadius: 16 }} />
           ))}
         </div>
-
-        <div
-          className="skeleton"
-          style={{
-            height: 68,
-            borderRadius: 18,
-            marginBottom: 18,
-          }}
-        />
-
-        {[1, 2, 3].map((item) => (
-          <div
-            key={item}
-            className="skeleton"
-            style={{
-              height: 105,
-              borderRadius: 18,
-              marginBottom: 14,
-            }}
-          />
-        ))}
       </div>
-    )
+    );
   }
 
-  // ------------------------------------------------------------
-  // ERROR
-  // ------------------------------------------------------------
-
-  if (isError) {
+  if (isError && unifiedRecords.length === 0) {
     return (
-      <div
-        style={{
-          minHeight: '65vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '2rem',
-        }}
-      >
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.96, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
           className="card"
-          style={{
-            width: '100%',
-            maxWidth: 480,
-            textAlign: 'center',
-            padding: '3rem 2rem',
-          }}
+          style={{ width: '100%', maxWidth: 480, textAlign: 'center', padding: '3rem 2rem' }}
         >
-          <div
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: 18,
-              margin: '0 auto 1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(239,68,68,0.08)',
-            }}
-          >
-            <AlertCircle
-              size={30}
-              style={{ color: 'var(--red)' }}
-            />
+          <div style={{ width: 60, height: 60, borderRadius: 18, margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.08)' }}>
+            <AlertCircle size={30} style={{ color: 'var(--red)' }} />
           </div>
-
-          <h2
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              marginBottom: 8,
-              color: 'var(--text-primary)',
-            }}
-          >
-            Unable to load interviews
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: 8, color: 'var(--text-primary)' }}>
+            Unable to load interview history
           </h2>
-
-          <p
-            style={{
-              color: 'var(--text-muted)',
-              marginBottom: 24,
-              lineHeight: 1.6,
-            }}
-          >
+          <p style={{ color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.6 }}>
             Please check your connection and try again.
           </p>
-
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => refetch()}
-            className="btn btn-primary"
-            style={{
-              gap: 8,
-              margin: '0 auto',
-            }}
-          >
+          <button onClick={() => refetch()} className="btn btn-primary" style={{ gap: 8, margin: '0 auto' }}>
             <RefreshCw size={16} />
             Retry
-          </motion.button>
+          </button>
         </motion.div>
       </div>
-    )
+    );
   }
 
-  // ------------------------------------------------------------
-  // MAIN UI
-  // ------------------------------------------------------------
-
   return (
-    <div
-      style={{
-        width: '100%',
-        maxWidth: 1180,
-        margin: '0 auto',
-        padding: '0.25rem 0 3rem',
-      }}
-    >
+    <div style={{ width: '100%', maxWidth: 1140, margin: '0 auto', paddingBottom: '3.5rem' }}>
       {/* ======================================================
-          HEADER
+          5. HISTORY HERO SECTION (Professional & Realistic Visual)
       ====================================================== */}
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#CDF5FD]/40 via-white to-[#A0E9FF]/20 border border-[#89CFF3]/40 p-6 sm:p-10 shadow-sm mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {/* LEFT: Heading, subtitle, and primary actions */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#00A9FF]/10 border border-[#00A9FF]/30 text-[#00A9FF] text-xs font-bold tracking-wide uppercase">
+              <Clock size={13} className="text-[#00A9FF]" />
+              <span>Session History</span>
+            </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: -15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          gap: 20,
-          marginBottom: 28,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 7,
-              padding: '5px 10px',
-              borderRadius: 999,
-              background: 'rgba(99,102,241,0.08)',
-              color: 'var(--blue-light)',
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              marginBottom: 10,
-            }}
-          >
-            Interview Workspace
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+              Your <span className="text-[#00A9FF]">Interview History</span>
+            </h1>
+
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl">
+              Review your previous interviews, practice sessions and assessments.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => navigate('/practice/mock-interview')}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#00A9FF] hover:bg-[#0092dd] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#00A9FF]/25 transition-all cursor-pointer"
+              >
+                <Zap size={16} />
+                <span>Start Interview</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/practice/mock-tests')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 text-xs sm:text-sm font-semibold border border-slate-200 shadow-xs transition-colors cursor-pointer"
+              >
+                <Award size={16} className="text-[#00A9FF]" />
+                <span>Take Mock Test</span>
+              </button>
+            </div>
           </div>
 
-          <h1
-            style={{
-              fontSize: 'clamp(1.55rem, 3vw, 2rem)',
-              fontWeight: 850,
-              letterSpacing: '-0.025em',
-              color: 'var(--text-primary)',
-              margin: 0,
-              marginBottom: 6,
-            }}
-          >
-            My Interviews
-          </h1>
+          {/* RIGHT: Subtle Professional Activity/Timeline Visual */}
+          <div className="lg:col-span-5 flex justify-center lg:justify-end">
+            <div className="relative w-full max-w-[340px] sm:max-w-[400px] transition-transform duration-300 hover:scale-[1.02]">
+              <img
+                src={historyHeroMockup}
+                alt="Interview activity history illustration"
+                className="w-full h-auto object-contain rounded-2xl drop-shadow-md"
+                style={{ width: '100%', height: 'auto', maxHeight: 310, objectFit: 'contain' }}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
 
-          <p
-            style={{
-              color: 'var(--text-muted)',
-              fontSize: '0.9rem',
-              margin: 0,
-            }}
-          >
-            Track your interview practice, scores and progress.
-          </p>
+      {/* ======================================================
+          SUMMARY STATS BAR (Real Recorded Data Only)
+      ====================================================== */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-[#CDF5FD] text-[#00A9FF] flex items-center justify-center shrink-0">
+            <Clock size={22} />
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-slate-500">Total Recorded Sessions</div>
+            <div className="text-xl font-extrabold text-slate-900">{totalCount}</div>
+          </div>
         </div>
 
-        <motion.button
-          whileHover={{
-            scale: 1.03,
-            y: -2,
-            boxShadow: '0 12px 28px rgba(99,102,241,0.25)',
-          }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => navigate('/interview/setup')}
-          className="btn btn-primary"
-          style={{
-            gap: 8,
-            minHeight: 42,
-            padding: '0 18px',
-            borderRadius: 12,
-          }}
-        >
-          <Zap size={16} />
-          New Interview
-        </motion.button>
-      </motion.div>
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <CheckCircle2 size={22} />
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-slate-500">Completed Sessions</div>
+            <div className="text-xl font-extrabold text-slate-900">{completedCount}</div>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <TrendingUp size={22} />
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-slate-500">Average Performance</div>
+            <div className="text-xl font-extrabold text-slate-900">
+              {averageScore > 0 ? `${averageScore}%` : '—'}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ======================================================
-          STATS
+          6. HISTORY FILTERS (All, Mock Interviews, Mock Tests, Practice)
       ====================================================== */}
-
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.08, duration: 0.45 }}
-        style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        {[
-          {
-            icon: MessageSquare,
-            label: 'Total Interviews',
-            value: interviews.length,
-            description:
-              interviews.length === 1
-                ? 'Practice session'
-                : 'Practice sessions',
-            className: 'stat-card-blue',
-          },
-          {
-            icon: TrendingUp,
-            label: 'Average Score',
-            value: avg > 0 ? `${avg}%` : '—',
-            description:
-              avg > 0
-                ? 'Across completed interviews'
-                : 'Complete an interview',
-            className: 'stat-card-blue',
-          },
-          {
-            icon: ArrowUpRight,
-            label: 'Best Score',
-            value: best > 0 ? `${best}%` : '—',
-            description:
-              best > 0
-                ? 'Your highest performance'
-                : 'No score available',
-            className: 'stat-card-green',
-          },
-        ].map((stat, index) => {
-          const Icon = stat.icon
-
-          return (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                delay: 0.1 + index * 0.07,
-                duration: 0.4,
-              }}
-              whileHover={{
-                y: -4,
-                boxShadow:
-                  '0 12px 30px rgba(0,0,0,0.07)',
-              }}
-              className={`card ${stat.className}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 15,
-                padding: '1.15rem 1.25rem',
-                borderRadius: 18,
-                transition:
-                  'box-shadow 0.25s ease, border-color 0.25s ease',
-              }}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        {/* Clean Pill / Tab Controls */}
+        <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200/80 max-w-full overflow-x-auto">
+          {[
+            { id: 'all', label: 'All', count: unifiedRecords.length },
+            { id: 'interviews', label: 'Mock Interviews', count: interviews.length },
+            { id: 'tests', label: 'Mock Tests', count: testAttempts.length },
+            { id: 'practice', label: 'Practice', count: practiceItems.length },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveFilter(tab.id as HistoryFilterType)}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeFilter === tab.id
+                  ? 'bg-white text-[#00A9FF] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
             >
-              <div
-                style={{
-                  width: 46,
-                  height: 46,
-                  flexShrink: 0,
-                  borderRadius: 14,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background:
-                    'rgba(99,102,241,0.1)',
-                }}
+              <span>{tab.label}</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  activeFilter === tab.id
+                    ? 'bg-[#CDF5FD] text-[#00A9FF]'
+                    : 'bg-slate-200/70 text-slate-600'
+                }`}
               >
-                <Icon
-                  size={20}
-                  style={{
-                    color: 'var(--blue-light)',
-                  }}
-                />
-              </div>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
 
-              <div style={{ minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: '0.74rem',
-                    color: 'var(--text-muted)',
-                    fontWeight: 600,
-                    marginBottom: 3,
-                  }}
-                >
-                  {stat.label}
-                </div>
+        {/* Search & Sort Area */}
+        <div className="flex items-center gap-2.5">
+          <div className="relative flex-1 sm:w-64">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search role or type..."
+              className="w-full pl-8.5 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-[#00A9FF]"
+            />
+          </div>
 
-                <div
-                  style={{
-                    fontSize: '1.45rem',
-                    lineHeight: 1.2,
-                    fontWeight: 850,
-                    color: 'var(--text-primary)',
-                  }}
-                >
-                  {stat.value}
-                </div>
-
-                <div
-                  style={{
-                    marginTop: 3,
-                    fontSize: '0.68rem',
-                    color: 'var(--text-muted)',
-                  }}
-                >
-                  {stat.description}
-                </div>
-              </div>
-            </motion.div>
-          )
-        })}
-      </motion.div>
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-0.5">
+            <button
+              type="button"
+              onClick={() => setSortBy('date')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded-lg cursor-pointer ${
+                sortBy === 'date' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Date
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortBy('score')}
+              className={`px-2.5 py-1 text-xs font-semibold rounded-lg cursor-pointer ${
+                sortBy === 'score' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Score
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* ======================================================
-          EMPTY STATE
+          7. HISTORY CARDS & 8. EMPTY STATE
       ====================================================== */}
-
-      {interviews.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4 }}
-          className="card"
-          style={{
-            textAlign: 'center',
-            padding: '5rem 2rem',
-            borderRadius: 20,
-          }}
-        >
-          <motion.div
-            animate={{
-              y: [0, -5, 0],
-            }}
-            transition={{
-              duration: 2.5,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-            style={{
-              width: 72,
-              height: 72,
-              margin: '0 auto 1.25rem',
-              borderRadius: 22,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background:
-                'rgba(99,102,241,0.08)',
-            }}
-          >
-            <MessageSquare
-              size={32}
-              style={{
-                color: 'var(--blue-light)',
-              }}
+      {filteredRecords.length === 0 ? (
+        /* ====================================================
+           8. HISTORY EMPTY STATE (Clean SVG, No Cartoon/Robots)
+        ==================================================== */
+        <div className="p-12 sm:p-16 rounded-2xl bg-white border border-slate-200 text-center shadow-xs">
+          <div className="w-28 h-24 mx-auto mb-4 flex items-center justify-center">
+            <img
+              src={historyEmptyIllustration}
+              alt="No interview history yet"
+              className="w-full h-full object-contain"
             />
-          </motion.div>
+          </div>
 
-          <h2
-            style={{
-              fontSize: '1.3rem',
-              fontWeight: 800,
-              marginBottom: 8,
-            }}
-          >
+          <h3 className="text-lg font-bold text-slate-900 mb-1">
             No interview history yet
-          </h2>
+          </h3>
 
-          <p
-            style={{
-              maxWidth: 450,
-              margin: '0 auto 24px',
-              color: 'var(--text-muted)',
-              lineHeight: 1.65,
-              fontSize: '0.88rem',
-            }}
-          >
-            Start your first AI-powered interview and
-            your interview activity will appear here.
+          <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mb-6 leading-relaxed">
+            Start your first mock interview or assessment to begin building your preparation history.
           </p>
 
-          <motion.button
-            whileHover={{
-              scale: 1.04,
-              y: -2,
-              boxShadow:
-                '0 12px 25px rgba(99,102,241,0.22)',
-            }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => navigate('/interview/setup')}
-            className="btn btn-primary"
-            style={{
-              gap: 8,
-              margin: '0 auto',
-            }}
+          <button
+            type="button"
+            onClick={() => navigate('/practice/mock-interview')}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#00A9FF] hover:bg-[#0092dd] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#00A9FF]/20 cursor-pointer"
           >
-            <Zap size={17} />
-            Start Your First Interview
-          </motion.button>
-        </motion.div>
+            <Zap size={15} />
+            <span>Start Interview</span>
+          </button>
+        </div>
       ) : (
-        <>
-          {/* ==================================================
-              FILTER BAR
-          ================================================== */}
+        /* ====================================================
+           7. HISTORY RECORD CARDS
+        ==================================================== */
+        <div className="space-y-3">
+          {filteredRecords.map((record) => {
+            const hasScore = record.score !== null && record.score !== undefined;
+            const scoreNum = hasScore ? Math.round(record.score as number) : null;
+            const isCompleted = record.status === 'Completed';
 
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.18 }}
-            className="card"
-            style={{
-              marginBottom: 18,
-              padding: '12px 14px',
-              borderRadius: 16,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              flexWrap: 'wrap',
-            }}
-          >
-            <div
-              style={{
-                position: 'relative',
-                flex: 1,
-                minWidth: 220,
-              }}
-            >
-              <Search
-                size={15}
-                style={{
-                  position: 'absolute',
-                  left: 12,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)',
-                  pointerEvents: 'none',
-                }}
-              />
-
-              <input
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search role or interview type..."
-                className="input"
-                style={{
-                  width: '100%',
-                  height: 40,
-                  paddingLeft: 36,
-                  paddingRight: 12,
-                  fontSize: '0.82rem',
-                  borderRadius: 11,
-                }}
-              />
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 7,
-              }}
-            >
-              <Filter
-                size={14}
-                style={{
-                  color: 'var(--text-muted)',
-                }}
-              />
-
-              {(['date', 'score'] as const).map(
-                (option) => (
-                  <motion.button
-                    key={option}
-                    whileHover={{ y: -1 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => setSortBy(option)}
-                    className={
-                      sortBy === option
-                        ? 'btn btn-primary btn-sm'
-                        : 'btn btn-ghost btn-sm'
-                    }
-                    style={{
-                      gap: 6,
-                      borderRadius: 9,
-                    }}
-                  >
-                    {option === 'date' ? (
-                      <>
-                        <Calendar size={12} />
-                        Date
-                      </>
+            return (
+              <div
+                key={record.id}
+                className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-[#89CFF3] shadow-xs transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+              >
+                {/* Left info: Role, Session type, Company, Date, Status */}
+                <div className="flex items-start gap-4 min-w-0">
+                  {/* Company Logo or Session Type Icon */}
+                  <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                    {record.company ? (
+                      <CompanyLogo name={record.company} size={28} showName={false} />
+                    ) : record.sessionType === 'Mock Interview' ? (
+                      <MessageSquare size={22} className="text-[#00A9FF]" />
+                    ) : record.sessionType === 'Mock Test' ? (
+                      <Award size={22} className="text-amber-500" />
                     ) : (
-                      <>
-                        <TrendingUp size={12} />
-                        Score
-                      </>
+                      <BookOpen size={22} className="text-emerald-500" />
                     )}
-                  </motion.button>
-                ),
-              )}
-            </div>
-          </motion.div>
+                  </div>
 
-          {/* ==================================================
-              RESULTS HEADER
-          ================================================== */}
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h4 className="text-sm font-extrabold text-slate-900 truncate">
+                        {record.role}
+                      </h4>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 12,
-              padding: '0 3px',
-            }}
-          >
-            <span
-              style={{
-                fontSize: '0.76rem',
-                color: 'var(--text-muted)',
-                fontWeight: 600,
-              }}
-            >
-              {filtered.length}{' '}
-              {filtered.length === 1
-                ? 'interview'
-                : 'interviews'}
-              {search.trim()
-                ? ' found'
-                : ''}
-            </span>
+                      {/* Session Type Badge */}
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                        {record.sessionType}
+                      </span>
 
-            {sortBy === 'date' && (
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  color: 'var(--text-muted)',
-                }}
-              >
-                Latest first
-              </span>
-            )}
+                      {/* Company Name if present */}
+                      {record.company && (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-[#00A9FF]">
+                          {record.company}
+                        </span>
+                      )}
+                    </div>
 
-            {sortBy === 'score' && (
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  color: 'var(--text-muted)',
-                }}
-              >
-                Highest score first
-              </span>
-            )}
-          </motion.div>
+                    <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                      <span className="inline-flex items-center gap-1">
+                        <Calendar size={13} className="text-slate-400" />
+                        {formatDate(record.date)}
+                      </span>
 
-          {/* ==================================================
-              NO SEARCH RESULTS
-          ================================================== */}
+                      {/* Status Badge (Subtle badges as specified: Completed, In Progress, Incomplete) */}
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          record.status === 'Completed'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                            : record.status === 'In Progress'
+                            ? 'bg-sky-50 text-sky-700 border border-sky-200/60'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200/60'
+                        }`}
+                      >
+                        {record.status === 'Completed' && <CheckCircle2 size={11} />}
+                        {record.status === 'In Progress' && <Clock size={11} />}
+                        {record.status === 'Incomplete' && <XCircle size={11} />}
+                        {record.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-          {filtered.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="card"
-              style={{
-                textAlign: 'center',
-                padding: '3.5rem 2rem',
-                borderRadius: 18,
-              }}
-            >
-              <Search
-                size={34}
-                style={{
-                  color: 'var(--text-muted)',
-                  margin: '0 auto 12px',
-                }}
-              />
+                {/* Right info: Score + Action Button */}
+                <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                  {scoreNum !== null && (
+                    <div className="text-right">
+                      <div className="text-xs text-slate-400 font-medium">Result</div>
+                      <div
+                        className="text-base font-extrabold"
+                        style={{ color: getScoreColor(scoreNum) }}
+                      >
+                        {scoreNum}%
+                      </div>
+                    </div>
+                  )}
 
-              <h3
-                style={{
-                  fontWeight: 750,
-                  marginBottom: 6,
-                }}
-              >
-                No interviews found
-              </h3>
-
-              <p
-                style={{
-                  color: 'var(--text-muted)',
-                  fontSize: '0.84rem',
-                }}
-              >
-                Try a different role or interview type.
-              </p>
-            </motion.div>
-          ) : (
-            /* ==================================================
-               INTERVIEW LIST
-            ================================================== */
-
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12,
-              }}
-            >
-              {filtered.map((interview, index) => {
-                const isCompleted =
-                  interview.status === 'completed'
-
-                const score =
-                  interview.score ?? null
-
-                return (
-                  <motion.div
-                    key={interview.id}
-                    initial={{
-                      opacity: 0,
-                      y: 12,
-                    }}
-                    animate={{
-                      opacity: 1,
-                      y: 0,
-                    }}
-                    transition={{
-                      delay: 0.04 * index,
-                      duration: 0.35,
-                    }}
-                    whileHover={
-                      isCompleted
-                        ? {
-                            y: -3,
-                            boxShadow:
-                              '0 14px 35px rgba(0,0,0,0.08)',
+                  {/* View Details button */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (record.rawInterview) {
+                          if (record.status === 'Completed') {
+                            navigate(`/interview/complete/${record.rawInterview.id}`);
+                          } else {
+                            navigate('/practice/mock-interview');
                           }
-                        : undefined
-                    }
-                    className="card"
-                    onClick={() => {
-                      if (isCompleted) {
-                        navigate(
-                          `/interview/complete/${interview.id}`,
-                        )
-                      }
-                    }}
-                    style={{
-                      position: 'relative',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 18,
-                      padding:
-                        '1rem 1.15rem',
-                      borderRadius: 18,
-                      cursor: isCompleted
-                        ? 'pointer'
-                        : 'default',
-                      transition:
-                        'box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease',
-                    }}
-                  >
-                    {/* Accent line */}
-
-                    {isCompleted && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: 0,
-                          top: 14,
-                          bottom: 14,
-                          width: 3,
-                          borderRadius: 999,
-                          background:
-                            score !== null
-                              ? getScoreColor(score)
-                              : 'var(--blue)',
-                        }}
-                      />
-                    )}
-
-                    {/* =========================================
-                        SCORE RING
-                    ========================================= */}
-
-                    <div
-                      style={{
-                        position: 'relative',
-                        width: 62,
-                        height: 62,
-                        flexShrink: 0,
+                        } else if (record.rawTest) {
+                          setSelectedTestReview(record.rawTest);
+                        } else if (record.rawPractice) {
+                          setSelectedPracticeReview(record.rawPractice);
+                        }
                       }}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold border border-slate-200 shadow-2xs transition-colors cursor-pointer"
                     >
-                      <svg
-                        width={62}
-                        height={62}
-                        style={{
-                          transform:
-                            'rotate(-90deg)',
-                        }}
+                      <span>View Details</span>
+                      <ChevronRight size={14} className="text-slate-400" />
+                    </button>
+
+                    {record.sessionType === 'Mock Interview' && isCompleted && (
+                      <button
+                        type="button"
+                        onClick={() => navigate('/practice/mock-interview')}
+                        title="Retake Interview"
+                        className="p-1.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
                       >
-                        <circle
-                          cx={31}
-                          cy={31}
-                          r={24}
-                          fill="none"
-                          stroke="var(--bg-muted)"
-                          strokeWidth={5}
-                        />
-
-                        {score !== null && (
-                          <motion.circle
-                            cx={31}
-                            cy={31}
-                            r={24}
-                            fill="none"
-                            stroke={getScoreColor(score)}
-                            strokeWidth={5}
-                            strokeLinecap="round"
-                            strokeDasharray={150.8}
-                            initial={{
-                              strokeDashoffset: 150.8,
-                            }}
-                            animate={{
-                              strokeDashoffset:
-                                150.8 -
-                                (score / 100) *
-                                  150.8,
-                            }}
-                            transition={{
-                              duration: 1,
-                              delay:
-                                0.15 +
-                                index * 0.04,
-                              ease: 'easeOut',
-                            }}
-                          />
-                        )}
-                      </svg>
-
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent:
-                            'center',
-                          fontSize:
-                            '0.75rem',
-                          fontWeight: 850,
-                          color:
-                            score !== null
-                              ? getScoreColor(
-                                  score,
-                                )
-                              : 'var(--text-muted)',
-                        }}
-                      >
-                        {score !== null
-                          ? score
-                          : '—'}
-                      </div>
-                    </div>
-
-                    {/* =========================================
-                        INFORMATION
-                    ========================================= */}
-
-                    <div
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems:
-                            'center',
-                          gap: 8,
-                          flexWrap: 'wrap',
-                          marginBottom: 7,
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontWeight: 750,
-                            color:
-                              'var(--text-primary)',
-                            fontSize:
-                              '0.95rem',
-                            overflow:
-                              'hidden',
-                            textOverflow:
-                              'ellipsis',
-                            whiteSpace:
-                              'nowrap',
-                            maxWidth:
-                              '100%',
-                          }}
-                        >
-                          {interview.role}
-                        </span>
-
-                        {score !== null && (
-                          <span
-                            className={`badge ${getScoreBadgeClass(
-                              score,
-                            )}`}
-                            style={{
-                              fontSize:
-                                '0.65rem',
-                            }}
-                          >
-                            {getScoreLabel(
-                              score,
-                            )}
-                          </span>
-                        )}
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems:
-                            'center',
-                          gap: 8,
-                          flexWrap: 'wrap',
-                          color:
-                            'var(--text-muted)',
-                          fontSize:
-                            '0.75rem',
-                        }}
-                      >
-                        <span className="badge badge-muted">
-                          {interview.type}
-                        </span>
-
-                        <span
-                          style={{
-                            display:
-                              'inline-flex',
-                            alignItems:
-                              'center',
-                            gap: 4,
-                          }}
-                        >
-                          <Calendar
-                            size={12}
-                          />
-                          {formatDate(
-                            interview.created_at,
-                          )}
-                        </span>
-
-                        <span
-                          className={`badge ${
-                            isCompleted
-                              ? 'badge-green'
-                              : 'badge-muted'
-                          }`}
-                        >
-                          {interview.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* =========================================
-                        ACTIONS
-                    ========================================= */}
-
-                    {isCompleted && (
-                      <div
-                        className="interview-actions"
-                        style={{
-                          display: 'flex',
-                          alignItems:
-                            'center',
-                          gap: 7,
-                          flexShrink: 0,
-                        }}
-                      >
-                        <motion.button
-                          whileHover={{
-                            x: 2,
-                          }}
-                          whileTap={{
-                            scale: 0.96,
-                          }}
-                          onClick={(event) => {
-                            event.stopPropagation()
-
-                            navigate(
-                              `/interview/complete/${interview.id}`,
-                            )
-                          }}
-                          className="btn btn-ghost btn-sm"
-                          style={{
-                            gap: 4,
-                            borderRadius: 9,
-                          }}
-                        >
-                          View Report
-                          <ChevronRight
-                            size={13}
-                          />
-                        </motion.button>
-
-                        <motion.button
-                          whileHover={{
-                            y: -1,
-                          }}
-                          whileTap={{
-                            scale: 0.96,
-                          }}
-                          onClick={(event) => {
-                            event.stopPropagation()
-
-                            navigate(
-                              '/interview/setup',
-                            )
-                          }}
-                          className="btn btn-outline btn-sm"
-                          style={{
-                            gap: 5,
-                            borderRadius: 9,
-                          }}
-                        >
-                          <RotateCcw
-                            size={13}
-                          />
-                          Retake
-                        </motion.button>
-                      </div>
+                        <RotateCcw size={15} />
+                      </button>
                     )}
-
-                    {/* Mobile arrow */}
-
-                    {isCompleted && (
-                      <ChevronRight
-                        className="mobile-interview-arrow"
-                        size={18}
-                        style={{
-                          color:
-                            'var(--text-muted)',
-                          flexShrink: 0,
-                        }}
-                      />
-                    )}
-                  </motion.div>
-                )
-              })}
-            </div>
-          )}
-        </>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* ======================================================
-          RESPONSIVE STYLES
+          MODAL: TEST REVIEW
       ====================================================== */}
+      <AnimatePresence>
+        {selectedTestReview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setSelectedTestReview(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 sm:p-7 max-w-2xl w-full max-h-[85vh] flex flex-col shadow-xl border border-slate-200"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {selectedTestReview.role} Mock Test Review
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Difficulty: {selectedTestReview.difficulty} • Score: {selectedTestReview.score}% • Total: {selectedTestReview.totalQuestions} questions
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTestReview(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-      <style>{`
-        .mobile-interview-arrow {
-          display: none;
-        }
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                {selectedTestReview.questions && selectedTestReview.questions.length > 0 ? (
+                  selectedTestReview.questions.map((qItem, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-3.5 rounded-xl border text-xs ${
+                        qItem.isCorrect ? 'border-emerald-200 bg-emerald-50/40' : 'border-rose-200 bg-rose-50/40'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1.5 font-bold">
+                        <span className="text-slate-900">Q{idx + 1}: {qItem.question.question}</span>
+                        <span className={`text-[10px] shrink-0 font-bold ${qItem.isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
+                          {qItem.isCorrect ? 'Correct' : 'Incorrect'}
+                        </span>
+                      </div>
+                      <div className="text-slate-600 mb-1">
+                        <strong>Your Answer:</strong>{' '}
+                        {qItem.selectedOption !== null && qItem.question.options
+                          ? qItem.question.options[qItem.selectedOption] || `Option ${qItem.selectedOption + 1}`
+                          : 'Unanswered'}
+                      </div>
+                      {qItem.explanation && (
+                        <div className="p-2 rounded bg-white border border-slate-200 text-slate-600 mt-1.5">
+                          <strong>Explanation:</strong> {qItem.explanation}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500">No question breakdown recorded for this attempt.</p>
+                )}
+              </div>
 
-        @media (max-width: 760px) {
-          .interview-actions {
-            display: none !important;
-          }
+              <div className="pt-3 border-t border-slate-100 flex justify-end mt-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTestReview(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold cursor-pointer"
+                >
+                  Close Review
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          .mobile-interview-arrow {
-            display: block;
-          }
-        }
+      {/* ======================================================
+          MODAL: PRACTICE REVIEW
+      ====================================================== */}
+      <AnimatePresence>
+        {selectedPracticeReview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setSelectedPracticeReview(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 sm:p-7 max-w-lg w-full shadow-xl border border-slate-200"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {selectedPracticeReview.topicName} Practice Details
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Difficulty: {selectedPracticeReview.difficulty} • Date: {formatDate(selectedPracticeReview.timestamp)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPracticeReview(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-        @media (max-width: 560px) {
-          .mobile-interview-arrow {
-            display: none;
-          }
-        }
+              <div className="space-y-3 text-xs text-slate-700">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="font-bold text-slate-900 mb-1">Question</div>
+                  <p>{selectedPracticeReview.question}</p>
+                </div>
 
-        @media (max-width: 520px) {
-          .card {
-            box-sizing: border-box;
-          }
-        }
+                <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100">
+                  <div className="font-bold text-[#00A9FF] mb-1">AI Feedback &amp; Insight</div>
+                  <p>{selectedPracticeReview.explanation}</p>
+                </div>
 
-        @media (max-width: 480px) {
-          .interview-actions {
-            display: none !important;
-          }
-        }
-      `}</style>
+                {selectedPracticeReview.suggestedImprovement && (
+                  <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-100">
+                    <div className="font-bold text-amber-700 mb-1">Suggested Improvement</div>
+                    <p>{selectedPracticeReview.suggestedImprovement}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPracticeReview(null);
+                    navigate('/practice/mock-practice');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#00A9FF] text-white text-xs font-semibold cursor-pointer"
+                >
+                  Practice Topic Again
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPracticeReview(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
-  )
+  );
 }
