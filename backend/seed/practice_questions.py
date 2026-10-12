@@ -1,11 +1,6 @@
 """
 Practice Questions Seed Script
 
-Safely seeds the 'practice_questions' collection in MongoDB with 140+ structured
-interview-oriented questions for C, C++, Python, Java, and Aptitude.
-- Re-runnable (upserts by id)
-- Preserves existing collections & user data
-- Sets up performance indexes
 """
 
 import asyncio
