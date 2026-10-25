@@ -750,22 +750,6 @@ async def register_user(
     req: RegisterRequest,
 ) -> UserResponse:
     """
-    Register a new user.
-
-    Flow:
-        Register
-          ↓
-        Create password hash
-          ↓
-        Save user
-          ↓
-        Generate OTP
-          ↓
-        Send OTP
-          ↓
-        Verify OTP
-          ↓
-        Account verified
     """
 
     email = req.email.lower().strip()

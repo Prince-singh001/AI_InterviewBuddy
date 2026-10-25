@@ -1,7 +1,5 @@
 """
 Practice Questions Seed Script
-
-
 """
 
 import asyncio
@@ -23,8 +21,7 @@ from app.data import ALL_PRACTICE_QUESTIONS
 async def seed_practice_questions(db=None) -> int:
     """
     Seed or update practice questions in MongoDB.
-    Accepts an existing db instance or connects using application settings.
-    """
+"""
     should_close_client = False
     client = None
 
