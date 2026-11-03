@@ -15,16 +15,17 @@ import {
   FileText,
   RefreshCw,
   Rocket,
+  Search,
   Target,
   UserRound,
   Video,
   Zap,
 } from "lucide-react";
 
-import React, { useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { authApi, formatUser } from "@/services/apiService";
 import { calculateProfileCompletion } from "@/utils/profileCompletion";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   Area,
@@ -312,6 +313,66 @@ function DashboardSkeleton() {
 export default function Dashboard() {
   const { user, updateUser } = useAuthStore();
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const dashboardSearchItems = useMemo(
+    () => [
+      {
+        title: "Practice Interview",
+        description: "Start a realistic mock interview",
+        keywords: "mock interview practice start interview",
+        path: "/interview/setup",
+        icon: Video,
+      },
+      {
+        title: "AI Insights",
+        description: "Review your AI feedback and performance",
+        keywords: "feedback score performance analytics insights",
+        path: "/ai-insights",
+        icon: Brain,
+      },
+      {
+        title: "Resume Intelligence",
+        description: "Improve your resume profile",
+        keywords: "resume cv document upload",
+        path: "/resume",
+        icon: FileText,
+      },
+      {
+        title: "Profile",
+        description: "View and complete your profile",
+        keywords: "account personal details profile completion",
+        path: "/profile",
+        icon: UserRound,
+      },
+      {
+        title: "Interview History",
+        description: "View your previous interview sessions",
+        keywords: "past previous completed interviews history sessions",
+        path: "/interviews",
+        icon: Clock,
+      },
+    ],
+    [],
+  );
+
+  const filteredSearchItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return dashboardSearchItems;
+
+    return dashboardSearchItems.filter((item) =>
+      `${item.title} ${item.description} ${item.keywords}`
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [dashboardSearchItems, searchQuery]);
+
+  const openSearchResult = (path: string) => {
+    navigate(path);
+    setSearchQuery("");
+    setIsSearchOpen(false);
+  };
 
   // Fetch authoritative persisted profile on mount to ensure synchronization
   useEffect(() => {
@@ -836,6 +897,135 @@ export default function Dashboard() {
 
           transition:
             width .8s cubic-bezier(.16,1,.3,1);
+        }
+
+
+        /* =====================================================
+           DASHBOARD SEARCH
+        ===================================================== */
+
+        .dashboard-search-section {
+          position: relative;
+          z-index: 10;
+          margin: 0 0 20px;
+        }
+
+        .dashboard-search-box {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-height: 54px;
+          padding: 0 17px;
+          border: 1px solid var(--voxa-card-border);
+          border-radius: 15px;
+          background: var(--voxa-card-bg);
+          color: var(--voxa-card-text);
+          box-shadow: 0 7px 25px rgba(0,0,0,.035);
+          transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+        .dashboard-search-box:focus-within {
+          border-color: #00A9FF;
+          box-shadow: 0 0 0 4px rgba(0,169,255,.10);
+        }
+
+        .dashboard-search-icon {
+          flex: 0 0 auto;
+          color: #00A9FF;
+        }
+
+        .dashboard-search-input {
+          width: 100%;
+          min-width: 0;
+          border: 0;
+          outline: 0;
+          background: transparent;
+          color: var(--voxa-card-text);
+          font: inherit;
+          font-size: .9rem;
+        }
+
+        .dashboard-search-input::placeholder {
+          color: var(--text-muted);
+        }
+
+        .dashboard-search-shortcut {
+          flex: 0 0 auto;
+          padding: 4px 8px;
+          border: 1px solid var(--voxa-card-border);
+          border-radius: 7px;
+          color: var(--text-muted);
+          font-size: .68rem;
+        }
+
+        .dashboard-search-results {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          right: 0;
+          max-height: 320px;
+          overflow-y: auto;
+          padding: 7px;
+          border: 1px solid var(--voxa-card-border);
+          border-radius: 15px;
+          background: var(--voxa-card-bg);
+          box-shadow: 0 18px 45px rgba(0,0,0,.14);
+        }
+
+        .dashboard-search-result {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+          padding: 11px 12px;
+          border: 0;
+          border-radius: 10px;
+          background: transparent;
+          color: var(--voxa-card-text);
+          text-align: left;
+          cursor: pointer;
+          transition: background .2s ease;
+        }
+
+        .dashboard-search-result:hover,
+        .dashboard-search-result:focus-visible {
+          outline: 0;
+          background: rgba(0,169,255,.09);
+        }
+
+        .dashboard-search-result-icon {
+          display: grid;
+          place-items: center;
+          width: 36px;
+          height: 36px;
+          flex: 0 0 auto;
+          border-radius: 10px;
+          background: rgba(0,169,255,.10);
+          color: #00A9FF;
+        }
+
+        .dashboard-search-result-copy {
+          min-width: 0;
+          flex: 1;
+        }
+
+        .dashboard-search-result-copy strong {
+          display: block;
+          font-size: .82rem;
+        }
+
+        .dashboard-search-result-copy span {
+          display: block;
+          margin-top: 3px;
+          color: var(--text-muted);
+          font-size: .72rem;
+        }
+
+        .dashboard-search-empty {
+          padding: 18px 12px;
+          color: var(--text-muted);
+          font-size: .82rem;
+          text-align: center;
         }
 
         /* =====================================================
@@ -2150,6 +2340,82 @@ export default function Dashboard() {
             <ArrowRight size={14} color="#8B5CF6" />
           </motion.div>
         </motion.div>
+
+        {/* DASHBOARD SEARCH */}
+        <section className="dashboard-search-section">
+          <div className="dashboard-search-box">
+            <Search className="dashboard-search-icon" size={20} />
+            <input
+              type="search"
+              className="dashboard-search-input"
+              placeholder="Search features, resume, interviews, insights..."
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setIsSearchOpen(true);
+              }}
+              onFocus={() => setIsSearchOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setIsSearchOpen(false);
+                if (event.key === "Enter" && filteredSearchItems[0]) {
+                  openSearchResult(filteredSearchItems[0].path);
+                }
+              }}
+              aria-label="Search dashboard features"
+              aria-expanded={isSearchOpen}
+              aria-controls="dashboard-search-results"
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                className="dashboard-search-shortcut"
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear search"
+              >
+                Clear
+              </button>
+            ) : (
+              <span className="dashboard-search-shortcut">Search</span>
+            )}
+          </div>
+
+          {isSearchOpen && (
+            <div
+              className="dashboard-search-results"
+              id="dashboard-search-results"
+              role="listbox"
+            >
+              {filteredSearchItems.length > 0 ? (
+                filteredSearchItems.map((item) => {
+                  const ResultIcon = item.icon;
+                  return (
+                    <button
+                      type="button"
+                      className="dashboard-search-result"
+                      key={item.path}
+                      role="option"
+                      aria-selected="false"
+                      onClick={() => openSearchResult(item.path)}
+                    >
+                      <span className="dashboard-search-result-icon">
+                        <ResultIcon size={18} />
+                      </span>
+                      <span className="dashboard-search-result-copy">
+                        <strong>{item.title}</strong>
+                        <span>{item.description}</span>
+                      </span>
+                      <ChevronRight size={17} />
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="dashboard-search-empty">
+                  No matching feature found. Try another keyword.
+                </div>
+              )}
+            </div>
+          )}
+        </section>
 
         {/* =====================================================
             QUICK ACTIONS
